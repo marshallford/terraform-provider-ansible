@@ -1,0 +1,112 @@
+name: CI
+
+on: # yamllint disable-line rule:truthy
+  push:
+    branches:
+    - main
+    paths-ignore:
+    - README.md
+  pull_request:
+    types:
+    - opened
+    - synchronize
+    - reopened
+    # - edited
+    branches:
+    - main
+    paths-ignore:
+    - README.md
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+    - name: Setup go
+      uses: actions/setup-go@v5
+      with:
+        go-version-file: .go-version
+        cache: true
+    - name: Download dependencies
+      run: go mod download
+    - name: Build
+      run: go build -v .
+    - name: Lint
+      uses: golangci/golangci-lint-action@v4
+      with:
+        version: 1.56.2
+
+  docs:
+    name: Test Docs
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+    - name: Setup go
+      uses: actions/setup-go@v5
+      with:
+        go-version-file: .go-version
+        cache: true
+    - name: Setup Terraform
+      uses: hashicorp/setup-terraform@v3
+      with:
+        terraform_wrapper: false
+    - name: Generate docs
+      run: make docs
+    - name: Check docs
+      run: |
+        GIT_STATUS=$(git status --porcelain)
+        test -z "$GIT_STATUS" || (echo -e "Unexpected difference after code generation: $GIT_STATUS"; exit 1)
+
+  test:
+    name: Test
+    needs:
+    - build
+    - docs
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        terraform:
+        - 1.5.*
+        - 1.6.*
+        - 1.7.*
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+    - name: Setup go
+      uses: actions/setup-go@v5
+      with:
+        go-version-file: .go-version
+        cache: true
+    - name: Download dependencies
+      run: go mod download
+    - name: Setup Terraform
+      uses: hashicorp/setup-terraform@v3
+      with:
+        terraform_version: ${{ matrix.terraform }}
+        terraform_wrapper: false
+    - name: Setup external dependencies
+      run: make deps
+    - name: Test
+      run: make test
+
+  check:
+    name: Test
+    runs-on: ubuntu-latest
+    if: always()
+    needs:
+    - test
+    steps:
+    - run: exit 1
+      # see https://stackoverflow.com/a/67532120/4907315
+      if: >-
+        ${{
+              contains(needs.*.result, 'failure')
+          || contains(needs.*.result, 'cancelled')
+        }}
