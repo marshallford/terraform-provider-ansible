@@ -1,7 +1,7 @@
 resource "ansible_navigator_run" "test" {
   ansible_navigator_binary = "%s"
-  working_directory = "%s"
-  playbook          = <<-EOT
+  working_directory        = "%s"
+  playbook                 = <<-EOT
   - name: Test
     hosts: localhost
     become: false
@@ -14,7 +14,7 @@ resource "ansible_navigator_run" "test" {
       ansible.builtin.slurp:
         src: /tmp/test
   EOT
-  inventory         = "# localhost"
+  inventory                = "# localhost"
   artifact_queries = {
     stdout = {
       jsonpath = "$.stdout"
