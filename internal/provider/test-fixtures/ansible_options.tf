@@ -6,6 +6,9 @@ resource "ansible_navigator_run" "test" {
     become: false
   EOT
   inventory                = "# localhost"
+  execution_environment = {
+    pull_policy = "missing" # speeds up tests
+  }
   ansible_options = {
     force_handlers = true
     limit          = ["host1", "host2"]

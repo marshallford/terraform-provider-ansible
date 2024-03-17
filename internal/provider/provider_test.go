@@ -1,9 +1,9 @@
 package provider_test
 
 import (
-	"errors"
 	"fmt"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"testing"
 
@@ -18,48 +18,51 @@ var testAccProtoV6ProviderFactories = map[string]func() (tfprotov6.ProviderServe
 	"ansible": providerserver.NewProtocol6WithError(provider.New("test")()),
 }
 
+func testAccLookPath(t *testing.T, file string) string {
+	t.Helper()
+
+	path, err := exec.LookPath(file)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	return path
+}
+
 func testAccPreCheck(t *testing.T) {
 	t.Helper()
 
-	if _, err := os.Stat(programPath); errors.Is(err, os.ErrNotExist) {
-		t.Fatal("ansible-navigator program not installed via Makefile")
+	if _, err := exec.LookPath(programPath); err != nil {
+		t.Fatalf("%s program not installed via Makefile", filepath.Base(programPath))
 	}
+
+	testAccLookPath(t, "docker")
 }
 
-func testAccPrependProgramToPath(t *testing.T) {
+func testAccAbsProgramPath(t *testing.T) string {
 	t.Helper()
-
-	absPath, err := filepath.Abs(programPath)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	t.Setenv("PATH", fmt.Sprintf("%s:%s", filepath.Dir(absPath), os.Getenv("PATH")))
-}
-
-func testAccNavigatorRunResourceConfigUsePath(t *testing.T, basename string, workingDirectory string) string {
-	t.Helper()
-
-	resource, err := os.ReadFile(fmt.Sprintf("test-fixtures/%s.tf", basename))
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	return fmt.Sprintf(string(resource), workingDirectory)
-}
-
-func testAccNavigatorRunResourceConfig(t *testing.T, basename string, workingDirectory string) string {
-	t.Helper()
-
-	resource, err := os.ReadFile(fmt.Sprintf("test-fixtures/%s.tf", basename))
-	if err != nil {
-		t.Fatal(err)
-	}
 
 	absProgramPath, err := filepath.Abs(programPath)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	return fmt.Sprintf(string(resource), absProgramPath, workingDirectory)
+	return absProgramPath
+}
+
+func testAccPrependProgramToPath(t *testing.T) {
+	t.Helper()
+
+	t.Setenv("PATH", fmt.Sprintf("%s:%s", filepath.Dir(testAccAbsProgramPath(t)), os.Getenv("PATH")))
+}
+
+func testAccFixture(t *testing.T, name string, format ...any) string {
+	t.Helper()
+
+	fixture, err := os.ReadFile(fmt.Sprintf("test-fixtures/%s.tf", name))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	return fmt.Sprintf(string(fixture), format...)
 }

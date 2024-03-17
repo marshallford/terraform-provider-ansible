@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"strings"
 )
 
 const NavigatorProgram = "ansible-navigator"
@@ -83,8 +84,13 @@ func NavigatorPath() (string, error) {
 // TODO require a min version
 func NavigatorPreflight(binary string) error {
 	command := exec.Command(binary, "--version")
-	if err := command.Run(); err != nil {
+	stdoutStderr, err := command.CombinedOutput()
+	if err != nil {
 		return fmt.Errorf("%w, '%s --version' command failed, %w", ErrNavigator, binary, err)
+	}
+
+	if !strings.HasPrefix(string(stdoutStderr), NavigatorProgram) {
+		return fmt.Errorf("%w, '%s --version' command output not expected", ErrNavigator, binary)
 	}
 
 	return nil

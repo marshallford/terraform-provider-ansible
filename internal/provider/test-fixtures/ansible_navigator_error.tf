@@ -4,9 +4,6 @@ resource "ansible_navigator_run" "test" {
   playbook                 = <<-EOT
   - hosts: localhost
     become: false
-    tasks:
-    - ansible.builtin.fail:
-        msg: test
   EOT
   inventory                = "# localhost"
   execution_environment = {
