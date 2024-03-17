@@ -15,6 +15,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/provider/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/types"
+	"github.com/marshallford/terraform-provider-ansible/pkg/ansible"
 )
 
 const defaultProviderPersistRunDir = false
@@ -84,18 +85,19 @@ func (p *AnsibleProvider) Configure(ctx context.Context, req provider.ConfigureR
 	if data.BaseRunDirectory.IsNull() {
 		opts.BaseRunDirectory = os.TempDir()
 	} else {
-		baseRunDirectory := data.BaseRunDirectory.ValueString()
-		if !filepath.IsAbs(baseRunDirectory) {
-			resp.Diagnostics.AddAttributeError(
-				path.Root("base_run_directory"),
-				"Base run directory must be an absolute path",
-				fmt.Sprintf("%s is not an absolute path", baseRunDirectory),
-			)
-
-			return
-		}
-		opts.BaseRunDirectory = baseRunDirectory
+		opts.BaseRunDirectory = data.BaseRunDirectory.ValueString()
 	}
+
+	if !filepath.IsAbs(opts.BaseRunDirectory) {
+		resp.Diagnostics.AddAttributeError(
+			path.Root("base_run_directory"),
+			"Base run directory must be an absolute path",
+			fmt.Sprintf("%s is not an absolute path", opts.BaseRunDirectory),
+		)
+	}
+
+	err := ansible.DirectoryPreflight(opts.BaseRunDirectory)
+	addPathError(&resp.Diagnostics, path.Root("base_run_directory"), "Base run directory preflight check", err)
 
 	if data.PersistRunDirectory.IsNull() {
 		opts.PersistRunDirectory = defaultProviderPersistRunDir

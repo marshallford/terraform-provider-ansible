@@ -229,7 +229,7 @@ func (r *NavigatorRunResource) Run(ctx context.Context, diags *diag.Diagnostics,
 	navigatorSettingsContents, err := ansible.GenerateNavigatorSettings(&navigatorSettings)
 	addError(diags, "Ansible navigator settings not generated", err)
 
-	err = ansible.WorkingDirectoryPreflight(data.WorkingDirectory.ValueString())
+	err = ansible.DirectoryPreflight(data.WorkingDirectory.ValueString())
 	addPathError(diags, path.Root("working_directory"), "Working directory preflight check", err)
 
 	err = ansible.ContainerEnginePreflight(navigatorSettings.ContainerEngine)

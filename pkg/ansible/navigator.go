@@ -10,7 +10,7 @@ import (
 const NavigatorProgram = "ansible-navigator"
 
 var (
-	ErrWorkingDirectory    = errors.New("working directory is not valid")
+	ErrDirectory           = errors.New("directory is not valid")
 	ErrContainerEnginePath = errors.New("container engine (podman or docker) must exist in PATH")
 	ErrContainerEngine     = errors.New("container engine is not running or usable")
 	ErrNavigatorPath       = fmt.Errorf("%s does not exist in PATH", NavigatorProgram)
@@ -25,14 +25,14 @@ func PullPolicyOptions() []string {
 	return []string{"always", "missing", "never", "tag"}
 }
 
-func WorkingDirectoryPreflight(dir string) error {
+func DirectoryPreflight(dir string) error {
 	stat, err := os.Stat(dir)
 	if err != nil {
-		return fmt.Errorf("%w, %w", ErrWorkingDirectory, err)
+		return fmt.Errorf("%w, %w", ErrDirectory, err)
 	}
 
 	if !stat.IsDir() {
-		return fmt.Errorf("%w, %s is not a directory", ErrWorkingDirectory, dir)
+		return fmt.Errorf("%w, %s is not a directory", ErrDirectory, dir)
 	}
 
 	return nil
