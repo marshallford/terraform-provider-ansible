@@ -9,8 +9,17 @@ import (
 
 // TODO
 // 1. Test failure cases
+//   a. GenerateNavigatorSettings
+//   b. WorkingDirectoryPreflight
+//   c. ContainerEnginePreflight
+//   d. ansible-navigator not in path
+//   e. NavigatorPreflight
+//   f. base_run_directory unwritable
+//   g. timeout
+//   h. query error?
+//   i. playbook error [x]
 // 2. Test provider options
-// 3. Test ansible options
+// 3. Test ansible options [x]
 // 4. Test EE options (env vars and generated navigator config file)
 // 5. Test triggers
 // 6. Test run on destroy
@@ -65,6 +74,25 @@ func TestAccNavigatorRun_basic_path(t *testing.T) { //nolint:paralleltest
 	})
 }
 
+func TestAccNavigatorRun_ansible_options(t *testing.T) {
+	t.Parallel()
+
+	workingDirectory := t.TempDir()
+
+	resource.Test(t, resource.TestCase{
+		PreCheck:                 func() { testAccPreCheck(t) },
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		Steps: []resource.TestStep{
+			{
+				Config: testAccNavigatorRunResourceConfig(t, "ansible_options", workingDirectory),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestMatchResourceAttr(navigatorRunResource, "command", regexp.MustCompile("--force-handlers --limit host1,host2 --tags tag1,tag2")),
+				),
+			},
+		},
+	})
+}
+
 func TestAccNavigatorRun_artifact_queries(t *testing.T) {
 	t.Parallel()
 
@@ -80,6 +108,23 @@ func TestAccNavigatorRun_artifact_queries(t *testing.T) {
 					resource.TestMatchResourceAttr(navigatorRunResource, "artifact_queries.stdout.result", regexp.MustCompile("ok=3")),
 					resource.TestCheckResourceAttr(navigatorRunResource, "artifact_queries.file.result", "YWNj"),
 				),
+			},
+		},
+	})
+}
+
+func TestAccNavigatorRun_playbook_error(t *testing.T) {
+	t.Parallel()
+
+	workingDirectory := t.TempDir()
+
+	resource.Test(t, resource.TestCase{
+		PreCheck:                 func() { testAccPreCheck(t) },
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		Steps: []resource.TestStep{
+			{
+				Config:      testAccNavigatorRunResourceConfig(t, "playbook_error", workingDirectory),
+				ExpectError: regexp.MustCompile("ansible-navigator run command failed|failed=1"),
 			},
 		},
 	})
