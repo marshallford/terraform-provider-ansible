@@ -54,9 +54,9 @@ func configureResourceClient(req resource.ConfigureRequest, resp *resource.Confi
 	return opts, ok
 }
 
-func addError(diags *diag.Diagnostics, summary string, err error) bool { //nolint:unparam
+func addError(diags *diag.Diagnostics, summary string, err error) bool {
 	if err != nil {
-		diags.AddError(summary, fmt.Sprintf("unexpected error: %v", err))
+		diags.AddError(summary, fmt.Sprintf("unexpected error: %s", err))
 
 		return true
 	}

@@ -42,13 +42,13 @@ func (p *AnsibleProvider) Schema(ctx context.Context, req provider.SchemaRequest
 		MarkdownDescription: "Interact with [Ansible](https://github.com/ansible/ansible).",
 		Attributes: map[string]schema.Attribute{
 			"base_run_directory": schema.StringAttribute{
-				Description:         "Base directory in which to create temporary run directories. On Unix systems this defaults to '$TMPDIR' if non-empty, else '/tmp'.",
-				MarkdownDescription: "Base directory in which to create temporary run directories. On Unix systems this defaults to `$TMPDIR` if non-empty, else `/tmp`.",
+				Description:         "Base directory in which to create run directories. On Unix systems this defaults to '$TMPDIR' if non-empty, else '/tmp'.",
+				MarkdownDescription: "Base directory in which to create run directories. On Unix systems this defaults to `$TMPDIR` if non-empty, else `/tmp`.",
 				Optional:            true,
 			},
 			"persist_run_directory": schema.BoolAttribute{
-				Description:         fmt.Sprintf("Remove temporary run directory after the run completes. Useful when troubleshooting. Defaults to '%t'.", defaultProviderPersistRunDir),
-				MarkdownDescription: fmt.Sprintf("Remove temporary run directory after the run completes. Useful when troubleshooting. Defaults to `%t`.", defaultProviderPersistRunDir),
+				Description:         fmt.Sprintf("Remove run directory after the run completes. Useful when troubleshooting. Defaults to '%t'.", defaultProviderPersistRunDir),
+				MarkdownDescription: fmt.Sprintf("Remove run directory after the run completes. Useful when troubleshooting. Defaults to `%t`.", defaultProviderPersistRunDir),
 				Optional:            true,
 			},
 		},
