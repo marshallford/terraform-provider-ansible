@@ -15,9 +15,6 @@ resource "ansible_navigator_run" "test" {
         src: /tmp/test
   EOT
   inventory                = "# localhost"
-  execution_environment = {
-    pull_policy = "missing" # speeds up tests
-  }
   artifact_queries = {
     stdout = {
       jsonpath = "$.stdout"

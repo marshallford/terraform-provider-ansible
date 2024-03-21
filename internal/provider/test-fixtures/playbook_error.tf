@@ -9,7 +9,4 @@ resource "ansible_navigator_run" "test" {
         msg: test
   EOT
   inventory                = "# localhost"
-  execution_environment = {
-    pull_policy = "missing" # speeds up tests
-  }
 }

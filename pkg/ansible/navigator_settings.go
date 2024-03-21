@@ -94,7 +94,7 @@ func GenerateNavigatorSettings(settings *NavigatorSettings) (string, error) {
 				VolumeMounts: volumeMounts,
 			},
 			Logging: navigatorSettingsFormatLogging{
-				Level: "warning",
+				Level: "debug",
 			},
 			Mode: "stdout",
 			PlaybookArtifact: navigatorSettingsFormatPlaybookArtifact{
