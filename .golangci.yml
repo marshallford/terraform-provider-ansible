@@ -12,6 +12,7 @@ linters:
   - funlen
   - godot
   - godox
+  - interfacer
   - lll
   - perfsprint
   - revive

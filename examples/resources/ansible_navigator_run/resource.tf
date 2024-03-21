@@ -71,7 +71,7 @@ resource "ansible_navigator_run" "destroy" {
   - hosts: all
     tasks:
     - ansible.builtin.set_fact:
-        destroy: "{{ lookup('ansible.builtin.env', 'ANSIBLE_TF_DESTROY') != '' }}"
+        destroy: "{{ lookup('ansible.builtin.env', 'ANSIBLE_TF_OPERATION') == 'destroy' }}"
     - ansible.builtin.debug:
         msg: "resource is being destroyed!"
       when: destroy

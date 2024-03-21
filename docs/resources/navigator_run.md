@@ -86,7 +86,7 @@ resource "ansible_navigator_run" "destroy" {
   - hosts: all
     tasks:
     - ansible.builtin.set_fact:
-        destroy: "{{ lookup('ansible.builtin.env', 'ANSIBLE_TF_DESTROY') != '' }}"
+        destroy: "{{ lookup('ansible.builtin.env', 'ANSIBLE_TF_OPERATION') == 'destroy' }}"
     - ansible.builtin.debug:
         msg: "resource is being destroyed!"
       when: destroy
@@ -165,7 +165,7 @@ output "resolv_conf" {
 - `artifact_queries` (Attributes Map) Query the playbook artifact with [JSONPath](https://goessner.net/articles/JsonPath/). The playbook artifact contains detailed information about every play and task, as well as the stdout from the playbook run. (see [below for nested schema](#nestedatt--artifact_queries))
 - `execution_environment` (Attributes) [Execution environment](https://ansible.readthedocs.io/en/latest/getting_started_ee/index.html) related configuration. (see [below for nested schema](#nestedatt--execution_environment))
 - `replacement_triggers` (Map of String) Arbitrary map of values that, when changed, will recreate the resource. Similar to `triggers`, but will cause `id` to change. Useful when combined with `run_on_destroy`.
-- `run_on_destroy` (Boolean) Run playbook on destroy. The environment variable `ANSIBLE_TF_DESTROY` is set during the destroy run to allow for conditional plays, tasks, etc. Defaults to `false`.
+- `run_on_destroy` (Boolean) Run playbook on destroy. The environment variable `ANSIBLE_TF_OPERATION` is set to `destroy` during the run to allow for conditional plays, tasks, etc. Defaults to `false`.
 - `ssh_private_keys` (Attributes List) SSH private keys used for authentication in addition to the [automatically mounted](https://ansible.readthedocs.io/projects/navigator/faq/#how-do-i-use-my-ssh-keys-with-an-execution-environment) default named keys and SSH agent socket path. (see [below for nested schema](#nestedatt--ssh_private_keys))
 - `timeouts` (Attributes) (see [below for nested schema](#nestedatt--timeouts))
 - `triggers` (Map of String) Arbitrary map of values that, when changed, will run the playbook again. Serves as alternative way to trigger a run without changing the inventory or playbook.
@@ -204,7 +204,7 @@ Optional:
 
 - `container_engine` (String) [Container engine](https://ansible.readthedocs.io/projects/navigator/settings/#container-engine) responsible for running the execution environment container image. Options: `auto`, `podman`, `docker`. Defaults to `auto`.
 - `environment_variables_pass` (List of String) Existing environment variables to be [passed](https://ansible.readthedocs.io/projects/navigator/settings/#pass-environment-variable) through to and set within the execution environment.
-- `environment_variables_set` (Map of String) Environment variables to be [set](https://ansible.readthedocs.io/projects/navigator/settings/#set-environment-variable) within the execution environment.
+- `environment_variables_set` (Map of String) Environment variables to be [set](https://ansible.readthedocs.io/projects/navigator/settings/#set-environment-variable) within the execution environment. By default `ANSIBLE_TF_OPERATION` is set to the current CRUD operation (`create`, `update`, `destroy`).
 - `image` (String) Name of the execution environment container [image](https://ansible.readthedocs.io/projects/navigator/settings/#execution-environment-image). Defaults to `ghcr.io/ansible/creator-ee:v24.2.0`.
 - `pull_arguments` (List of String) Additional [parameters](https://ansible.readthedocs.io/projects/navigator/settings/#pull-arguments) that should be added to the pull command when pulling an execution environment container image from a container registry.
 - `pull_policy` (String) Container image [pull policy](https://ansible.readthedocs.io/projects/navigator/settings/#pull-policy). Defaults to `tag`.
