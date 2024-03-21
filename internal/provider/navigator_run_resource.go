@@ -2,8 +2,11 @@ package provider
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
+	"path/filepath"
+	"regexp"
 	"strings"
 	"time"
 
@@ -29,7 +32,8 @@ import (
 
 const (
 	navigatorRunDestroyEnvVar          = "ANSIBLE_TF_DESTROY"
-	navigatorRunDir                    = "tf-provider-ansible-navigator-run"
+	navigatorRunDir                    = "tf-ansible-navigator-run"
+	navigatorRunSSHPrivateKeysDir      = "ssh-private-keys"
 	defaultNavigatorRunTimeout         = 10 * time.Minute
 	defaultNavigatorRunContainerEngine = "auto"
 	defaultNavigatorRunImage           = "ghcr.io/ansible/creator-ee:latest"
@@ -54,6 +58,7 @@ type NavigatorRunResourceModel struct {
 	ExecutionEnvironment   types.Object   `tfsdk:"execution_environment"`
 	AnsibleNavigatorBinary types.String   `tfsdk:"ansible_navigator_binary"`
 	AnsibleOptions         types.Object   `tfsdk:"ansible_options"`
+	SSHPrivateKeys         types.List     `tfsdk:"ssh_private_keys"`
 	RunOnDestroy           types.Bool     `tfsdk:"run_on_destroy"`
 	Triggers               types.Map      `tfsdk:"triggers"`
 	ReplacementTriggers    types.Map      `tfsdk:"replacement_triggers"`
@@ -78,12 +83,17 @@ type AnsibleOptionsModel struct {
 	Tags          types.List `tfsdk:"tags"`
 }
 
+type SSHPrivateKeyModel struct {
+	Name types.String `tfsdk:"name"`
+	Data types.String `tfsdk:"data"`
+}
+
 type ArtifactQueryModel struct {
 	JSONPath types.String `tfsdk:"jsonpath"`
 	Result   types.String `tfsdk:"result"`
 }
 
-func (ExecutionEnvironmentModel) attrTypes() map[string]attr.Type {
+func (ExecutionEnvironmentModel) AttrTypes() map[string]attr.Type {
 	return map[string]attr.Type{
 		"container_engine":           types.StringType,
 		"environment_variables_pass": types.ListType{ElemType: types.StringType},
@@ -121,19 +131,10 @@ func (m ExecutionEnvironmentModel) Value(ctx context.Context, settings *ansible.
 	}
 
 	settings.PullArguments = pullArguments
-
 	settings.PullPolicy = m.PullPolicy.ValueString()
 
 	return diags
 }
-
-// func (AnsibleOptionsModel) attrTypes() map[string]attr.Type {
-// 	return map[string]attr.Type{
-// 		"force_handlers": types.BoolType,
-// 		"limit":          types.ListType{ElemType: types.StringType},
-// 		"tags":           types.ListType{ElemType: types.StringType},
-// 	}
-// }
 
 func (m AnsibleOptionsModel) Value(ctx context.Context, opts *ansible.RunOptions) diag.Diagnostics {
 	var diags diag.Diagnostics
@@ -157,7 +158,16 @@ func (m AnsibleOptionsModel) Value(ctx context.Context, opts *ansible.RunOptions
 	return diags
 }
 
-func (ArtifactQueryModel) attrTypes() map[string]attr.Type {
+func (m SSHPrivateKeyModel) Value(ctx context.Context, key *ansible.SSHPrivateKey) diag.Diagnostics {
+	var diags diag.Diagnostics
+
+	key.Name = m.Name.ValueString()
+	key.Data = m.Data.ValueString()
+
+	return diags
+}
+
+func (ArtifactQueryModel) AttrTypes() map[string]attr.Type {
 	return map[string]attr.Type{
 		"jsonpath": types.StringType,
 		"result":   types.StringType,
@@ -182,7 +192,7 @@ func (m *ArtifactQueryModel) Set(ctx context.Context, query ansible.ArtifactQuer
 	return diags
 }
 
-func (r *NavigatorRunResource) Run(ctx context.Context, diags *diag.Diagnostics, data *NavigatorRunResourceModel, destroy bool) { //nolint:cyclop
+func (r *NavigatorRunResource) Run(ctx context.Context, diags *diag.Diagnostics, data *NavigatorRunResourceModel, runs uint32, destroy bool) { //nolint:cyclop
 	var err error
 
 	timeout, newDiags := data.Timeouts.Create(ctx, defaultNavigatorRunTimeout)
@@ -195,6 +205,9 @@ func (r *NavigatorRunResource) Run(ctx context.Context, diags *diag.Diagnostics,
 	ctx, cancel := context.WithTimeout(ctx, timeout)
 	defer cancel()
 
+	runDir := filepath.Join(r.opts.BaseRunDirectory, fmt.Sprintf("%s-%s-%d", navigatorRunDir, data.ID.ValueString(), runs))
+	sshPrivateKeysDir := filepath.Join(runDir, navigatorRunSSHPrivateKeysDir)
+
 	var eeModel ExecutionEnvironmentModel
 	diags.Append(data.ExecutionEnvironment.As(ctx, &eeModel, basetypes.ObjectAsOptions{})...)
 
@@ -206,6 +219,17 @@ func (r *NavigatorRunResource) Run(ctx context.Context, diags *diag.Diagnostics,
 
 	var ansibleOptions ansible.RunOptions
 	diags.Append(optsModel.Value(ctx, &ansibleOptions)...)
+
+	var sshPrivateKeysModel []SSHPrivateKeyModel
+	diags.Append(data.SSHPrivateKeys.ElementsAs(ctx, &sshPrivateKeysModel, false)...)
+
+	sshPrivateKeys := []ansible.SSHPrivateKey{}
+	for _, model := range sshPrivateKeysModel {
+		var key ansible.SSHPrivateKey
+
+		diags.Append(model.Value(ctx, &key)...)
+		sshPrivateKeys = append(sshPrivateKeys, key)
+	}
 
 	var queriesModel map[string]ArtifactQueryModel
 	diags.Append(data.ArtifactQueries.ElementsAs(ctx, &queriesModel, false)...)
@@ -222,13 +246,6 @@ func (r *NavigatorRunResource) Run(ctx context.Context, diags *diag.Diagnostics,
 		return
 	}
 
-	if destroy {
-		navigatorSettings.EnvironmentVariablesSet[navigatorRunDestroyEnvVar] = "true"
-	}
-
-	navigatorSettingsContents, err := ansible.GenerateNavigatorSettings(&navigatorSettings)
-	addError(diags, "Ansible navigator settings not generated", err)
-
 	err = ansible.DirectoryPreflight(data.WorkingDirectory.ValueString())
 	addPathError(diags, path.Root("working_directory"), "Working directory preflight check", err)
 
@@ -244,30 +261,43 @@ func (r *NavigatorRunResource) Run(ctx context.Context, diags *diag.Diagnostics,
 	err = ansible.NavigatorPreflight(ansibleNavigatorBinary)
 	addPathError(diags, path.Root("ansible_navigator_binary"), "Ansible navigator preflight check", err)
 
-	tempRunDir, err := ansible.CreateTempRunDir(r.opts.BaseRunDirectory, navigatorRunDir)
-	addError(diags, "Temporary run directory not created", err)
+	err = ansible.CreateRunDir(runDir)
+	addError(diags, "Run directory not created", err)
 
-	err = ansible.CreatePlaybookFile(tempRunDir, data.Playbook.ValueString())
+	err = ansible.CreateRunSSHPrivateKeysDir(sshPrivateKeysDir)
+	addError(diags, "SSH private keys directory not created", err)
+
+	err = ansible.CreatePlaybookFile(runDir, data.Playbook.ValueString())
 	addError(diags, "Ansible playbook file not created", err)
 
-	err = ansible.CreateInventoryFile(tempRunDir, data.Inventory.ValueString())
+	err = ansible.CreateInventoryFile(runDir, data.Inventory.ValueString())
 	addError(diags, "Ansible inventory file not created", err)
 
-	err = ansible.CreateNavigatorSettingsFile(tempRunDir, navigatorSettingsContents)
+	err = ansible.CreateSSHPrivateKeys(sshPrivateKeysDir, sshPrivateKeys, &navigatorSettings, &ansibleOptions)
+	addError(diags, "SSH private keys not created", err)
+
+	if destroy {
+		navigatorSettings.EnvironmentVariablesSet[navigatorRunDestroyEnvVar] = "true"
+	}
+
+	navigatorSettingsContents, err := ansible.GenerateNavigatorSettings(&navigatorSettings)
+	addError(diags, "Ansible navigator settings not generated", err)
+
+	err = ansible.CreateNavigatorSettingsFile(runDir, navigatorSettingsContents)
 	addError(diags, "Ansible navigator settings file not created", err)
 
 	command := ansible.GenerateNavigatorRunCommand(
 		ctx,
 		data.WorkingDirectory.ValueString(),
 		ansibleNavigatorBinary,
-		tempRunDir,
+		runDir,
 		&ansibleOptions,
 	)
 
 	if diags.HasError() {
 		if !r.opts.PersistRunDirectory {
-			err = ansible.RemoveTempRunDir(tempRunDir)
-			addError(diags, "Temporary run directory not removed", err)
+			err = ansible.RemoveRunDir(runDir)
+			addError(diags, "Run directory not removed", err)
 		}
 
 		return
@@ -285,11 +315,11 @@ func (r *NavigatorRunResource) Run(ctx context.Context, diags *diag.Diagnostics,
 	}
 
 	// TODO stream to log file instead
-	err = ansible.CreateNavigatorRunLogFile(tempRunDir, output)
+	err = ansible.CreateNavigatorRunLogFile(runDir, output)
 	addError(diags, "Ansible navigator run output log not created", err)
 
 	// TODO skip on destroy?
-	err = ansible.QueryPlaybookArtifact(tempRunDir, artifactQueries)
+	err = ansible.QueryPlaybookArtifact(runDir, artifactQueries)
 	addPathError(diags, path.Root("artifact_queries"), "Playbook artifact queries failed", err)
 
 	for name, model := range queriesModel {
@@ -297,14 +327,13 @@ func (r *NavigatorRunResource) Run(ctx context.Context, diags *diag.Diagnostics,
 		queriesModel[name] = model
 	}
 
-	newQueriesModel, newDiags := types.MapValueFrom(ctx, types.ObjectType{AttrTypes: ArtifactQueryModel{}.attrTypes()}, queriesModel)
+	newQueriesModel, newDiags := types.MapValueFrom(ctx, types.ObjectType{AttrTypes: ArtifactQueryModel{}.AttrTypes()}, queriesModel)
 	diags.Append(newDiags...)
-
 	data.ArtifactQueries = newQueriesModel
 
 	if !r.opts.PersistRunDirectory {
-		err = ansible.RemoveTempRunDir(tempRunDir)
-		addError(diags, "Temporary run directory not removed", err)
+		err = ansible.RemoveRunDir(runDir)
+		addError(diags, "Run directory not removed", err)
 	}
 }
 
@@ -343,7 +372,7 @@ func (r *NavigatorRunResource) Schema(ctx context.Context, req resource.SchemaRe
 				Optional:            true,
 				Computed:            true,
 				Default: objectdefault.StaticValue(types.ObjectValueMust(
-					ExecutionEnvironmentModel{}.attrTypes(),
+					ExecutionEnvironmentModel{}.AttrTypes(),
 					map[string]attr.Value{
 						"container_engine":           types.StringValue(defaultNavigatorRunContainerEngine),
 						"environment_variables_pass": types.ListNull(types.StringType),
@@ -399,7 +428,6 @@ func (r *NavigatorRunResource) Schema(ctx context.Context, req resource.SchemaRe
 							stringvalidator.OneOf(ansible.PullPolicyOptions()...),
 						},
 					},
-					// TODO volume-mounts, container-options
 				},
 			},
 			"ansible_navigator_binary": schema.StringAttribute{
@@ -428,6 +456,33 @@ func (r *NavigatorRunResource) Schema(ctx context.Context, req resource.SchemaRe
 						Description: "Only run plays and tasks tagged with these values.",
 						Optional:    true,
 						ElementType: types.StringType,
+					},
+				},
+			},
+			"ssh_private_keys": schema.ListNestedAttribute{
+				Description:         "SSH private keys used for authentication in addition to the automatically mounted default named keys and SSH agent socket path.",
+				MarkdownDescription: "SSH private keys used for authentication in addition to the [automatically mounted](https://ansible.readthedocs.io/projects/navigator/faq/#how-do-i-use-my-ssh-keys-with-an-execution-environment) default named keys and SSH agent socket path.",
+				Optional:            true,
+				NestedObject: schema.NestedAttributeObject{
+					Attributes: map[string]schema.Attribute{
+						"name": schema.StringAttribute{
+							Description: "Key name.",
+							Required:    true,
+							Validators: []validator.String{
+								stringvalidator.RegexMatches(
+									regexp.MustCompile(`^[a-zA-Z0-9]*$`),
+									"Must only contain only alphanumeric characters",
+								),
+							},
+						},
+						"data": schema.StringAttribute{
+							Description: "Key data.",
+							Required:    true,
+							Sensitive:   true,
+							Validators: []validator.String{
+								stringIsSSHPrivateKey(),
+							},
+						},
 					},
 				},
 			},
@@ -511,8 +566,15 @@ func (r *NavigatorRunResource) Create(ctx context.Context, req resource.CreateRe
 		return
 	}
 
+	runs := uint32(1)
+	SetRuns(ctx, &resp.Diagnostics, resp.Private.SetKey, runs)
+
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
 	data.ID = types.StringValue(uuid.New().String())
-	r.Run(ctx, &resp.Diagnostics, data, false)
+	r.Run(ctx, &resp.Diagnostics, data, runs, false)
 
 	if resp.Diagnostics.HasError() {
 		return
@@ -533,7 +595,13 @@ func (r *NavigatorRunResource) Update(ctx context.Context, req resource.UpdateRe
 		return
 	}
 
-	r.Run(ctx, &resp.Diagnostics, data, false)
+	runs := IncrementRuns(ctx, &resp.Diagnostics, req.Private.GetKey, resp.Private.SetKey)
+
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	r.Run(ctx, &resp.Diagnostics, data, runs, false)
 
 	if resp.Diagnostics.HasError() {
 		return
@@ -551,7 +619,51 @@ func (r *NavigatorRunResource) Delete(ctx context.Context, req resource.DeleteRe
 		return
 	}
 
-	if data.RunOnDestroy.ValueBool() {
-		r.Run(ctx, &resp.Diagnostics, data, true)
+	runs := IncrementRuns(ctx, &resp.Diagnostics, req.Private.GetKey, resp.Private.SetKey)
+
+	if resp.Diagnostics.HasError() {
+		return
 	}
+
+	if data.RunOnDestroy.ValueBool() {
+		r.Run(ctx, &resp.Diagnostics, data, runs, true)
+	}
+}
+
+type (
+	GetKey func(ctx context.Context, key string) ([]byte, diag.Diagnostics)
+	SetKey func(ctx context.Context, key string, value []byte) diag.Diagnostics
+)
+
+func SetRuns(ctx context.Context, diags *diag.Diagnostics, setKey SetKey, runs uint32) {
+	runsBytes, err := json.Marshal(runs)
+	if addError(diags, "Failed to set 'runs' private state", err) {
+		return
+	}
+
+	setKey(ctx, "runs", runsBytes)
+}
+
+func IncrementRuns(ctx context.Context, diags *diag.Diagnostics, getKey GetKey, setKey SetKey) uint32 {
+	runsBytes, newDiags := getKey(ctx, "runs")
+	diags.Append(newDiags...)
+
+	runs := uint32(0)
+	if runsBytes != nil {
+		err := json.Unmarshal(runsBytes, &runs)
+		if addError(diags, "Failed to get 'runs' private state", err) {
+			return runs
+		}
+	}
+
+	runs++
+
+	runsBytes, err := json.Marshal(runs)
+	if addError(diags, "Failed to set 'runs' private state", err) {
+		return runs
+	}
+
+	setKey(ctx, "runs", runsBytes)
+
+	return runs
 }

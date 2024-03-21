@@ -32,5 +32,5 @@ provider "ansible" {
 
 ### Optional
 
-- `base_run_directory` (String) Base directory in which to create temporary run directories. On Unix systems this defaults to `$TMPDIR` if non-empty, else `/tmp`.
-- `persist_run_directory` (Boolean) Remove temporary run directory after the run completes. Useful when troubleshooting. Defaults to `false`.
+- `base_run_directory` (String) Base directory in which to create run directories. On Unix systems this defaults to `$TMPDIR` if non-empty, else `/tmp`.
+- `persist_run_directory` (Boolean) Remove run directory after the run completes. Useful when troubleshooting. Defaults to `false`.

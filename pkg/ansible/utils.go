@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"io"
 	"os"
 	"os/exec"
 
@@ -20,19 +19,7 @@ func programExistsOnPath(program string) error {
 }
 
 func writeFile(path string, contents string) error {
-	file, err := os.Create(path)
-	if err != nil {
-		return err
-	}
-
-	// TODO lock down file permissions
-	if _, err = io.WriteString(file, contents); err != nil {
-		file.Close()
-
-		return err
-	}
-
-	return file.Close()
+	return os.WriteFile(path, []byte(contents), 0o600) //nolint:gomnd
 }
 
 func jsonPath(data []byte, template string) (string, error) {

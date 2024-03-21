@@ -23,28 +23,23 @@ type RunOptions struct {
 	ForceHandlers bool
 	Limit         []string
 	Tags          []string
+	PrivateKey    []string
 }
 
-type ArtifactQuery struct {
-	JSONPath   string
-	JSONOutput bool
-	Result     string
-}
-
-func GenerateNavigatorRunCommand(ctx context.Context, workingDirectory string, ansibleNavigatorBinary string, tempRunDir string, opts *RunOptions) *exec.Cmd {
+func GenerateNavigatorRunCommand(ctx context.Context, workingDirectory string, ansibleNavigatorBinary string, runDir string, opts *RunOptions) *exec.Cmd {
 	command := exec.CommandContext(ctx, ansibleNavigatorBinary, []string{ // #nosec G204
 		"run",
-		filepath.Join(tempRunDir, playbookFilename),
+		filepath.Join(runDir, playbookFilename),
 		"--inventory",
-		filepath.Join(tempRunDir, inventoryFilename),
+		filepath.Join(runDir, inventoryFilename),
 		"--playbook-artifact-save-as",
-		filepath.Join(tempRunDir, playbookArtifactFilename),
+		filepath.Join(runDir, playbookArtifactFilename),
 		"--log-file",
-		filepath.Join(tempRunDir, navigatorLogFilename),
+		filepath.Join(runDir, navigatorLogFilename),
 	}...)
 	command.Dir = workingDirectory
 
-	command.Env = append(os.Environ(), fmt.Sprintf("ANSIBLE_NAVIGATOR_CONFIG=%s", filepath.Join(tempRunDir, navigatorSettingsFilename)))
+	command.Env = append(os.Environ(), fmt.Sprintf("ANSIBLE_NAVIGATOR_CONFIG=%s", filepath.Join(runDir, navigatorSettingsFilename)))
 	command.WaitDelay = commandWaitDelay
 
 	if opts.ForceHandlers {
@@ -59,6 +54,10 @@ func GenerateNavigatorRunCommand(ctx context.Context, workingDirectory string, a
 		command.Args = append(command.Args, "--tags", strings.Join(opts.Tags, ","))
 	}
 
+	for _, path := range opts.PrivateKey {
+		command.Args = append(command.Args, "--private-key", path)
+	}
+
 	return command
 }
 
@@ -71,26 +70,32 @@ func ExecNavigatorRunCommand(command *exec.Cmd) (string, error) {
 	return string(stdoutStderr), nil
 }
 
-func CreateTempRunDir(baseRunDir string, pattern string) (string, error) {
-	dir, err := os.MkdirTemp(baseRunDir, fmt.Sprintf("%s-", pattern))
-	if err != nil {
-		return "", fmt.Errorf("failed to create temporary directory for run, %w", err)
-	}
-
-	return dir, nil
-}
-
-func RemoveTempRunDir(tempRunDir string) error {
-	err := os.RemoveAll(tempRunDir)
-	if err != nil {
-		return fmt.Errorf("failed to remove temporary directory for run, %w", err)
+func CreateRunDir(dir string) error {
+	if err := os.Mkdir(dir, 0o700); err != nil { //nolint:gomnd
+		return fmt.Errorf("failed to create directory for run, %w", err)
 	}
 
 	return nil
 }
 
-func CreatePlaybookFile(tempRunDir string, playbookContents string) error {
-	path := filepath.Join(tempRunDir, playbookFilename)
+func CreateRunSSHPrivateKeysDir(dir string) error {
+	if err := os.Mkdir(dir, 0o700); err != nil { //nolint:gomnd
+		return fmt.Errorf("failed to create SSH private keys directory for run, %w", err)
+	}
+
+	return nil
+}
+
+func RemoveRunDir(dir string) error {
+	if err := os.RemoveAll(dir); err != nil {
+		return fmt.Errorf("failed to remove directory for run, %w", err)
+	}
+
+	return nil
+}
+
+func CreatePlaybookFile(dir string, playbookContents string) error {
+	path := filepath.Join(dir, playbookFilename)
 
 	err := writeFile(path, playbookContents)
 	if err != nil {
@@ -100,8 +105,8 @@ func CreatePlaybookFile(tempRunDir string, playbookContents string) error {
 	return nil
 }
 
-func CreateInventoryFile(tempRunDir string, inventoryContents string) error {
-	path := filepath.Join(tempRunDir, inventoryFilename)
+func CreateInventoryFile(dir string, inventoryContents string) error {
+	path := filepath.Join(dir, inventoryFilename)
 
 	err := writeFile(path, inventoryContents)
 	if err != nil {
@@ -111,33 +116,12 @@ func CreateInventoryFile(tempRunDir string, inventoryContents string) error {
 	return nil
 }
 
-func CreateNavigatorRunLogFile(tempRunDir string, outputContents string) error {
-	path := filepath.Join(tempRunDir, navigatorRunLogFilename)
+func CreateNavigatorRunLogFile(dir string, outputContents string) error {
+	path := filepath.Join(dir, navigatorRunLogFilename)
 
 	err := writeFile(path, outputContents)
 	if err != nil {
 		return fmt.Errorf("failed to create %s file for run, %w", NavigatorProgram, err)
-	}
-
-	return nil
-}
-
-func QueryPlaybookArtifact(tempRunDir string, queries map[string]ArtifactQuery) error {
-	path := filepath.Join(tempRunDir, playbookArtifactFilename)
-
-	contents, err := os.ReadFile(path)
-	if err != nil {
-		return fmt.Errorf("failed to read playbook artifact, %w", err)
-	}
-
-	for name, query := range queries {
-		result, err := jsonPath(contents, query.JSONPath)
-		if err != nil {
-			return fmt.Errorf("failed to query playbook artifact with JSONPath, %w", err)
-		}
-
-		query.Result = result
-		queries[name] = query
 	}
 
 	return nil
