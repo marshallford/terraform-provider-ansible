@@ -36,7 +36,7 @@ const (
 	navigatorRunSSHPrivateKeysDir      = "ssh-private-keys"
 	defaultNavigatorRunTimeout         = 10 * time.Minute
 	defaultNavigatorRunContainerEngine = "auto"
-	defaultNavigatorRunImage           = "ghcr.io/ansible/creator-ee:latest"
+	defaultNavigatorRunImage           = "ghcr.io/ansible/creator-ee:v24.2.0"
 	defaultNavigatorRunPullPolicy      = "tag"
 	defaultNavigatorRunOnDestroy       = false
 )

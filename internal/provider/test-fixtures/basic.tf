@@ -17,7 +17,4 @@ resource "ansible_navigator_run" "test" {
             ansible_connection: local
             some_var: hello world!
   EOT
-  execution_environment = {
-    pull_policy = "missing" # speeds up tests
-  }
 }
