@@ -7,7 +7,7 @@ resource "ansible_navigator_run" "test" {
     become: false
     tasks:
     - name: write file
-      copy:
+      ansible.builtin.copy:
         dest: /tmp/test
         content: acc
     - name: get file

@@ -75,6 +75,25 @@ func TestAccNavigatorRun_basic_path(t *testing.T) { //nolint:paralleltest
 	})
 }
 
+func TestAccNavigatorRun_env_vars(t *testing.T) {
+	t.Parallel()
+
+	workingDirectory := t.TempDir()
+
+	resource.Test(t, resource.TestCase{
+		PreCheck:                 func() { testAccPreCheck(t) },
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		Steps: []resource.TestStep{
+			{
+				Config: testAccFixture(t, "env_vars", testAccAbsProgramPath(t), workingDirectory),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttrSet(navigatorRunResource, "id"),
+				),
+			},
+		},
+	})
+}
+
 func TestAccNavigatorRun_ansible_options(t *testing.T) {
 	t.Parallel()
 
@@ -144,6 +163,22 @@ func TestAccNavigatorRun_errors(t *testing.T) {
 				return testAccFixture(t, "ansible_navigator_error", testAccLookPath(t, "docker"), workingDirectory)
 			},
 			expected: regexp.MustCompile("Ansible navigator preflight check|ansible-navigator is not functional"),
+		},
+		"env_var_name": {
+			config: func(t *testing.T, workingDirectory string) string {
+				t.Helper()
+
+				return testAccFixture(t, "env_var_name_error", testAccAbsProgramPath(t), workingDirectory)
+			},
+			expected: regexp.MustCompile("Not a environment variable name"),
+		},
+		"playbook_yaml": {
+			config: func(t *testing.T, workingDirectory string) string {
+				t.Helper()
+
+				return testAccFixture(t, "playbook_yaml_error", testAccAbsProgramPath(t), workingDirectory)
+			},
+			expected: regexp.MustCompile("Not valid YAML"),
 		},
 	}
 
