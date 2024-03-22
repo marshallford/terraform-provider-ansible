@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"path/filepath"
 	"regexp"
-	"strings"
 	"time"
 
 	"github.com/google/uuid"
@@ -31,7 +30,7 @@ import (
 )
 
 const (
-	navigatorRunDestroyEnvVar          = "ANSIBLE_TF_DESTROY"
+	navigatorRunOperationEnvVar        = "ANSIBLE_TF_OPERATION"
 	navigatorRunDir                    = "tf-ansible-navigator-run"
 	navigatorRunSSHPrivateKeysDir      = "ssh-private-keys"
 	defaultNavigatorRunTimeout         = 10 * time.Minute
@@ -192,7 +191,7 @@ func (m *ArtifactQueryModel) Set(ctx context.Context, query ansible.ArtifactQuer
 	return diags
 }
 
-func (r *NavigatorRunResource) Run(ctx context.Context, diags *diag.Diagnostics, data *NavigatorRunResourceModel, runs uint32, destroy bool) { //nolint:cyclop
+func (r *NavigatorRunResource) Run(ctx context.Context, diags *diag.Diagnostics, data *NavigatorRunResourceModel, runs uint32, operation TerraformOperation) { //nolint:cyclop
 	var err error
 
 	timeout, newDiags := data.Timeouts.Create(ctx, defaultNavigatorRunTimeout)
@@ -276,9 +275,7 @@ func (r *NavigatorRunResource) Run(ctx context.Context, diags *diag.Diagnostics,
 	err = ansible.CreateSSHPrivateKeys(sshPrivateKeysDir, sshPrivateKeys, &navigatorSettings, &ansibleOptions)
 	addError(diags, "SSH private keys not created", err)
 
-	if destroy {
-		navigatorSettings.EnvironmentVariablesSet[navigatorRunDestroyEnvVar] = "true"
-	}
+	navigatorSettings.EnvironmentVariablesSet[navigatorRunOperationEnvVar] = operation.String()
 
 	navigatorSettingsContents, err := ansible.GenerateNavigatorSettings(&navigatorSettings)
 	addError(diags, "Ansible navigator settings not generated", err)
@@ -384,8 +381,8 @@ func (r *NavigatorRunResource) Schema(ctx context.Context, req resource.SchemaRe
 				)),
 				Attributes: map[string]schema.Attribute{
 					"container_engine": schema.StringAttribute{
-						Description:         fmt.Sprintf("Container engine responsible for running the execution environment container image. Options: %s. Defaults to '%s'.", strings.Join(wrapElements(ansible.ContainerEngineOptions(), "'"), ", "), defaultNavigatorRunContainerEngine),
-						MarkdownDescription: fmt.Sprintf("[Container engine](https://ansible.readthedocs.io/projects/navigator/settings/#container-engine) responsible for running the execution environment container image. Options: %s. Defaults to `%s`.", strings.Join(wrapElements(ansible.ContainerEngineOptions(), "`"), ", "), defaultNavigatorRunContainerEngine),
+						Description:         fmt.Sprintf("Container engine responsible for running the execution environment container image. Options: %s. Defaults to '%s'.", wrapElementsJoin(ansible.ContainerEngineOptions(), "'"), defaultNavigatorRunContainerEngine),
+						MarkdownDescription: fmt.Sprintf("[Container engine](https://ansible.readthedocs.io/projects/navigator/settings/#container-engine) responsible for running the execution environment container image. Options: %s. Defaults to `%s`.", wrapElementsJoin(ansible.ContainerEngineOptions(), "`"), defaultNavigatorRunContainerEngine),
 						Optional:            true,
 						Computed:            true,
 						Default:             stringdefault.StaticString(defaultNavigatorRunContainerEngine),
@@ -400,8 +397,8 @@ func (r *NavigatorRunResource) Schema(ctx context.Context, req resource.SchemaRe
 						ElementType:         types.StringType,
 					},
 					"environment_variables_set": schema.MapAttribute{
-						Description:         "Environment variables to be set within the execution environment.",
-						MarkdownDescription: "Environment variables to be [set](https://ansible.readthedocs.io/projects/navigator/settings/#set-environment-variable) within the execution environment.",
+						Description:         fmt.Sprintf("Environment variables to be set within the execution environment. By default '%s' is set to the current CRUD operation (%s).", navigatorRunOperationEnvVar, wrapElementsJoin(terraformOperations, "'")),
+						MarkdownDescription: fmt.Sprintf("Environment variables to be [set](https://ansible.readthedocs.io/projects/navigator/settings/#set-environment-variable) within the execution environment. By default `%s` is set to the current CRUD operation (%s).", navigatorRunOperationEnvVar, wrapElementsJoin(terraformOperations, "`")),
 						Optional:            true,
 						ElementType:         types.StringType,
 					},
@@ -487,8 +484,8 @@ func (r *NavigatorRunResource) Schema(ctx context.Context, req resource.SchemaRe
 				},
 			},
 			"run_on_destroy": schema.BoolAttribute{
-				Description:         fmt.Sprintf("Run playbook on destroy. The environment variable '%s' is set during the destroy run to allow for conditional plays, tasks, etc. Defaults to '%t'.", navigatorRunDestroyEnvVar, defaultNavigatorRunOnDestroy),
-				MarkdownDescription: fmt.Sprintf("Run playbook on destroy. The environment variable `%s` is set during the destroy run to allow for conditional plays, tasks, etc. Defaults to `%t`.", navigatorRunDestroyEnvVar, defaultNavigatorRunOnDestroy),
+				Description:         fmt.Sprintf("Run playbook on destroy. The environment variable '%s' is set to '%s' during the run to allow for conditional plays, tasks, etc. Defaults to '%t'.", navigatorRunOperationEnvVar, TerraformOperation(terraformOperationDestroy).String(), defaultNavigatorRunOnDestroy),
+				MarkdownDescription: fmt.Sprintf("Run playbook on destroy. The environment variable `%s` is set to `%s` during the run to allow for conditional plays, tasks, etc. Defaults to `%t`.", navigatorRunOperationEnvVar, TerraformOperation(terraformOperationDestroy).String(), defaultNavigatorRunOnDestroy),
 				Optional:            true,
 				Computed:            true,
 				Default:             booldefault.StaticBool(defaultNavigatorRunOnDestroy),
@@ -574,7 +571,7 @@ func (r *NavigatorRunResource) Create(ctx context.Context, req resource.CreateRe
 	}
 
 	data.ID = types.StringValue(uuid.New().String())
-	r.Run(ctx, &resp.Diagnostics, data, runs, false)
+	r.Run(ctx, &resp.Diagnostics, data, runs, terraformOperationCreate)
 
 	if resp.Diagnostics.HasError() {
 		return
@@ -601,7 +598,7 @@ func (r *NavigatorRunResource) Update(ctx context.Context, req resource.UpdateRe
 		return
 	}
 
-	r.Run(ctx, &resp.Diagnostics, data, runs, false)
+	r.Run(ctx, &resp.Diagnostics, data, runs, terraformOperationUpdate)
 
 	if resp.Diagnostics.HasError() {
 		return
@@ -626,7 +623,7 @@ func (r *NavigatorRunResource) Delete(ctx context.Context, req resource.DeleteRe
 	}
 
 	if data.RunOnDestroy.ValueBool() {
-		r.Run(ctx, &resp.Diagnostics, data, runs, true)
+		r.Run(ctx, &resp.Diagnostics, data, runs, terraformOperationDestroy)
 	}
 }
 

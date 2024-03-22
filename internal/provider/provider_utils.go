@@ -2,15 +2,30 @@ package provider
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 )
 
+const (
+	terraformOperationCreate  = iota
+	terraformOperationUpdate  = iota
+	terraformOperationDestroy = iota
+)
+
 type providerOptions struct {
 	BaseRunDirectory    string
 	PersistRunDirectory bool
+}
+
+type TerraformOperation int
+
+var terraformOperations = []string{"create", "update", "destroy"} //nolint:gochecknoglobals
+
+func (op TerraformOperation) String() string {
+	return terraformOperations[op]
 }
 
 func unknownProviderValue(value path.Path) (string, string) {
@@ -81,4 +96,8 @@ func wrapElements(input []string, wrap string) []string {
 	}
 
 	return output
+}
+
+func wrapElementsJoin(input []string, wrap string) string {
+	return strings.Join(wrapElements(input, wrap), ", ")
 }
