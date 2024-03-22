@@ -11,6 +11,8 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/hashicorp/terraform-plugin-framework-timeouts/resource/timeouts"
+	"github.com/hashicorp/terraform-plugin-framework-validators/listvalidator"
+	"github.com/hashicorp/terraform-plugin-framework-validators/mapvalidator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
@@ -356,6 +358,9 @@ func (r *NavigatorRunResource) Schema(ctx context.Context, req resource.SchemaRe
 				Description:         "Ansible playbook contents.",
 				MarkdownDescription: "Ansible [playbook](https://docs.ansible.com/ansible/latest/playbook_guide/playbooks_intro.html) contents.",
 				Required:            true,
+				Validators: []validator.String{
+					stringIsYAML(),
+				},
 			},
 			"inventory": schema.StringAttribute{
 				Description:         "Ansible inventory contents.",
@@ -395,12 +400,18 @@ func (r *NavigatorRunResource) Schema(ctx context.Context, req resource.SchemaRe
 						MarkdownDescription: "Existing environment variables to be [passed](https://ansible.readthedocs.io/projects/navigator/settings/#pass-environment-variable) through to and set within the execution environment.",
 						Optional:            true,
 						ElementType:         types.StringType,
+						Validators: []validator.List{
+							listvalidator.ValueStringsAre(stringIsEnvVarName()),
+						},
 					},
 					"environment_variables_set": schema.MapAttribute{
 						Description:         fmt.Sprintf("Environment variables to be set within the execution environment. By default '%s' is set to the current CRUD operation (%s).", navigatorRunOperationEnvVar, wrapElementsJoin(terraformOperations, "'")),
 						MarkdownDescription: fmt.Sprintf("Environment variables to be [set](https://ansible.readthedocs.io/projects/navigator/settings/#set-environment-variable) within the execution environment. By default `%s` is set to the current CRUD operation (%s).", navigatorRunOperationEnvVar, wrapElementsJoin(terraformOperations, "`")),
 						Optional:            true,
 						ElementType:         types.StringType,
+						Validators: []validator.Map{
+							mapvalidator.KeysAre(stringIsEnvVarName()),
+						},
 					},
 					"image": schema.StringAttribute{
 						Description:         fmt.Sprintf("Name of the execution environment container image. Defaults to '%s'.", defaultNavigatorRunImage),
