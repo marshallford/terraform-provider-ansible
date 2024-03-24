@@ -56,13 +56,13 @@ func testAccPrependProgramToPath(t *testing.T) {
 	t.Setenv("PATH", fmt.Sprintf("%s:%s", filepath.Dir(testAccAbsProgramPath(t)), os.Getenv("PATH")))
 }
 
-func testAccFixture(t *testing.T, name string, format ...any) string {
+func testAccResource(t *testing.T, name string, format ...any) string {
 	t.Helper()
 
-	fixture, err := os.ReadFile(fmt.Sprintf("test-fixtures/%s.tf", name))
+	data, err := os.ReadFile(filepath.Join("testdata", fmt.Sprintf("%s.tf", name)))
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	return fmt.Sprintf(string(fixture), format...)
+	return fmt.Sprintf(string(data), format...)
 }

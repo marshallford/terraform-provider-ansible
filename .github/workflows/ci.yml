@@ -34,7 +34,7 @@ jobs:
     - name: Lint
       uses: golangci/golangci-lint-action@v4
       with:
-        version: v1.56.2
+        version: v1.57.1
 
   docs:
     name: Test Docs
