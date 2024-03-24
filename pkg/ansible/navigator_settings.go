@@ -49,14 +49,15 @@ type navigatorSettingsFormatVolumeMounts struct {
 }
 
 type navigatorSettingsFormatExecutionEnvironment struct {
-	ContainerEngine      string                                      `yaml:"container-engine"`      //nolint:tagliatelle
+	ContainerEngine      string                                      `yaml:"container-engine"` //nolint:tagliatelle
+	Enabled              bool                                        `yaml:"enabled"`
 	EnvironmentVariables navigatorSettingsFormatEnvironmentVariables `yaml:"environment-variables"` //nolint:tagliatelle
 	Image                string                                      `yaml:"image"`
 	Pull                 navigatorSettingsFormatPull                 `yaml:"pull"`
 	VolumeMounts         []navigatorSettingsFormatVolumeMounts       `yaml:"volume-mounts"` //nolint:tagliatelle
 }
 
-type navigatorSettingsFormatAnsibleNavigator struct { //nolint:maligned
+type navigatorSettingsFormatAnsibleNavigator struct {
 	Color                navigatorSettingsFormatColor                `yaml:"color"`
 	ExecutionEnvironment navigatorSettingsFormatExecutionEnvironment `yaml:"execution-environment"` //nolint:tagliatelle
 	Logging              navigatorSettingsFormatLogging              `yaml:"logging"`
@@ -82,6 +83,7 @@ func GenerateNavigatorSettings(settings *NavigatorSettings) (string, error) {
 			},
 			ExecutionEnvironment: navigatorSettingsFormatExecutionEnvironment{
 				ContainerEngine: settings.ContainerEngine,
+				Enabled:         true,
 				EnvironmentVariables: navigatorSettingsFormatEnvironmentVariables{
 					Pass: settings.EnvironmentVariablesPass,
 					Set:  settings.EnvironmentVariablesSet,
