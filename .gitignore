@@ -1,4 +1,5 @@
 examples/smoke
+context/
 
 # Created by https://www.toptal.com/developers/gitignore/api/go,linux,terraform,python
 # Edit at https://www.toptal.com/developers/gitignore?templates=go,linux,terraform,python

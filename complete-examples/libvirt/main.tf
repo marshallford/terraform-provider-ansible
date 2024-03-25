@@ -11,13 +11,15 @@ terraform {
     }
     ansible = {
       source  = "marshallford/ansible"
-      version = "0.3.3"
+      version = "0.4.0"
     }
   }
 }
 provider "libvirt" {
   uri = "qemu:///system"
 }
+
+provider "tls" {}
 
 provider "ansible" {}
 
@@ -80,21 +82,14 @@ resource "libvirt_domain" "this" {
     volume_id = libvirt_volume.this.id
   }
   network_interface {
-    network_id = libvirt_network.this.id
+    network_id     = libvirt_network.this.id
     wait_for_lease = true
   }
-}
-
-output "test" {
-  value = libvirt_domain.this.network_interface[0].addresses[0]
 }
 
 locals {
   inventory = yamlencode({
     all = {
-      vars = {
-        example_var = "hello world!"
-      }
       children = {
         example_group = {
           hosts = {
@@ -103,6 +98,9 @@ locals {
               ansible_user = "ubuntu"
             }
           }
+          vars = {
+            example_var = "hello world!"
+          }
         }
       }
     }
@@ -110,17 +108,38 @@ locals {
 }
 
 resource "ansible_navigator_run" "this" {
-  working_directory = abspath("${path.root}/working-directory")
-  playbook          = <<-EOT
+  working_directory        = abspath("${path.root}/working-directory")
+  playbook                 = <<-EOT
   - hosts: example_group
+    gather_facts: false
     tasks:
-    - ansible.builtin.debug:
+    - name: wait for hosts
+      ansible.builtin.wait_for_connection:
+        timeout: 600
+    - name: gather facts
+      ansible.builtin.setup:
+    - name: print example_var
+      ansible.builtin.debug:
         msg: "{{ example_var }}"
   EOT
-  inventory = local.inventory
+  inventory                = local.inventory
   ansible_navigator_binary = abspath("${path.root}/.venv/bin/ansible-navigator")
-  ssh_private_keys = [ {
-    name = "foobar"
-    data = tls_private_key.this.private_key_openssh
-  } ]
+  execution_environment = {
+    image = "ansible-execution-env-libvirt-example:v1"
+    container_options = [
+      "--net=host", # required because libvirt nat network is on same host as EE
+    ]
+  }
+  ssh_private_keys = [
+    { name = "terraform", data = tls_private_key.this.private_key_openssh },
+  ]
+  artifact_queries = {
+    "stdout" = {
+      jsonpath = "$.stdout"
+    }
+  }
+}
+
+output "playbook_stdout" {
+  value = join("\n", jsondecode(ansible_navigator_run.this.artifact_queries.stdout.result))
 }

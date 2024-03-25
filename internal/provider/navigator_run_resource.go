@@ -350,8 +350,8 @@ func (r *NavigatorRunResource) Metadata(ctx context.Context, req resource.Metada
 
 func (r *NavigatorRunResource) Schema(ctx context.Context, req resource.SchemaRequest, resp *resource.SchemaResponse) {
 	resp.Schema = schema.Schema{
-		Description:         fmt.Sprintf("Run an Ansible playbook within an Ansible execution environment (EE). Requires '%s' and a container engine to run the EE.", ansible.NavigatorProgram),
-		MarkdownDescription: fmt.Sprintf("Run an Ansible playbook within an Ansible execution environment (EE). Requires `%s` and a container engine to run the EE.", ansible.NavigatorProgram),
+		Description:         fmt.Sprintf("Run an Ansible playbook within an execution environment (EE). Requires '%s' and a container engine to run the EE.", ansible.NavigatorProgram),
+		MarkdownDescription: fmt.Sprintf("Run an Ansible playbook within an execution environment (EE). Requires `%s` and a container engine to run the EE.", ansible.NavigatorProgram),
 		Attributes: map[string]schema.Attribute{
 			// required
 			"working_directory": schema.StringAttribute{
@@ -532,7 +532,7 @@ func (r *NavigatorRunResource) Schema(ctx context.Context, req resource.SchemaRe
 			},
 			"artifact_queries": schema.MapNestedAttribute{
 				Description:         "Query the playbook artifact with JSONPath. The playbook artifact contains detailed information about every play and task, as well as the stdout from the playbook run.",
-				MarkdownDescription: "Query the playbook artifact with [JSONPath](https://goessner.net/articles/JsonPath/). The playbook artifact contains detailed information about every play and task, as well as the stdout from the playbook run.",
+				MarkdownDescription: "Query the playbook artifact with [JSONPath](https://goessner.net/articles/JsonPath/). The [playbook artifact](https://access.redhat.com/documentation/en-us/red_hat_ansible_automation_platform/2.0-ea/html/ansible_navigator_creator_guide/assembly-troubleshooting-navigator_ansible-navigator#proc-review-artifact_troubleshooting-navigator) contains detailed information about every play and task, as well as the stdout from the playbook run.",
 				Optional:            true,
 				NestedObject: schema.NestedAttributeObject{
 					Attributes: map[string]schema.Attribute{

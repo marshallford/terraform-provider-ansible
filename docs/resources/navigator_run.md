@@ -3,12 +3,12 @@
 page_title: "ansible_navigator_run Resource - terraform-provider-ansible"
 subcategory: ""
 description: |-
-  Run an Ansible playbook within an Ansible execution environment (EE). Requires ansible-navigator and a container engine to run the EE.
+  Run an Ansible playbook within an execution environment (EE). Requires ansible-navigator and a container engine to run the EE.
 ---
 
 # ansible_navigator_run (Resource)
 
-Run an Ansible playbook within an Ansible execution environment (EE). Requires `ansible-navigator` and a container engine to run the EE.
+Run an Ansible playbook within an execution environment (EE). Requires `ansible-navigator` and a container engine to run the EE.
 
 ## Example Usage
 
@@ -82,7 +82,8 @@ resource "ansible_navigator_run" "ansible_options" {
 
 # run on destroy
 resource "ansible_navigator_run" "destroy" {
-  playbook       = <<-EOT
+  working_directory = "/some/dir"
+  playbook          = <<-EOT
   - hosts: all
     tasks:
     - ansible.builtin.set_fact:
@@ -91,8 +92,8 @@ resource "ansible_navigator_run" "destroy" {
         msg: "resource is being destroyed!"
       when: destroy
   EOT
-  inventory      = "..."
-  run_on_destroy = true
+  inventory         = "..."
+  run_on_destroy    = true
 }
 
 # triggers and replacement triggers
@@ -162,7 +163,7 @@ output "resolv_conf" {
 
 - `ansible_navigator_binary` (String) Absolute path to `ansible-navigator` binary. By default `$PATH` is searched for the binary.
 - `ansible_options` (Attributes) Ansible [playbook](https://docs.ansible.com/ansible/latest/cli/ansible-playbook.html) run related configuration. (see [below for nested schema](#nestedatt--ansible_options))
-- `artifact_queries` (Attributes Map) Query the playbook artifact with [JSONPath](https://goessner.net/articles/JsonPath/). The playbook artifact contains detailed information about every play and task, as well as the stdout from the playbook run. (see [below for nested schema](#nestedatt--artifact_queries))
+- `artifact_queries` (Attributes Map) Query the playbook artifact with [JSONPath](https://goessner.net/articles/JsonPath/). The [playbook artifact](https://access.redhat.com/documentation/en-us/red_hat_ansible_automation_platform/2.0-ea/html/ansible_navigator_creator_guide/assembly-troubleshooting-navigator_ansible-navigator#proc-review-artifact_troubleshooting-navigator) contains detailed information about every play and task, as well as the stdout from the playbook run. (see [below for nested schema](#nestedatt--artifact_queries))
 - `execution_environment` (Attributes) [Execution environment](https://ansible.readthedocs.io/en/latest/getting_started_ee/index.html) related configuration. (see [below for nested schema](#nestedatt--execution_environment))
 - `replacement_triggers` (Map of String) Arbitrary map of values that, when changed, will recreate the resource. Similar to `triggers`, but will cause `id` to change. Useful when combined with `run_on_destroy`.
 - `run_on_destroy` (Boolean) Run playbook on destroy. The environment variable `ANSIBLE_TF_OPERATION` is set to `destroy` during the run to allow for conditional plays, tasks, etc. Defaults to `false`.
