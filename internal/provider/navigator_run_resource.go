@@ -76,6 +76,7 @@ type ExecutionEnvironmentModel struct {
 	Image                    types.String `tfsdk:"image"`
 	PullArguments            types.List   `tfsdk:"pull_arguments"`
 	PullPolicy               types.String `tfsdk:"pull_policy"`
+	ContainerOptions         types.List   `tfsdk:"container_options"`
 }
 
 type AnsibleOptionsModel struct {
@@ -102,6 +103,7 @@ func (ExecutionEnvironmentModel) AttrTypes() map[string]attr.Type {
 		"image":                      types.StringType,
 		"pull_arguments":             types.ListType{ElemType: types.StringType},
 		"pull_policy":                types.StringType,
+		"container_options":          types.ListType{ElemType: types.StringType},
 	}
 }
 
@@ -130,9 +132,15 @@ func (m ExecutionEnvironmentModel) Value(ctx context.Context, settings *ansible.
 	if !m.PullArguments.IsNull() {
 		diags.Append(m.PullArguments.ElementsAs(ctx, &pullArguments, false)...)
 	}
-
 	settings.PullArguments = pullArguments
+
 	settings.PullPolicy = m.PullPolicy.ValueString()
+
+	var containerOptions []string
+	if !m.ContainerOptions.IsNull() {
+		diags.Append(m.ContainerOptions.ElementsAs(ctx, &containerOptions, false)...)
+	}
+	settings.ContainerOptions = containerOptions
 
 	return diags
 }
@@ -382,6 +390,7 @@ func (r *NavigatorRunResource) Schema(ctx context.Context, req resource.SchemaRe
 						"image":                      types.StringValue(defaultNavigatorRunImage),
 						"pull_arguments":             types.ListNull(types.StringType),
 						"pull_policy":                types.StringValue(defaultNavigatorRunPullPolicy),
+						"container_options":          types.ListNull(types.StringType),
 					},
 				)),
 				Attributes: map[string]schema.Attribute{
@@ -435,6 +444,12 @@ func (r *NavigatorRunResource) Schema(ctx context.Context, req resource.SchemaRe
 						Validators: []validator.String{
 							stringvalidator.OneOf(ansible.PullPolicyOptions()...),
 						},
+					},
+					"container_options": schema.ListAttribute{
+						Description:         "Extra parameters passed to the container engine command.",
+						MarkdownDescription: "[Extra parameters](https://ansible.readthedocs.io/projects/navigator/settings/#container-options) passed to the container engine command.",
+						Optional:            true,
+						ElementType:         types.StringType,
 					},
 				},
 			},
