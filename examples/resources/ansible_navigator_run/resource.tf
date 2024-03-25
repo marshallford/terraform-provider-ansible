@@ -67,7 +67,8 @@ resource "ansible_navigator_run" "ansible_options" {
 
 # run on destroy
 resource "ansible_navigator_run" "destroy" {
-  playbook       = <<-EOT
+  working_directory = "/some/dir"
+  playbook          = <<-EOT
   - hosts: all
     tasks:
     - ansible.builtin.set_fact:
@@ -76,8 +77,8 @@ resource "ansible_navigator_run" "destroy" {
         msg: "resource is being destroyed!"
       when: destroy
   EOT
-  inventory      = "..."
-  run_on_destroy = true
+  inventory         = "..."
+  run_on_destroy    = true
 }
 
 # triggers and replacement triggers

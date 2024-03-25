@@ -2,15 +2,23 @@
 
 [![Registry](https://img.shields.io/badge/ansible-Terraform%20Registry-blue)](https://registry.terraform.io/providers/marshallford/ansible/latest/docs)
 
-Run Ansible playbooks within an Ansible execution environment (EE) using Terraform managed inventories/hosts.
+Run Ansible playbooks within Ansible execution environments (EE) using Terraform.
 
-> [!WARNING]
-> All versions released prior to `v1.0.0` are to be considered [breaking changes](https://semver.org/#how-do-i-know-when-to-release-100).
+## Features
+
+1. Run Ansible playbooks against Terraform managed infrastructure (without the `local-exec` provisioner). Eliminates the need for additional scripting or pipeline steps.
+2. Create Ansible inventories using Terraform data sources and resources. Set Ansible host and group variables to values and secrets from other providers.
+3. Utilize Ansible [execution environments](https://ansible.readthedocs.io/en/latest/getting_started_ee/index.html) (containers images) to run Ansible in a portable and consistent way. Isolate Ansible and its related dependencies (Python/OS packages, collections, etc) in EEs to simplify workstation and pipeline management.
+4. Write JSONPath queries against [playbook artifacts](https://access.redhat.com/documentation/en-us/red_hat_ansible_automation_platform/2.0-ea/html/ansible_navigator_creator_guide/assembly-troubleshooting-navigator_ansible-navigator#proc-review-artifact_troubleshooting-navigator). Retrieve playbook outcomes for use elsewhere in the Terraform configuration. Remote file contents, Ansible facts, task results -- the options are endless!
+5. Control playbook re-run behavior using several "lifecycle" options, including a flag for running the playbook on resource destruction. Implement conditional plays/tasks with the environment variable `ANSIBLE_TF_OPERATION`.
 
 > [!WARNING]
 > Windows builds of this provider are unlikely to work. Bug reports and PRs are welcome.
 
 ## Support Matrix
+
+> [!WARNING]
+> All versions released prior to `v1.0.0` are to be considered [breaking changes](https://semver.org/#how-do-i-know-when-to-release-100).
 
 |  Release | Ansible Navigator | Terraform |
 |:--------:|:-----------------:|:---------:|
