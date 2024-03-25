@@ -17,6 +17,7 @@ type NavigatorSettings struct {
 	PullArguments            []string
 	PullPolicy               string
 	VolumeMounts             map[string]string
+	ContainerOptions         []string
 }
 
 type navigatorSettingsFormatColor struct {
@@ -54,7 +55,8 @@ type navigatorSettingsFormatExecutionEnvironment struct {
 	EnvironmentVariables navigatorSettingsFormatEnvironmentVariables `yaml:"environment-variables"` //nolint:tagliatelle
 	Image                string                                      `yaml:"image"`
 	Pull                 navigatorSettingsFormatPull                 `yaml:"pull"`
-	VolumeMounts         []navigatorSettingsFormatVolumeMounts       `yaml:"volume-mounts"` //nolint:tagliatelle
+	VolumeMounts         []navigatorSettingsFormatVolumeMounts       `yaml:"volume-mounts"`     //nolint:tagliatelle
+	ContainerOptions     []string                                    `yaml:"container-options"` //nolint:tagliatelle
 }
 
 type navigatorSettingsFormatAnsibleNavigator struct {
@@ -93,7 +95,8 @@ func GenerateNavigatorSettings(settings *NavigatorSettings) (string, error) {
 					Arguments: settings.PullArguments,
 					Policy:    settings.PullPolicy,
 				},
-				VolumeMounts: volumeMounts,
+				VolumeMounts:     volumeMounts,
+				ContainerOptions: settings.ContainerOptions,
 			},
 			Logging: navigatorSettingsFormatLogging{
 				Level: "debug",
