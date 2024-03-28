@@ -1,6 +1,6 @@
 # Libvirt Example
 
-This example creates a KVM domain using the [`dmacvicar/libvirt`](https://registry.terraform.io/providers/dmacvicar/libvirt/latest/docs) provider and connects to the virtual machine with Ansible.
+This Terraform configuration creates a KVM domain using the [`dmacvicar/libvirt`](https://registry.terraform.io/providers/dmacvicar/libvirt/latest/docs) provider, constructs an Ansible inventory containing the virtual machine, and runs a playbook against said inventory.
 
 ## Prerequisites
 
@@ -11,6 +11,5 @@ This example creates a KVM domain using the [`dmacvicar/libvirt`](https://regist
 
 ## Steps
 
-1. Run `make` to install `ansible-builder` and `ansible-navigator` packages into a Python virtual environment.
-2. Run `.venv/bin/ansible-builder build --container-runtime=docker -t ansible-execution-env-libvirt-example:v1 --no-cache` to build Ansible EE container image.
-3. Run `terraform init` and `terraform apply`
+1. Run `make bin` to install the `ansible-navigator` package into a Python virtual environment.
+2. Run `terraform init` and `terraform apply`

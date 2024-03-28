@@ -17,4 +17,5 @@ dependencies:
 
 additional_build_steps:
   prepend_final:
-  - RUN dnf install -y openssh-clients
+  - RUN dnf install -y openssh-clients awscli2
+  - RUN dnf install -y https://s3.amazonaws.com/session-manager-downloads/plugin/latest/linux_64bit/session-manager-plugin.rpm

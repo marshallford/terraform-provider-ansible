@@ -161,7 +161,7 @@ output "resolv_conf" {
 
 ### Optional
 
-- `ansible_navigator_binary` (String) Absolute path to `ansible-navigator` binary. By default `$PATH` is searched for the binary.
+- `ansible_navigator_binary` (String) Absolute path to the `ansible-navigator` binary. By default `$PATH` is searched.
 - `ansible_options` (Attributes) Ansible [playbook](https://docs.ansible.com/ansible/latest/cli/ansible-playbook.html) run related configuration. (see [below for nested schema](#nestedatt--ansible_options))
 - `artifact_queries` (Attributes Map) Query the playbook artifact with [JSONPath](https://goessner.net/articles/JsonPath/). The [playbook artifact](https://access.redhat.com/documentation/en-us/red_hat_ansible_automation_platform/2.0-ea/html/ansible_navigator_creator_guide/assembly-troubleshooting-navigator_ansible-navigator#proc-review-artifact_troubleshooting-navigator) contains detailed information about every play and task, as well as the stdout from the playbook run. (see [below for nested schema](#nestedatt--artifact_queries))
 - `execution_environment` (Attributes) [Execution environment](https://ansible.readthedocs.io/en/latest/getting_started_ee/index.html) related configuration. (see [below for nested schema](#nestedatt--execution_environment))

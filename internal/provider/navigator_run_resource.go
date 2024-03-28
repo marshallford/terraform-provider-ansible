@@ -454,8 +454,8 @@ func (r *NavigatorRunResource) Schema(ctx context.Context, req resource.SchemaRe
 				},
 			},
 			"ansible_navigator_binary": schema.StringAttribute{
-				Description:         fmt.Sprintf("Absolute path to '%s' binary. By default '$PATH' is searched for the binary.", ansible.NavigatorProgram),
-				MarkdownDescription: fmt.Sprintf("Absolute path to `%s` binary. By default `$PATH` is searched for the binary.", ansible.NavigatorProgram),
+				Description:         fmt.Sprintf("Absolute path to the '%s' binary. By default '$PATH' is searched.", ansible.NavigatorProgram),
+				MarkdownDescription: fmt.Sprintf("Absolute path to the `%s` binary. By default `$PATH` is searched.", ansible.NavigatorProgram),
 				Optional:            true,
 				Validators: []validator.String{
 					stringIsAbsolutePath(),
