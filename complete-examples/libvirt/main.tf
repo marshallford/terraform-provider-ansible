@@ -99,7 +99,7 @@ locals {
             }
           }
           vars = {
-            example_var = "hello world!"
+            hello_msg = "hello world"
           }
         }
       }
@@ -110,7 +110,7 @@ locals {
 resource "ansible_navigator_run" "this" {
   working_directory        = abspath("${path.root}/working-directory")
   playbook                 = <<-EOT
-  - hosts: example_group
+  - hosts: all
     gather_facts: false
     tasks:
     - name: wait for hosts
@@ -118,14 +118,13 @@ resource "ansible_navigator_run" "this" {
         timeout: 600
     - name: gather facts
       ansible.builtin.setup:
-    - name: print example_var
+    - name: hello
       ansible.builtin.debug:
-        msg: "{{ example_var }}"
+        msg: "{{ hello_msg }}! Distribution: {{ ansible_facts.distribution }}, System Vendor: {{ ansible_facts.system_vendor }}"
   EOT
   inventory                = local.inventory
   ansible_navigator_binary = abspath("${path.root}/.venv/bin/ansible-navigator")
   execution_environment = {
-    image = "ansible-execution-env-libvirt-example:v1"
     container_options = [
       "--net=host", # required because libvirt nat network is on same host as EE
     ]

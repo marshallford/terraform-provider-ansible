@@ -1,1 +1,2 @@
+ansible-builder==3.0.1
 ansible-navigator==24.2.0
