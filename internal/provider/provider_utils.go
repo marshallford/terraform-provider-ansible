@@ -10,9 +10,9 @@ import (
 )
 
 const (
-	terraformOperationCreate  = iota
-	terraformOperationUpdate  = iota
-	terraformOperationDestroy = iota
+	terraformOperationCreate = iota
+	terraformOperationUpdate = iota
+	terraformOperationDelete = iota
 )
 
 type providerOptions struct {
@@ -22,7 +22,7 @@ type providerOptions struct {
 
 type TerraformOperation int
 
-var terraformOperations = []string{"create", "update", "destroy"} //nolint:gochecknoglobals
+var terraformOperations = []string{"create", "update", "delete"} //nolint:gochecknoglobals
 
 func (op TerraformOperation) String() string {
 	return terraformOperations[op]

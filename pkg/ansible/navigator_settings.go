@@ -3,6 +3,7 @@ package ansible
 import (
 	"fmt"
 	"path/filepath"
+	"time"
 
 	"gopkg.in/yaml.v3"
 )
@@ -10,6 +11,7 @@ import (
 const navigatorSettingsFilename = "ansible-navigator.yaml"
 
 type NavigatorSettings struct {
+	Timeout                  time.Duration
 	ContainerEngine          string
 	EnvironmentVariablesPass []string
 	EnvironmentVariablesSet  map[string]string
@@ -18,6 +20,10 @@ type NavigatorSettings struct {
 	PullPolicy               string
 	VolumeMounts             map[string]string
 	ContainerOptions         []string
+}
+
+type navigatorSettingsFormatAnsibleRunner struct {
+	Timeout uint32 `yaml:"timeout"`
 }
 
 type navigatorSettingsFormatColor struct {
@@ -60,6 +66,7 @@ type navigatorSettingsFormatExecutionEnvironment struct {
 }
 
 type navigatorSettingsFormatAnsibleNavigator struct {
+	AnsibleRunner        navigatorSettingsFormatAnsibleRunner        `yaml:"ansible-runner"` //nolint:tagliatelle
 	Color                navigatorSettingsFormatColor                `yaml:"color"`
 	ExecutionEnvironment navigatorSettingsFormatExecutionEnvironment `yaml:"execution-environment"` //nolint:tagliatelle
 	Logging              navigatorSettingsFormatLogging              `yaml:"logging"`
@@ -79,6 +86,9 @@ func GenerateNavigatorSettings(settings *NavigatorSettings) (string, error) {
 
 	settingsFormat := navigatorSettingsFormat{
 		AnsibleNavigator: navigatorSettingsFormatAnsibleNavigator{
+			AnsibleRunner: navigatorSettingsFormatAnsibleRunner{
+				Timeout: uint32(settings.Timeout.Seconds()),
+			},
 			Color: navigatorSettingsFormatColor{
 				Enable: false,
 				OSC4:   false,

@@ -3,7 +3,6 @@ package provider
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"path/filepath"
 	"regexp"
@@ -204,9 +203,19 @@ func (m *ArtifactQueryModel) Set(ctx context.Context, query ansible.ArtifactQuer
 func (r *NavigatorRunResource) Run(ctx context.Context, diags *diag.Diagnostics, data *NavigatorRunResourceModel, runs uint32, operation TerraformOperation) { //nolint:cyclop
 	var err error
 
-	timeout, newDiags := data.Timeouts.Create(ctx, defaultNavigatorRunTimeout)
-	diags.Append(newDiags...)
+	var timeout time.Duration
+	var newDiags diag.Diagnostics
 
+	switch operation {
+	case terraformOperationCreate:
+		timeout, newDiags = data.Timeouts.Create(ctx, defaultNavigatorRunTimeout)
+	case terraformOperationUpdate:
+		timeout, newDiags = data.Timeouts.Update(ctx, defaultNavigatorRunTimeout)
+	case terraformOperationDelete:
+		timeout, newDiags = data.Timeouts.Delete(ctx, defaultNavigatorRunTimeout)
+	}
+
+	diags.Append(newDiags...)
 	if diags.HasError() {
 		return
 	}
@@ -286,6 +295,7 @@ func (r *NavigatorRunResource) Run(ctx context.Context, diags *diag.Diagnostics,
 	addError(diags, "SSH private keys not created", err)
 
 	navigatorSettings.EnvironmentVariablesSet[navigatorRunOperationEnvVar] = operation.String()
+	navigatorSettings.Timeout = timeout
 
 	navigatorSettingsContents, err := ansible.GenerateNavigatorSettings(&navigatorSettings)
 	addError(diags, "Ansible navigator settings not generated", err)
@@ -294,7 +304,6 @@ func (r *NavigatorRunResource) Run(ctx context.Context, diags *diag.Diagnostics,
 	addError(diags, "Ansible navigator settings file not created", err)
 
 	command := ansible.GenerateNavigatorRunCommand(
-		ctx,
 		data.WorkingDirectory.ValueString(),
 		ansibleNavigatorBinary,
 		runDir,
@@ -312,18 +321,21 @@ func (r *NavigatorRunResource) Run(ctx context.Context, diags *diag.Diagnostics,
 
 	data.Command = types.StringValue(command.String())
 
-	output, err := ansible.ExecNavigatorRunCommand(command)
+	commandOutput, err := ansible.ExecNavigatorRunCommand(command)
 	if err != nil {
-		if errors.Is(ctx.Err(), context.DeadlineExceeded) {
-			addError(diags, "Ansible navigator run timed out", err)
-		} else {
-			addError(diags, "Ansible navigator run failed", fmt.Errorf("%w\n\nstdout and stderr:\n\n%s", err, output))
+		output, _ := ansible.GetStdoutFromPlaybookArtifact(runDir)
+		if output == "" {
+			output = commandOutput
+		}
+
+		status, _ := ansible.GetStatusFromPlaybookArtifact(runDir)
+		switch status {
+		case "timeout":
+			addError(diags, "Ansible navigator run timed out", fmt.Errorf("%w\n\noutput:\n%s", err, output))
+		default:
+			addError(diags, "Ansible navigator run failed", fmt.Errorf("%w\n\noutput:\n%s", err, output))
 		}
 	}
-
-	// TODO stream to log file instead
-	err = ansible.CreateNavigatorRunLogFile(runDir, output)
-	addError(diags, "Ansible navigator run output log not created", err)
 
 	// TODO skip on destroy?
 	err = ansible.QueryPlaybookArtifact(runDir, artifactQueries)
@@ -510,8 +522,8 @@ func (r *NavigatorRunResource) Schema(ctx context.Context, req resource.SchemaRe
 				},
 			},
 			"run_on_destroy": schema.BoolAttribute{
-				Description:         fmt.Sprintf("Run playbook on destroy. The environment variable '%s' is set to '%s' during the run to allow for conditional plays, tasks, etc. Defaults to '%t'.", navigatorRunOperationEnvVar, TerraformOperation(terraformOperationDestroy).String(), defaultNavigatorRunOnDestroy),
-				MarkdownDescription: fmt.Sprintf("Run playbook on destroy. The environment variable `%s` is set to `%s` during the run to allow for conditional plays, tasks, etc. Defaults to `%t`.", navigatorRunOperationEnvVar, TerraformOperation(terraformOperationDestroy).String(), defaultNavigatorRunOnDestroy),
+				Description:         fmt.Sprintf("Run playbook on destroy. The environment variable '%s' is set to '%s' during the run to allow for conditional plays, tasks, etc. Defaults to '%t'.", navigatorRunOperationEnvVar, TerraformOperation(terraformOperationDelete).String(), defaultNavigatorRunOnDestroy),
+				MarkdownDescription: fmt.Sprintf("Run playbook on destroy. The environment variable `%s` is set to `%s` during the run to allow for conditional plays, tasks, etc. Defaults to `%t`.", navigatorRunOperationEnvVar, TerraformOperation(terraformOperationDelete).String(), defaultNavigatorRunOnDestroy),
 				Optional:            true,
 				Computed:            true,
 				Default:             booldefault.StaticBool(defaultNavigatorRunOnDestroy),
@@ -649,7 +661,7 @@ func (r *NavigatorRunResource) Delete(ctx context.Context, req resource.DeleteRe
 	}
 
 	if data.RunOnDestroy.ValueBool() {
-		r.Run(ctx, &resp.Diagnostics, data, runs, terraformOperationDestroy)
+		r.Run(ctx, &resp.Diagnostics, data, runs, terraformOperationDelete)
 	}
 }
 

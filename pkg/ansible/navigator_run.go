@@ -1,7 +1,6 @@
 package ansible
 
 import (
-	"context"
 	"fmt"
 	"os"
 	"os/exec"
@@ -26,8 +25,8 @@ type RunOptions struct {
 	PrivateKey    []string
 }
 
-func GenerateNavigatorRunCommand(ctx context.Context, workingDirectory string, ansibleNavigatorBinary string, runDir string, opts *RunOptions) *exec.Cmd {
-	command := exec.CommandContext(ctx, ansibleNavigatorBinary, []string{ // #nosec G204
+func GenerateNavigatorRunCommand(workingDirectory string, ansibleNavigatorBinary string, runDir string, opts *RunOptions) *exec.Cmd {
+	command := exec.Command(ansibleNavigatorBinary, []string{ // #nosec G204
 		"run",
 		filepath.Join(runDir, playbookFilename),
 		"--inventory",
@@ -111,17 +110,6 @@ func CreateInventoryFile(dir string, inventoryContents string) error {
 	err := writeFile(path, inventoryContents)
 	if err != nil {
 		return fmt.Errorf("failed to create ansible inventory file, %w", err)
-	}
-
-	return nil
-}
-
-func CreateNavigatorRunLogFile(dir string, outputContents string) error {
-	path := filepath.Join(dir, navigatorRunLogFilename)
-
-	err := writeFile(path, outputContents)
-	if err != nil {
-		return fmt.Errorf("failed to create %s file for run, %w", NavigatorProgram, err)
 	}
 
 	return nil
