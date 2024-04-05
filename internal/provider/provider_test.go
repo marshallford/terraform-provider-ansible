@@ -1,15 +1,22 @@
 package provider_test
 
 import (
+	"crypto"
+	"crypto/ed25519"
+	"encoding/base64"
+	"encoding/pem"
 	"fmt"
+	"net"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"testing"
 
+	"github.com/gliderlabs/ssh"
 	"github.com/hashicorp/terraform-plugin-framework/providerserver"
 	"github.com/hashicorp/terraform-plugin-go/tfprotov6"
 	"github.com/marshallford/terraform-provider-ansible/internal/provider"
+	gossh "golang.org/x/crypto/ssh"
 )
 
 const programPath = "../../.venv/bin/ansible-navigator" // TODO improve
@@ -65,4 +72,73 @@ func testAccResource(t *testing.T, name string, format ...any) string {
 	}
 
 	return fmt.Sprintf(string(data), format...)
+}
+
+func sshKeygen(t *testing.T) (string, string) {
+	t.Helper()
+
+	pub, priv, err := ed25519.GenerateKey(nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	privateKey, err := gossh.MarshalPrivateKey(crypto.PrivateKey(priv), "")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	publicKey, err := gossh.NewPublicKey(pub)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	return fmt.Sprintf("ssh-ed25519 %s", base64.StdEncoding.EncodeToString(publicKey.Marshal())), string(pem.EncodeToMemory(privateKey))
+}
+
+func sshServer(t *testing.T, publicKey string) int {
+	t.Helper()
+
+	listener, err := net.Listen("tcp", "localhost:0")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	sshServer := ssh.Server{
+		Handler: func(s ssh.Session) {
+			_, err = s.Write([]byte("hello world!"))
+			if err != nil {
+				t.Fatal(err)
+			}
+		},
+	}
+
+	err = sshServer.SetOption(
+		ssh.PublicKeyAuth(func(ctx ssh.Context, key ssh.PublicKey) bool {
+			allowed, _, _, _, err := ssh.ParseAuthorizedKey([]byte(publicKey))
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			return ssh.KeysEqual(key, allowed)
+		}),
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// TODO wait until ready?
+	go sshServer.Serve(listener) //nolint:errcheck
+
+	t.Cleanup(func() {
+		if err := sshServer.Close(); err != nil {
+			t.Fatal(err)
+		}
+	})
+
+	addr, ok := listener.Addr().(*net.TCPAddr)
+	if !ok {
+		t.Fatal()
+	}
+
+	return addr.Port
 }

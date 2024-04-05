@@ -97,10 +97,10 @@ func (v stringIsEnvVarNameValidator) ValidateString(ctx context.Context, req val
 		return
 	}
 
-	if len(req.ConfigValue.ValueString()) == 0 {
+	if req.ConfigValue.ValueString() == "" {
 		resp.Diagnostics.AddAttributeError(
 			req.Path,
-			"Not a environment variable name",
+			"Not an environment variable name",
 			"Environment variable name must not be empty",
 		)
 
@@ -111,7 +111,7 @@ func (v stringIsEnvVarNameValidator) ValidateString(ctx context.Context, req val
 		if r > unicode.MaxASCII || !unicode.IsPrint(r) || r == '=' {
 			resp.Diagnostics.AddAttributeError(
 				req.Path,
-				"Not a environment variable name",
+				"Not an environment variable name",
 				"Environment variable name must consist only of printable ASCII characters other than '='",
 			)
 
