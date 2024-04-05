@@ -116,6 +116,28 @@ func TestAccNavigatorRun_env_vars(t *testing.T) {
 	})
 }
 
+func TestAccNavigatorRun_ssh_private_keys(t *testing.T) {
+	t.Parallel()
+
+	workingDirectory := t.TempDir()
+
+	publicKey, privateKey := sshKeygen(t)
+	port := sshServer(t, publicKey)
+
+	resource.Test(t, resource.TestCase{
+		PreCheck:                 func() { testAccPreCheck(t) },
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		Steps: []resource.TestStep{
+			{
+				Config: testAccResource(t, filepath.Join("navigator_run", "ssh_private_keys"), testAccAbsProgramPath(t), workingDirectory, port, privateKey),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttrSet(navigatorRunResource, "id"),
+				),
+			},
+		},
+	})
+}
+
 func TestAccNavigatorRun_errors(t *testing.T) {
 	t.Parallel()
 
@@ -136,7 +158,7 @@ func TestAccNavigatorRun_errors(t *testing.T) {
 			resourceFormat: func(t *testing.T) []any { //nolint:thelper
 				return []any{testAccAbsProgramPath(t), t.TempDir()}
 			},
-			expected: regexp.MustCompile("Not a environment variable name"),
+			expected: regexp.MustCompile("must not be empty|must consist only of printable ASCII characters"),
 		},
 		{
 			name: "navigator_preflight",
@@ -158,6 +180,13 @@ func TestAccNavigatorRun_errors(t *testing.T) {
 				return []any{testAccAbsProgramPath(t), t.TempDir()}
 			},
 			expected: regexp.MustCompile("Ansible navigator run failed"),
+		},
+		{
+			name: "ssh_private_keys",
+			resourceFormat: func(t *testing.T) []any { //nolint:thelper
+				return []any{testAccAbsProgramPath(t), t.TempDir()}
+			},
+			expected: regexp.MustCompile("Not a SSH private key|Not an unencrypted SSH private key"),
 		},
 		{
 			name: "timeout",
