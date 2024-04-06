@@ -89,6 +89,16 @@ func addPathError(diags *diag.Diagnostics, path path.Path, summary string, err e
 	return false
 }
 
+func addWarning(diags *diag.Diagnostics, summary string, err error) bool { //nolint:unparam
+	if err != nil {
+		diags.AddError(summary, err.Error())
+
+		return true
+	}
+
+	return false
+}
+
 func wrapElements(input []string, wrap string) []string {
 	output := []string{}
 	for _, element := range input {
