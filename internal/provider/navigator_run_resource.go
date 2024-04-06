@@ -2,9 +2,7 @@ package provider
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
-	"path/filepath"
 	"regexp"
 	"time"
 
@@ -15,7 +13,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
-	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/booldefault"
@@ -26,7 +23,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
-	"github.com/hashicorp/terraform-plugin-framework/types/basetypes"
 	"github.com/marshallford/terraform-provider-ansible/pkg/ansible"
 )
 
@@ -198,162 +194,6 @@ func (m *ArtifactQueryModel) Set(ctx context.Context, query ansible.ArtifactQuer
 	m.Result = types.StringValue(query.Result)
 
 	return diags
-}
-
-func (r *NavigatorRunResource) Run(ctx context.Context, diags *diag.Diagnostics, data *NavigatorRunResourceModel, runs uint32, operation TerraformOperation) { //nolint:cyclop
-	var err error
-
-	var timeout time.Duration
-	var newDiags diag.Diagnostics
-
-	switch operation {
-	case terraformOperationCreate:
-		timeout, newDiags = data.Timeouts.Create(ctx, defaultNavigatorRunTimeout)
-	case terraformOperationUpdate:
-		timeout, newDiags = data.Timeouts.Update(ctx, defaultNavigatorRunTimeout)
-	case terraformOperationDelete:
-		timeout, newDiags = data.Timeouts.Delete(ctx, defaultNavigatorRunTimeout)
-	}
-
-	diags.Append(newDiags...)
-	if diags.HasError() {
-		return
-	}
-
-	ctx, cancel := context.WithTimeout(ctx, timeout)
-	defer cancel()
-
-	runDir := filepath.Join(r.opts.BaseRunDirectory, fmt.Sprintf("%s-%s-%d", navigatorRunDir, data.ID.ValueString(), runs))
-	sshPrivateKeysDir := filepath.Join(runDir, navigatorRunSSHPrivateKeysDir)
-
-	var eeModel ExecutionEnvironmentModel
-	diags.Append(data.ExecutionEnvironment.As(ctx, &eeModel, basetypes.ObjectAsOptions{})...)
-
-	var navigatorSettings ansible.NavigatorSettings
-	diags.Append(eeModel.Value(ctx, &navigatorSettings)...)
-
-	var optsModel AnsibleOptionsModel
-	diags.Append(data.AnsibleOptions.As(ctx, &optsModel, basetypes.ObjectAsOptions{UnhandledNullAsEmpty: true})...)
-
-	var ansibleOptions ansible.RunOptions
-	diags.Append(optsModel.Value(ctx, &ansibleOptions)...)
-
-	var sshPrivateKeysModel []SSHPrivateKeyModel
-	diags.Append(data.SSHPrivateKeys.ElementsAs(ctx, &sshPrivateKeysModel, false)...)
-
-	sshPrivateKeys := []ansible.SSHPrivateKey{}
-	for _, model := range sshPrivateKeysModel {
-		var key ansible.SSHPrivateKey
-
-		diags.Append(model.Value(ctx, &key)...)
-		sshPrivateKeys = append(sshPrivateKeys, key)
-	}
-
-	var queriesModel map[string]ArtifactQueryModel
-	diags.Append(data.ArtifactQueries.ElementsAs(ctx, &queriesModel, false)...)
-
-	artifactQueries := map[string]ansible.ArtifactQuery{}
-	for name, model := range queriesModel {
-		var query ansible.ArtifactQuery
-
-		diags.Append(model.Value(ctx, &query)...)
-		artifactQueries[name] = query
-	}
-
-	if diags.HasError() {
-		return
-	}
-
-	err = ansible.DirectoryPreflight(data.WorkingDirectory.ValueString())
-	addPathError(diags, path.Root("working_directory"), "Working directory preflight check", err)
-
-	err = ansible.ContainerEnginePreflight(navigatorSettings.ContainerEngine)
-	addPathError(diags, path.Root("execution_environment").AtMapKey("container_engine"), "Container engine preflight check", err)
-
-	ansibleNavigatorBinary := data.AnsibleNavigatorBinary.ValueString()
-	if data.AnsibleNavigatorBinary.IsNull() {
-		ansibleNavigatorBinary, err = ansible.NavigatorPath()
-		addError(diags, "Ansible navigator not found", err)
-	}
-
-	err = ansible.NavigatorPreflight(ansibleNavigatorBinary)
-	addPathError(diags, path.Root("ansible_navigator_binary"), "Ansible navigator preflight check", err)
-
-	err = ansible.CreateRunDir(runDir)
-	addError(diags, "Run directory not created", err)
-
-	err = ansible.CreateRunSSHPrivateKeysDir(sshPrivateKeysDir)
-	addError(diags, "SSH private keys directory not created", err)
-
-	err = ansible.CreatePlaybookFile(runDir, data.Playbook.ValueString())
-	addError(diags, "Ansible playbook file not created", err)
-
-	err = ansible.CreateInventoryFile(runDir, data.Inventory.ValueString())
-	addError(diags, "Ansible inventory file not created", err)
-
-	err = ansible.CreateSSHPrivateKeys(sshPrivateKeysDir, sshPrivateKeys, &navigatorSettings, &ansibleOptions)
-	addError(diags, "SSH private keys not created", err)
-
-	navigatorSettings.EnvironmentVariablesSet[navigatorRunOperationEnvVar] = operation.String()
-	navigatorSettings.Timeout = timeout
-
-	navigatorSettingsContents, err := ansible.GenerateNavigatorSettings(&navigatorSettings)
-	addError(diags, "Ansible navigator settings not generated", err)
-
-	err = ansible.CreateNavigatorSettingsFile(runDir, navigatorSettingsContents)
-	addError(diags, "Ansible navigator settings file not created", err)
-
-	command := ansible.GenerateNavigatorRunCommand(
-		data.WorkingDirectory.ValueString(),
-		ansibleNavigatorBinary,
-		runDir,
-		&ansibleOptions,
-	)
-
-	if diags.HasError() {
-		if !r.opts.PersistRunDirectory {
-			err = ansible.RemoveRunDir(runDir)
-			addError(diags, "Run directory not removed", err)
-		}
-
-		return
-	}
-
-	data.Command = types.StringValue(command.String())
-
-	commandOutput, err := ansible.ExecNavigatorRunCommand(command)
-	if err != nil {
-		output, _ := ansible.GetStdoutFromPlaybookArtifact(runDir)
-		if output == "" {
-			output = commandOutput
-		}
-
-		status, _ := ansible.GetStatusFromPlaybookArtifact(runDir)
-		switch status {
-		case "timeout":
-			addError(diags, "Ansible navigator run timed out", fmt.Errorf("%w\n\noutput:\n%s", err, output))
-		default:
-			addError(diags, "Ansible navigator run failed", fmt.Errorf("%w\n\noutput:\n%s", err, output))
-		}
-	}
-
-	// TODO skip on destroy?
-	err = ansible.QueryPlaybookArtifact(runDir, artifactQueries)
-	addPathError(diags, path.Root("artifact_queries"), "Playbook artifact queries failed", err)
-
-	for name, model := range queriesModel {
-		diags.Append(model.Set(ctx, artifactQueries[name])...)
-		queriesModel[name] = model
-	}
-
-	newQueriesModel, newDiags := types.MapValueFrom(ctx, types.ObjectType{AttrTypes: ArtifactQueryModel{}.AttrTypes()}, queriesModel)
-	diags.Append(newDiags...)
-	data.ArtifactQueries = newQueriesModel
-
-	if !r.opts.PersistRunDirectory {
-		err = ansible.RemoveRunDir(runDir)
-		addError(diags, "Run directory not removed", err)
-	}
 }
 
 func (r *NavigatorRunResource) Metadata(ctx context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
@@ -622,24 +462,29 @@ func (r *NavigatorRunResource) Read(ctx context.Context, req resource.ReadReques
 }
 
 func (r *NavigatorRunResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
-	var data *NavigatorRunResourceModel
+	var data, state *NavigatorRunResourceModel
 
 	resp.Diagnostics.Append(req.Plan.Get(ctx, &data)...)
+	resp.Diagnostics.Append(req.State.Get(ctx, &state)...)
 
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
-	runs := IncrementRuns(ctx, &resp.Diagnostics, req.Private.GetKey, resp.Private.SetKey)
+	if r.ShouldRun(data, state) {
+		runs := IncrementRuns(ctx, &resp.Diagnostics, req.Private.GetKey, resp.Private.SetKey)
 
-	if resp.Diagnostics.HasError() {
-		return
-	}
+		if resp.Diagnostics.HasError() {
+			return
+		}
 
-	r.Run(ctx, &resp.Diagnostics, data, runs, terraformOperationUpdate)
+		r.Run(ctx, &resp.Diagnostics, data, runs, terraformOperationUpdate)
 
-	if resp.Diagnostics.HasError() {
-		return
+		if resp.Diagnostics.HasError() {
+			return
+		}
+	} else {
+		data.Command = state.Command
 	}
 
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
@@ -663,42 +508,4 @@ func (r *NavigatorRunResource) Delete(ctx context.Context, req resource.DeleteRe
 	if data.RunOnDestroy.ValueBool() {
 		r.Run(ctx, &resp.Diagnostics, data, runs, terraformOperationDelete)
 	}
-}
-
-type (
-	GetKey func(ctx context.Context, key string) ([]byte, diag.Diagnostics)
-	SetKey func(ctx context.Context, key string, value []byte) diag.Diagnostics
-)
-
-func SetRuns(ctx context.Context, diags *diag.Diagnostics, setKey SetKey, runs uint32) {
-	runsBytes, err := json.Marshal(runs)
-	if addError(diags, "Failed to set 'runs' private state", err) {
-		return
-	}
-
-	setKey(ctx, "runs", runsBytes)
-}
-
-func IncrementRuns(ctx context.Context, diags *diag.Diagnostics, getKey GetKey, setKey SetKey) uint32 {
-	runsBytes, newDiags := getKey(ctx, "runs")
-	diags.Append(newDiags...)
-
-	runs := uint32(0)
-	if runsBytes != nil {
-		err := json.Unmarshal(runsBytes, &runs)
-		if addError(diags, "Failed to get 'runs' private state", err) {
-			return runs
-		}
-	}
-
-	runs++
-
-	runsBytes, err := json.Marshal(runs)
-	if addError(diags, "Failed to set 'runs' private state", err) {
-		return runs
-	}
-
-	setKey(ctx, "runs", runsBytes)
-
-	return runs
 }
