@@ -22,7 +22,7 @@ type RunOptions struct {
 	ForceHandlers bool
 	Limit         []string
 	Tags          []string
-	PrivateKey    []string
+	PrivateKeys   []string
 }
 
 func GenerateNavigatorRunCommand(workingDirectory string, ansibleNavigatorBinary string, runDir string, opts *RunOptions) *exec.Cmd {
@@ -53,8 +53,8 @@ func GenerateNavigatorRunCommand(workingDirectory string, ansibleNavigatorBinary
 		command.Args = append(command.Args, "--tags", strings.Join(opts.Tags, ","))
 	}
 
-	for _, path := range opts.PrivateKey {
-		command.Args = append(command.Args, "--private-key", path)
+	for _, key := range opts.PrivateKeys {
+		command.Args = append(command.Args, "--private-key", fmt.Sprintf("%s/%s", navigatorPrivateKeysDir, key))
 	}
 
 	return command
@@ -77,9 +77,9 @@ func CreateRunDir(dir string) error {
 	return nil
 }
 
-func CreateRunSSHPrivateKeysDir(dir string) error {
+func CreateRunPrivateKeysDir(dir string) error {
 	if err := os.Mkdir(dir, 0o700); err != nil { //nolint:gomnd
-		return fmt.Errorf("failed to create SSH private keys directory for run, %w", err)
+		return fmt.Errorf("failed to create private keys directory for run, %w", err)
 	}
 
 	return nil

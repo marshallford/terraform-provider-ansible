@@ -5,31 +5,27 @@ import (
 	"path/filepath"
 )
 
-const navigatorSSHDir = "/tmp/ssh"
+const navigatorPrivateKeysDir = "/tmp/private-keys"
 
-type SSHPrivateKey struct {
+type PrivateKey struct {
 	Name string
 	Data string
 }
 
-func CreateSSHPrivateKeys(dir string, keys []SSHPrivateKey, settings *NavigatorSettings, opts *RunOptions) error {
+func CreatePrivateKeys(dir string, keys []PrivateKey, settings *NavigatorSettings) error {
 	for _, key := range keys {
-		srcPath := filepath.Join(dir, key.Name)
-		destPath := fmt.Sprintf("%s/%s", navigatorSSHDir, key.Name)
-
-		err := writeFile(srcPath, key.Data)
+		err := writeFile(filepath.Join(dir, key.Name), key.Data)
 		if err != nil {
-			return fmt.Errorf("failed to create SSH private key file for run, %w", err)
+			return fmt.Errorf("failed to create private key file for run, %w", err)
 		}
-
-		// TODO better option?
-		if settings.VolumeMounts == nil {
-			settings.VolumeMounts = map[string]string{}
-		}
-
-		settings.VolumeMounts[srcPath] = destPath
-		opts.PrivateKey = append(opts.PrivateKey, destPath)
 	}
+
+	// TODO better option?
+	if settings.VolumeMounts == nil {
+		settings.VolumeMounts = map[string]string{}
+	}
+
+	settings.VolumeMounts[dir] = navigatorPrivateKeysDir
 
 	return nil
 }

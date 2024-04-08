@@ -100,7 +100,7 @@ func addWarning(diags *diag.Diagnostics, summary string, err error) bool { //nol
 }
 
 func wrapElements(input []string, wrap string) []string {
-	output := []string{}
+	output := make([]string, 0, len(input))
 	for _, element := range input {
 		output = append(output, fmt.Sprintf("%s%s%s", wrap, element, wrap))
 	}

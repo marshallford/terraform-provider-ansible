@@ -77,7 +77,7 @@ func (r *NavigatorRunResource) Run(ctx context.Context, diags *diag.Diagnostics,
 	defer cancel()
 
 	runDir := filepath.Join(r.opts.BaseRunDirectory, fmt.Sprintf("%s-%s-%d", navigatorRunDir, data.ID.ValueString(), runs))
-	sshPrivateKeysDir := filepath.Join(runDir, navigatorRunSSHPrivateKeysDir)
+	privateKeysDir := filepath.Join(runDir, navigatorRunPrivateKeysDir)
 
 	var eeModel ExecutionEnvironmentModel
 	diags.Append(data.ExecutionEnvironment.As(ctx, &eeModel, basetypes.ObjectAsOptions{})...)
@@ -91,15 +91,17 @@ func (r *NavigatorRunResource) Run(ctx context.Context, diags *diag.Diagnostics,
 	var ansibleOptions ansible.RunOptions
 	diags.Append(optsModel.Value(ctx, &ansibleOptions)...)
 
-	var sshPrivateKeysModel []SSHPrivateKeyModel
-	diags.Append(data.SSHPrivateKeys.ElementsAs(ctx, &sshPrivateKeysModel, false)...)
+	var privateKeysModel []PrivateKeyModel
+	if !optsModel.PrivateKeys.IsNull() {
+		diags.Append(optsModel.PrivateKeys.ElementsAs(ctx, &privateKeysModel, false)...)
+	}
 
-	sshPrivateKeys := []ansible.SSHPrivateKey{}
-	for _, model := range sshPrivateKeysModel {
-		var key ansible.SSHPrivateKey
+	privateKeys := make([]ansible.PrivateKey, 0, len(privateKeysModel))
+	for _, model := range privateKeysModel {
+		var key ansible.PrivateKey
 
 		diags.Append(model.Value(ctx, &key)...)
-		sshPrivateKeys = append(sshPrivateKeys, key)
+		privateKeys = append(privateKeys, key)
 	}
 
 	var queriesModel map[string]ArtifactQueryModel
@@ -135,8 +137,8 @@ func (r *NavigatorRunResource) Run(ctx context.Context, diags *diag.Diagnostics,
 	err = ansible.CreateRunDir(runDir)
 	addError(diags, "Run directory not created", err)
 
-	err = ansible.CreateRunSSHPrivateKeysDir(sshPrivateKeysDir)
-	addError(diags, "SSH private keys directory not created", err)
+	err = ansible.CreateRunPrivateKeysDir(privateKeysDir)
+	addError(diags, "Private keys directory not created", err)
 
 	err = ansible.CreatePlaybookFile(runDir, data.Playbook.ValueString())
 	addError(diags, "Ansible playbook file not created", err)
@@ -144,8 +146,8 @@ func (r *NavigatorRunResource) Run(ctx context.Context, diags *diag.Diagnostics,
 	err = ansible.CreateInventoryFile(runDir, data.Inventory.ValueString())
 	addError(diags, "Ansible inventory file not created", err)
 
-	err = ansible.CreateSSHPrivateKeys(sshPrivateKeysDir, sshPrivateKeys, &navigatorSettings, &ansibleOptions)
-	addError(diags, "SSH private keys not created", err)
+	err = ansible.CreatePrivateKeys(privateKeysDir, privateKeys, &navigatorSettings)
+	addError(diags, "Private keys not created", err)
 
 	navigatorSettings.EnvironmentVariablesSet[navigatorRunOperationEnvVar] = operation.String()
 	navigatorSettings.Timeout = timeout
@@ -215,7 +217,7 @@ func (*NavigatorRunResource) ShouldRun(plan *NavigatorRunResourceModel, state *N
 		plan.Playbook.Equal(state.Playbook),
 		plan.Inventory.Equal(state.Inventory),
 		plan.ExecutionEnvironment.Equal(state.ExecutionEnvironment),
-		plan.AnsibleOptions.Equal(state.AnsibleOptions),
+		plan.AnsibleOptions.Equal(state.AnsibleOptions), // TODO check nested attrs
 		plan.Triggers.Equal(state.Triggers),
 		plan.ArtifactQueries.Equal(state.ArtifactQueries),
 	}

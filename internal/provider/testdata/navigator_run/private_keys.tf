@@ -26,12 +26,14 @@ resource "ansible_navigator_run" "test" {
       "--net=host",
     ]
   }
-  ssh_private_keys = [
-    {
-      name = "test"
-      data = <<EOT
+  ansible_options = {
+    private_keys = [
+      {
+        name = "test"
+        data = <<EOT
 %s
-      EOT
-    }
-  ]
+        EOT
+      }
+    ]
+  }
 }
