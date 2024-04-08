@@ -167,7 +167,6 @@ output "resolv_conf" {
 - `execution_environment` (Attributes) [Execution environment](https://ansible.readthedocs.io/en/latest/getting_started_ee/index.html) related configuration. (see [below for nested schema](#nestedatt--execution_environment))
 - `replacement_triggers` (Map of String) Arbitrary map of values that, when changed, will recreate the resource. Similar to `triggers`, but will cause `id` to change. Useful when combined with `run_on_destroy`.
 - `run_on_destroy` (Boolean) Run playbook on destroy. The environment variable `ANSIBLE_TF_OPERATION` is set to `delete` during the run to allow for conditional plays, tasks, etc. Defaults to `false`.
-- `ssh_private_keys` (Attributes List) SSH private keys used for authentication in addition to the [automatically mounted](https://ansible.readthedocs.io/projects/navigator/faq/#how-do-i-use-my-ssh-keys-with-an-execution-environment) default named keys and SSH agent socket path. (see [below for nested schema](#nestedatt--ssh_private_keys))
 - `timeouts` (Attributes) (see [below for nested schema](#nestedatt--timeouts))
 - `triggers` (Map of String) Arbitrary map of values that, when changed, will run the playbook again. Serves as alternative way to trigger a run without changing the inventory or playbook.
 
@@ -183,7 +182,17 @@ Optional:
 
 - `force_handlers` (Boolean) Run handlers even if a task fails.
 - `limit` (List of String) Further limit selected hosts to an additional pattern.
+- `private_keys` (Attributes List) SSH private keys used for authentication in addition to the [automatically mounted](https://ansible.readthedocs.io/projects/navigator/faq/#how-do-i-use-my-ssh-keys-with-an-execution-environment) default named keys and SSH agent socket path. (see [below for nested schema](#nestedatt--ansible_options--private_keys))
 - `tags` (List of String) Only run plays and tasks tagged with these values.
+
+<a id="nestedatt--ansible_options--private_keys"></a>
+### Nested Schema for `ansible_options.private_keys`
+
+Required:
+
+- `data` (String, Sensitive) Key data.
+- `name` (String) Key name.
+
 
 
 <a id="nestedatt--artifact_queries"></a>
@@ -210,15 +219,6 @@ Optional:
 - `image` (String) Name of the execution environment container [image](https://ansible.readthedocs.io/projects/navigator/settings/#execution-environment-image). Defaults to `ghcr.io/ansible/creator-ee:v24.2.0`.
 - `pull_arguments` (List of String) Additional [parameters](https://ansible.readthedocs.io/projects/navigator/settings/#pull-arguments) that should be added to the pull command when pulling an execution environment container image from a container registry.
 - `pull_policy` (String) Container image [pull policy](https://ansible.readthedocs.io/projects/navigator/settings/#pull-policy). Defaults to `tag`.
-
-
-<a id="nestedatt--ssh_private_keys"></a>
-### Nested Schema for `ssh_private_keys`
-
-Required:
-
-- `data` (String, Sensitive) Key data.
-- `name` (String) Key name.
 
 
 <a id="nestedatt--timeouts"></a>

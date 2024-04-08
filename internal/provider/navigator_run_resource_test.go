@@ -116,7 +116,7 @@ func TestAccNavigatorRun_env_vars(t *testing.T) {
 	})
 }
 
-func TestAccNavigatorRun_ssh_private_keys(t *testing.T) {
+func TestAccNavigatorRun_private_keys(t *testing.T) {
 	t.Parallel()
 
 	workingDirectory := t.TempDir()
@@ -129,7 +129,7 @@ func TestAccNavigatorRun_ssh_private_keys(t *testing.T) {
 		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
 		Steps: []resource.TestStep{
 			{
-				Config: testAccResource(t, filepath.Join("navigator_run", "ssh_private_keys"), testAccAbsProgramPath(t), workingDirectory, port, privateKey),
+				Config: testAccResource(t, filepath.Join("navigator_run", "private_keys"), testAccAbsProgramPath(t), workingDirectory, port, privateKey),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttrSet(navigatorRunResource, "id"),
 				),
@@ -182,7 +182,7 @@ func TestAccNavigatorRun_errors(t *testing.T) {
 			expected: regexp.MustCompile("Ansible navigator run failed"),
 		},
 		{
-			name: "ssh_private_keys",
+			name: "private_keys",
 			resourceFormat: func(t *testing.T) []any { //nolint:thelper
 				return []any{testAccAbsProgramPath(t), t.TempDir()}
 			},

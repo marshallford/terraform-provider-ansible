@@ -29,7 +29,7 @@ import (
 const (
 	navigatorRunOperationEnvVar        = "ANSIBLE_TF_OPERATION"
 	navigatorRunDir                    = "tf-ansible-navigator-run"
-	navigatorRunSSHPrivateKeysDir      = "ssh-private-keys"
+	navigatorRunPrivateKeysDir         = "private-keys"
 	defaultNavigatorRunTimeout         = 10 * time.Minute
 	defaultNavigatorRunContainerEngine = "auto"
 	defaultNavigatorRunImage           = "ghcr.io/ansible/creator-ee:v24.2.0"
@@ -54,7 +54,6 @@ type NavigatorRunResourceModel struct {
 	ExecutionEnvironment   types.Object   `tfsdk:"execution_environment"`
 	AnsibleNavigatorBinary types.String   `tfsdk:"ansible_navigator_binary"`
 	AnsibleOptions         types.Object   `tfsdk:"ansible_options"`
-	SSHPrivateKeys         types.List     `tfsdk:"ssh_private_keys"`
 	RunOnDestroy           types.Bool     `tfsdk:"run_on_destroy"`
 	Triggers               types.Map      `tfsdk:"triggers"`
 	ReplacementTriggers    types.Map      `tfsdk:"replacement_triggers"`
@@ -78,9 +77,10 @@ type AnsibleOptionsModel struct {
 	ForceHandlers types.Bool `tfsdk:"force_handlers"`
 	Limit         types.List `tfsdk:"limit"`
 	Tags          types.List `tfsdk:"tags"`
+	PrivateKeys   types.List `tfsdk:"private_keys"`
 }
 
-type SSHPrivateKeyModel struct {
+type PrivateKeyModel struct {
 	Name types.String `tfsdk:"name"`
 	Data types.String `tfsdk:"data"`
 }
@@ -159,10 +159,22 @@ func (m AnsibleOptionsModel) Value(ctx context.Context, opts *ansible.RunOptions
 
 	opts.Tags = tags
 
+	var privateKeysModel []PrivateKeyModel
+	if !m.PrivateKeys.IsNull() {
+		diags.Append(m.PrivateKeys.ElementsAs(ctx, &privateKeysModel, false)...)
+	}
+
+	privateKeys := make([]string, 0, len(privateKeysModel))
+	for _, privateKeyModel := range privateKeysModel {
+		privateKeys = append(privateKeys, privateKeyModel.Name.ValueString())
+	}
+
+	opts.PrivateKeys = privateKeys
+
 	return diags
 }
 
-func (m SSHPrivateKeyModel) Value(ctx context.Context, key *ansible.SSHPrivateKey) diag.Diagnostics {
+func (m PrivateKeyModel) Value(ctx context.Context, key *ansible.PrivateKey) diag.Diagnostics {
 	var diags diag.Diagnostics
 
 	key.Name = m.Name.ValueString()
@@ -332,30 +344,30 @@ func (r *NavigatorRunResource) Schema(ctx context.Context, req resource.SchemaRe
 						Optional:    true,
 						ElementType: types.StringType,
 					},
-				},
-			},
-			"ssh_private_keys": schema.ListNestedAttribute{
-				Description:         "SSH private keys used for authentication in addition to the automatically mounted default named keys and SSH agent socket path.",
-				MarkdownDescription: "SSH private keys used for authentication in addition to the [automatically mounted](https://ansible.readthedocs.io/projects/navigator/faq/#how-do-i-use-my-ssh-keys-with-an-execution-environment) default named keys and SSH agent socket path.",
-				Optional:            true,
-				NestedObject: schema.NestedAttributeObject{
-					Attributes: map[string]schema.Attribute{
-						"name": schema.StringAttribute{
-							Description: "Key name.",
-							Required:    true,
-							Validators: []validator.String{
-								stringvalidator.RegexMatches(
-									regexp.MustCompile(`^[a-zA-Z0-9]*$`),
-									"Must only contain only alphanumeric characters",
-								),
-							},
-						},
-						"data": schema.StringAttribute{
-							Description: "Key data.",
-							Required:    true,
-							Sensitive:   true,
-							Validators: []validator.String{
-								stringIsSSHPrivateKey(),
+					"private_keys": schema.ListNestedAttribute{
+						Description:         "SSH private keys used for authentication in addition to the automatically mounted default named keys and SSH agent socket path.",
+						MarkdownDescription: "SSH private keys used for authentication in addition to the [automatically mounted](https://ansible.readthedocs.io/projects/navigator/faq/#how-do-i-use-my-ssh-keys-with-an-execution-environment) default named keys and SSH agent socket path.",
+						Optional:            true,
+						NestedObject: schema.NestedAttributeObject{
+							Attributes: map[string]schema.Attribute{
+								"name": schema.StringAttribute{
+									Description: "Key name.",
+									Required:    true,
+									Validators: []validator.String{
+										stringvalidator.RegexMatches(
+											regexp.MustCompile(`^[a-zA-Z0-9]*$`),
+											"Must only contain only alphanumeric characters",
+										),
+									},
+								},
+								"data": schema.StringAttribute{
+									Description: "Key data.",
+									Required:    true,
+									Sensitive:   true,
+									Validators: []validator.String{
+										stringIsSSHPrivateKey(),
+									},
+								},
 							},
 						},
 					},

@@ -79,7 +79,7 @@ type navigatorSettingsFormat struct {
 }
 
 func GenerateNavigatorSettings(settings *NavigatorSettings) (string, error) {
-	volumeMounts := []navigatorSettingsFormatVolumeMounts{}
+	volumeMounts := make([]navigatorSettingsFormatVolumeMounts, 0, len(settings.VolumeMounts))
 	for src, dest := range settings.VolumeMounts {
 		volumeMounts = append(volumeMounts, navigatorSettingsFormatVolumeMounts{Src: src, Dest: dest, Options: "Z"})
 	}
