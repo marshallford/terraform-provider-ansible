@@ -3,7 +3,7 @@ terraform {
   required_providers {
     aws = {
       source  = "hashicorp/aws"
-      version = "5.42.0"
+      version = "5.44.0"
     }
     tls = {
       source  = "hashicorp/tls"
@@ -11,7 +11,7 @@ terraform {
     }
     ansible = {
       source  = "marshallford/ansible"
-      version = "0.4.0"
+      version = "0.7.0"
     }
   }
 }
@@ -174,9 +174,11 @@ resource "ansible_navigator_run" "this" {
       AWS_DEFAULT_REGION    = data.aws_region.this.name
     }
   }
-  ssh_private_keys = [
-    { name = "terraform", data = tls_private_key.this.private_key_openssh },
-  ]
+  ansible_options = {
+    private_keys = [
+      { name = "terraform", data = tls_private_key.this.private_key_openssh },
+    ]
+  }
   artifact_queries = {
     "stdout" = {
       jsonpath = "$.stdout"

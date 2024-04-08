@@ -11,7 +11,7 @@ terraform {
     }
     ansible = {
       source  = "marshallford/ansible"
-      version = "0.4.0"
+      version = "0.7.0"
     }
   }
 }
@@ -129,9 +129,11 @@ resource "ansible_navigator_run" "this" {
       "--net=host", # required because libvirt nat network is on same host as EE
     ]
   }
-  ssh_private_keys = [
-    { name = "terraform", data = tls_private_key.this.private_key_openssh },
-  ]
+  ansible_options = {
+    private_keys = [
+      { name = "terraform", data = tls_private_key.this.private_key_openssh },
+    ]
+  }
   artifact_queries = {
     "stdout" = {
       jsonpath = "$.stdout"

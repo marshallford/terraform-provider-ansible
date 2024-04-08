@@ -1,6 +1,7 @@
 # Terraform Provider Ansible
 
 [![Registry](https://img.shields.io/badge/ansible-Terraform%20Registry-blue)](https://registry.terraform.io/providers/marshallford/ansible/latest/docs)
+[![Go Report Card](https://goreportcard.com/badge/github.com/marshallford/terraform-provider-ansible)](https://goreportcard.com/report/github.com/marshallford/terraform-provider-ansible)
 
 Run Ansible playbooks within Ansible execution environments (EE) using Terraform.
 
