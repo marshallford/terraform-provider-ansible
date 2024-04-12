@@ -60,8 +60,10 @@ resource "ansible_navigator_run" "ansible_options" {
   inventory         = "..."
   ansible_options = {
     force_handlers = true               # --force-handlers
+    skip_tags      = ["tag1", "tag2"]   # --skip-tags tag1,tag2
+    start_at_task  = "task name"        # --start-at-task task name
     limit          = ["host1", "host2"] # --limit host1,host2
-    tags           = ["tag1", "tag2"]   # --tags tag1,tag2
+    tags           = ["tag3", "tag4"]   # --tags tag3,tag4
   }
 }
 

@@ -8,7 +8,9 @@ resource "ansible_navigator_run" "test" {
   inventory                = "# localhost"
   ansible_options = {
     force_handlers = true
+    skip_tags      = ["tag1", "tag2"]
+    start_at_task  = "task name"
     limit          = ["host1", "host2"]
-    tags           = ["tag1", "tag2"]
+    tags           = ["tag3", "tag4"]
   }
 }

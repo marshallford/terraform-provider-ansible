@@ -75,8 +75,10 @@ resource "ansible_navigator_run" "ansible_options" {
   inventory         = "..."
   ansible_options = {
     force_handlers = true               # --force-handlers
+    skip_tags      = ["tag1", "tag2"]   # --skip-tags tag1,tag2
+    start_at_task  = "task name"        # --start-at-task task name
     limit          = ["host1", "host2"] # --limit host1,host2
-    tags           = ["tag1", "tag2"]   # --tags tag1,tag2
+    tags           = ["tag3", "tag4"]   # --tags tag3,tag4
   }
 }
 
@@ -183,6 +185,8 @@ Optional:
 - `force_handlers` (Boolean) Run handlers even if a task fails.
 - `limit` (List of String) Further limit selected hosts to an additional pattern.
 - `private_keys` (Attributes List) SSH private keys used for authentication in addition to the [automatically mounted](https://ansible.readthedocs.io/projects/navigator/faq/#how-do-i-use-my-ssh-keys-with-an-execution-environment) default named keys and SSH agent socket path. (see [below for nested schema](#nestedatt--ansible_options--private_keys))
+- `skip_tags` (List of String) Only run plays and tasks whose tags do not match these values.
+- `start_at_task` (String) Start the playbook at the task matching this name.
 - `tags` (List of String) Only run plays and tasks tagged with these values.
 
 <a id="nestedatt--ansible_options--private_keys"></a>

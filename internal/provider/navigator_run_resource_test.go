@@ -22,7 +22,7 @@ func TestAccNavigatorRun_ansible_options(t *testing.T) {
 			{
 				Config: testAccResource(t, filepath.Join("navigator_run", "ansible_options"), testAccAbsProgramPath(t), workingDirectory),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					resource.TestMatchResourceAttr(navigatorRunResource, "command", regexp.MustCompile("--force-handlers --limit host1,host2 --tags tag1,tag2")),
+					resource.TestMatchResourceAttr(navigatorRunResource, "command", regexp.MustCompile("--force-handlers --skip-tags tag1,tag2 --start-at-task task name --limit host1,host2 --tags tag3,tag4")),
 				),
 			},
 		},
