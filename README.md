@@ -28,7 +28,7 @@ Run Ansible playbooks within Ansible execution environments (EE) using Terraform
 
 |  Release | Ansible Navigator | Terraform |
 |:--------:|:-----------------:|:---------:|
-| < v1.0.0 |      >= 3.5.0     |  >= 1.5.0 |
+| < v1.0.0 |      >= 3.5.0     |  >= 1.6.0 |
 
 ## Development Requirements
 
