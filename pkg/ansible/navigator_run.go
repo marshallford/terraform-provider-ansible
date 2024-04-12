@@ -20,6 +20,8 @@ const (
 
 type RunOptions struct {
 	ForceHandlers bool
+	SkipTags      []string
+	StartAtTask   string
 	Limit         []string
 	Tags          []string
 	PrivateKeys   []string
@@ -43,6 +45,14 @@ func GenerateNavigatorRunCommand(workingDirectory string, ansibleNavigatorBinary
 
 	if opts.ForceHandlers {
 		command.Args = append(command.Args, "--force-handlers")
+	}
+
+	if len(opts.SkipTags) > 0 {
+		command.Args = append(command.Args, "--skip-tags", strings.Join(opts.SkipTags, ","))
+	}
+
+	if opts.StartAtTask != "" {
+		command.Args = append(command.Args, "--start-at-task", opts.StartAtTask)
 	}
 
 	if len(opts.Limit) > 0 {

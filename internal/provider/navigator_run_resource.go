@@ -74,10 +74,12 @@ type ExecutionEnvironmentModel struct {
 }
 
 type AnsibleOptionsModel struct {
-	ForceHandlers types.Bool `tfsdk:"force_handlers"`
-	Limit         types.List `tfsdk:"limit"`
-	Tags          types.List `tfsdk:"tags"`
-	PrivateKeys   types.List `tfsdk:"private_keys"`
+	ForceHandlers types.Bool   `tfsdk:"force_handlers"`
+	SkipTags      types.List   `tfsdk:"skip_tags"`
+	StartAtTask   types.String `tfsdk:"start_at_task"`
+	Limit         types.List   `tfsdk:"limit"`
+	Tags          types.List   `tfsdk:"tags"`
+	PrivateKeys   types.List   `tfsdk:"private_keys"`
 }
 
 type PrivateKeyModel struct {
@@ -145,18 +147,24 @@ func (m AnsibleOptionsModel) Value(ctx context.Context, opts *ansible.RunOptions
 
 	opts.ForceHandlers = m.ForceHandlers.ValueBool()
 
+	var skipTags []string
+	if !m.SkipTags.IsNull() {
+		diags.Append(m.SkipTags.ElementsAs(ctx, &skipTags, false)...)
+	}
+	opts.SkipTags = skipTags
+
+	opts.StartAtTask = m.StartAtTask.ValueString()
+
 	var limit []string
 	if !m.Limit.IsNull() {
 		diags.Append(m.Limit.ElementsAs(ctx, &limit, false)...)
 	}
-
 	opts.Limit = limit
 
 	var tags []string
 	if !m.Tags.IsNull() {
 		diags.Append(m.Tags.ElementsAs(ctx, &tags, false)...)
 	}
-
 	opts.Tags = tags
 
 	var privateKeysModel []PrivateKeyModel
@@ -168,7 +176,6 @@ func (m AnsibleOptionsModel) Value(ctx context.Context, opts *ansible.RunOptions
 	for _, privateKeyModel := range privateKeysModel {
 		privateKeys = append(privateKeys, privateKeyModel.Name.ValueString())
 	}
-
 	opts.PrivateKeys = privateKeys
 
 	return diags
@@ -332,6 +339,15 @@ func (r *NavigatorRunResource) Schema(ctx context.Context, req resource.SchemaRe
 				Attributes: map[string]schema.Attribute{
 					"force_handlers": schema.BoolAttribute{
 						Description: "Run handlers even if a task fails.",
+						Optional:    true,
+					},
+					"skip_tags": schema.ListAttribute{
+						Description: "Only run plays and tasks whose tags do not match these values.",
+						Optional:    true,
+						ElementType: types.StringType,
+					},
+					"start_at_task": schema.StringAttribute{
+						Description: "Start the playbook at the task matching this name.",
 						Optional:    true,
 					},
 					"limit": schema.ListAttribute{

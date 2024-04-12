@@ -14,7 +14,7 @@ EDITORCONFIG_CHECKER := $(DOCKER_RUN) -v=$(CURDIR):/check docker.io/mstruebing/e
 YAMLLINT_VERSION ?= 0.31.0
 YAMLLINT := $(DOCKER_RUN) -v=$(CURDIR):/code docker.io/pipelinecomponents/yamllint:$(YAMLLINT_VERSION) yamllint
 
-GOLANGCI_LINT_VERSION ?= 1.57.1
+GOLANGCI_LINT_VERSION ?= 1.57.2
 GOLANGCI_LINT := $(DOCKER_RUN) -v=$(CURDIR):/code -w /code docker.io/golangci/golangci-lint:v$(GOLANGCI_LINT_VERSION) golangci-lint run
 
 VENV := .venv
