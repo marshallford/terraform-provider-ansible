@@ -1,0 +1,14 @@
+- name: AWS complete example
+  hosts: all
+  gather_facts: false
+  tasks:
+  - name: Wait for hosts
+    ansible.builtin.wait_for_connection:
+      timeout: 600
+  - name: Gather facts
+    ansible.builtin.setup:
+  - name: Hello
+    ansible.builtin.include_role:
+      name: hello_world
+    vars:
+      _hello_world_msg: "{{ hello_msg }}"

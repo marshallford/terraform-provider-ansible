@@ -1,0 +1,10 @@
+# https://ansible.readthedocs.io/projects/lint/configuring/#ansible-lint-configuration
+profile: production
+offline: true
+
+skip_list:
+- yaml # yamllint will catch these
+
+exclude_paths:
+- .terraform/
+- .venv/
