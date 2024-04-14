@@ -11,7 +11,7 @@ terraform {
     }
     ansible = {
       source  = "marshallford/ansible"
-      version = "0.7.0"
+      version = "0.8.0"
     }
   }
 }
@@ -22,6 +22,10 @@ provider "libvirt" {
 provider "tls" {}
 
 provider "ansible" {}
+
+locals {
+  machines = toset(["a", "b"])
+}
 
 resource "tls_private_key" "this" {
   algorithm = "ED25519"
@@ -41,17 +45,19 @@ resource "libvirt_volume" "ubuntu" {
 }
 
 resource "libvirt_cloudinit_disk" "this" {
-  name = "example-cloudinit.iso"
-  pool = libvirt_pool.this.name
+  for_each = local.machines
+  name     = "example-cloudinit-${each.key}.iso"
+  pool     = libvirt_pool.this.name
   user_data = templatefile("${path.module}/cloud_init.cfg.tpl", {
-    hostname           = "example",
+    hostname           = "example-${each.key}",
     ssh_authorized_key = tls_private_key.this.public_key_openssh
   })
   network_config = file("${path.module}/network.cfg.tpl")
 }
 
 resource "libvirt_volume" "this" {
-  name             = "example.qcow2"
+  for_each         = local.machines
+  name             = "example-${each.key}.qcow2"
   pool             = libvirt_pool.this.name
   base_volume_name = libvirt_volume.ubuntu.name
   size             = (1024 * 1024 * 1024) * 10
@@ -73,13 +79,14 @@ resource "libvirt_network" "this" {
 }
 
 resource "libvirt_domain" "this" {
-  name      = "example"
+  for_each  = local.machines
+  name      = "example-${each.key}"
   vcpu      = 2
   memory    = 1024
   autostart = true
-  cloudinit = libvirt_cloudinit_disk.this.id
+  cloudinit = libvirt_cloudinit_disk.this[each.key].id
   disk {
-    volume_id = libvirt_volume.this.id
+    volume_id = libvirt_volume.this[each.key].id
   }
   network_interface {
     network_id     = libvirt_network.this.id
@@ -92,14 +99,12 @@ locals {
     all = {
       children = {
         example_group = {
-          hosts = {
-            example = {
-              ansible_host = libvirt_domain.this.network_interface[0].addresses[0]
-              ansible_user = "ubuntu"
-            }
-          }
+          hosts = { for domain in libvirt_domain.this : domain.name => {
+            ansible_host = domain.network_interface[0].addresses[0]
+            ansible_user = "ubuntu"
+          } }
           vars = {
-            hello_msg = "hello world"
+            hello_msg = "hello world (Libvirt)"
           }
         }
       }
@@ -109,19 +114,7 @@ locals {
 
 resource "ansible_navigator_run" "this" {
   working_directory        = abspath("${path.root}/working-directory")
-  playbook                 = <<-EOT
-  - hosts: all
-    gather_facts: false
-    tasks:
-    - name: wait for hosts
-      ansible.builtin.wait_for_connection:
-        timeout: 600
-    - name: gather facts
-      ansible.builtin.setup:
-    - name: hello
-      ansible.builtin.debug:
-        msg: "{{ hello_msg }}! Distribution: {{ ansible_facts.distribution }}, System Vendor: {{ ansible_facts.system_vendor }}"
-  EOT
+  playbook                 = file("${path.root}/playbook.yaml")
   inventory                = local.inventory
   ansible_navigator_binary = abspath("${path.root}/.venv/bin/ansible-navigator")
   execution_environment = {

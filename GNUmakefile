@@ -21,7 +21,7 @@ VENV := .venv
 VENV_STAMP := $(VENV)/stamp
 ACTIVATE := . $(VENV)/bin/activate
 
-lint: lint/editorconfig lint/yamllint lint/go
+lint: lint/editorconfig lint/yamllint lint/go lint/ansible
 
 lint/editorconfig:
 	$(EDITORCONFIG_CHECKER)
@@ -31,6 +31,9 @@ lint/yamllint:
 
 lint/go:
 	$(GOLANGCI_LINT)
+
+lint/ansible: bin/ansible-navigator
+	$(ACTIVATE); ansible-lint complete-examples docs examples
 
 install:
 	go install
@@ -56,4 +59,4 @@ $(VENV_STAMP): requirements.txt
 	$(ACTIVATE); pip install -qr requirements.txt
 	touch $(VENV_STAMP)
 
-.PHONY: lint lint/editorconfig lint/yamllint lint/go install test test/pkg test/acc docs deps bin/ansible-navigator
+.PHONY: lint lint/editorconfig lint/yamllint lint/go lint/ansible install test test/pkg test/acc docs deps bin/ansible-navigator

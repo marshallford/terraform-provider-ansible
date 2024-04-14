@@ -3,7 +3,7 @@ terraform {
   required_providers {
     aws = {
       source  = "hashicorp/aws"
-      version = "5.44.0"
+      version = "5.45.0"
     }
     tls = {
       source  = "hashicorp/tls"
@@ -11,7 +11,7 @@ terraform {
     }
     ansible = {
       source  = "marshallford/ansible"
-      version = "0.7.0"
+      version = "0.8.0"
     }
   }
 }
@@ -77,6 +77,7 @@ resource "aws_key_pair" "this" {
 }
 
 resource "aws_instance" "this" {
+  for_each               = toset(["a", "b"])
   ami                    = data.aws_ami.this.id
   instance_type          = "t3a.nano"
   subnet_id              = aws_subnet.this.id
@@ -85,7 +86,7 @@ resource "aws_instance" "this" {
   key_name               = aws_key_pair.this.key_name
 
   tags = {
-    Name = "ansible-provider-example"
+    Name = "ansible-provider-example-${each.key}"
   }
 
   lifecycle {
@@ -104,10 +105,10 @@ resource "aws_iam_access_key" "ssh_ssm" {
 data "aws_iam_policy_document" "shh_ssm" {
   statement {
     actions = ["ssm:StartSession"]
-    resources = [
-      aws_instance.this.arn,
-      "arn:aws:ssm:*:*:document/AWS-StartSSHSession",
-    ]
+    resources = concat(
+      [for instance in aws_instance.this : instance.arn],
+      ["arn:aws:ssm:*:*:document/AWS-StartSSHSession"],
+    )
     condition {
       test     = "BoolIfExists"
       variable = "ssm:SessionDocumentAccessCheck"
@@ -134,14 +135,12 @@ locals {
       }
       children = {
         example_group = {
-          hosts = {
-            example = {
-              ansible_host = aws_instance.this.id
-              ansible_user = "ec2-user"
-            }
-          }
+          hosts = { for instance in aws_instance.this : instance.tags.Name => {
+            ansible_host = instance.id,
+            ansible_user = "ec2-user"
+          } }
           vars = {
-            hello_msg = "hello world"
+            hello_msg = "hello world (AWS)"
           }
         }
       }
@@ -151,19 +150,7 @@ locals {
 
 resource "ansible_navigator_run" "this" {
   working_directory        = abspath("${path.root}/working-directory")
-  playbook                 = <<-EOT
-  - hosts: all
-    gather_facts: false
-    tasks:
-    - name: wait for hosts
-      ansible.builtin.wait_for_connection:
-        timeout: 600
-    - name: gather facts
-      ansible.builtin.setup:
-    - name: hello
-      ansible.builtin.debug:
-        msg: "{{ hello_msg }}! Distribution: {{ ansible_facts.distribution }}, System Vendor: {{ ansible_facts.system_vendor }}"
-  EOT
+  playbook                 = file("${path.root}/playbook.yaml")
   inventory                = local.inventory
   ansible_navigator_binary = abspath("${path.root}/.venv/bin/ansible-navigator")
   execution_environment = {
