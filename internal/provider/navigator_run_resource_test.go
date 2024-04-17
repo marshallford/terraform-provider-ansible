@@ -196,6 +196,13 @@ func TestAccNavigatorRun_errors(t *testing.T) {
 			expected: regexp.MustCompile("Ansible navigator run timed out"),
 		},
 		{
+			name: "timezone",
+			resourceFormat: func(t *testing.T) []any { //nolint:thelper
+				return []any{testAccAbsProgramPath(t), t.TempDir()}
+			},
+			expected: regexp.MustCompile("Not an IANA time zone"),
+		},
+		{
 			name: "working_directory",
 			resourceFormat: func(t *testing.T) []any { //nolint:thelper
 				return []any{testAccAbsProgramPath(t), filepath.Join(t.TempDir(), "non-existent")}
