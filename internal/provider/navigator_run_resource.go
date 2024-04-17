@@ -34,6 +34,7 @@ const (
 	defaultNavigatorRunContainerEngine = "auto"
 	defaultNavigatorRunImage           = "ghcr.io/ansible/creator-ee:v24.2.0"
 	defaultNavigatorRunPullPolicy      = "tag"
+	defaultNavigatorRunTimezone        = "UTC"
 	defaultNavigatorRunOnDestroy       = false
 )
 
@@ -54,6 +55,7 @@ type NavigatorRunResourceModel struct {
 	ExecutionEnvironment   types.Object   `tfsdk:"execution_environment"`
 	AnsibleNavigatorBinary types.String   `tfsdk:"ansible_navigator_binary"`
 	AnsibleOptions         types.Object   `tfsdk:"ansible_options"`
+	Timezone               types.String   `tfsdk:"timezone"`
 	RunOnDestroy           types.Bool     `tfsdk:"run_on_destroy"`
 	Triggers               types.Map      `tfsdk:"triggers"`
 	ReplacementTriggers    types.Map      `tfsdk:"replacement_triggers"`
@@ -221,8 +223,8 @@ func (r *NavigatorRunResource) Metadata(ctx context.Context, req resource.Metada
 
 func (r *NavigatorRunResource) Schema(ctx context.Context, req resource.SchemaRequest, resp *resource.SchemaResponse) {
 	resp.Schema = schema.Schema{
-		Description:         fmt.Sprintf("Run an Ansible playbook within an execution environment (EE). Requires '%s' and a container engine to run the EE.", ansible.NavigatorProgram),
-		MarkdownDescription: fmt.Sprintf("Run an Ansible playbook within an execution environment (EE). Requires `%s` and a container engine to run the EE.", ansible.NavigatorProgram),
+		Description:         fmt.Sprintf("Run an Ansible playbook within an execution environment (EE). Requires '%s' and a container engine to run the EEI.", ansible.NavigatorProgram),
+		MarkdownDescription: fmt.Sprintf("Run an Ansible playbook within an execution environment (EE). Requires `%s` and a container engine to run the EEI.", ansible.NavigatorProgram),
 		Attributes: map[string]schema.Attribute{
 			// required
 			"working_directory": schema.StringAttribute{
@@ -387,6 +389,16 @@ func (r *NavigatorRunResource) Schema(ctx context.Context, req resource.SchemaRe
 							},
 						},
 					},
+				},
+			},
+			"timezone": schema.StringAttribute{
+				Description:         fmt.Sprintf("IANA time zone, use 'local' for the system time zone. Defaults to '%s'.", defaultNavigatorRunTimezone),
+				MarkdownDescription: fmt.Sprintf("IANA time zone, use `local` for the system time zone. Defaults to `%s`.", defaultNavigatorRunTimezone),
+				Optional:            true,
+				Computed:            true,
+				Default:             stringdefault.StaticString(defaultNavigatorRunTimezone),
+				Validators: []validator.String{
+					stringIsIANATimezone(),
 				},
 			},
 			"run_on_destroy": schema.BoolAttribute{

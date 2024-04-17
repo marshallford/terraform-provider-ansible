@@ -3,12 +3,12 @@
 page_title: "ansible_navigator_run Resource - terraform-provider-ansible"
 subcategory: ""
 description: |-
-  Run an Ansible playbook within an execution environment (EE). Requires ansible-navigator and a container engine to run the EE.
+  Run an Ansible playbook within an execution environment (EE). Requires ansible-navigator and a container engine to run the EEI.
 ---
 
 # ansible_navigator_run (Resource)
 
-Run an Ansible playbook within an execution environment (EE). Requires `ansible-navigator` and a container engine to run the EE.
+Run an Ansible playbook within an execution environment (EE). Requires `ansible-navigator` and a container engine to run the EEI.
 
 ## Example Usage
 
@@ -175,6 +175,7 @@ output "resolv_conf" {
 - `replacement_triggers` (Map of String) Arbitrary map of values that, when changed, will recreate the resource. Similar to `triggers`, but will cause `id` to change. Useful when combined with `run_on_destroy`.
 - `run_on_destroy` (Boolean) Run playbook on destroy. The environment variable `ANSIBLE_TF_OPERATION` is set to `delete` during the run to allow for conditional plays, tasks, etc. Defaults to `false`.
 - `timeouts` (Attributes) (see [below for nested schema](#nestedatt--timeouts))
+- `timezone` (String) IANA time zone, use `local` for the system time zone. Defaults to `UTC`.
 - `triggers` (Map of String) Arbitrary map of values that, when changed, will run the playbook again. Serves as alternative way to trigger a run without changing the inventory or playbook.
 
 ### Read-Only

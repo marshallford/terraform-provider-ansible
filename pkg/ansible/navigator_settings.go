@@ -20,6 +20,7 @@ type NavigatorSettings struct {
 	PullPolicy               string
 	VolumeMounts             map[string]string
 	ContainerOptions         []string
+	Timezone                 string
 }
 
 type navigatorSettingsFormatAnsibleRunner struct {
@@ -72,6 +73,7 @@ type navigatorSettingsFormatAnsibleNavigator struct {
 	Logging              navigatorSettingsFormatLogging              `yaml:"logging"`
 	Mode                 string                                      `yaml:"mode"`
 	PlaybookArtifact     navigatorSettingsFormatPlaybookArtifact     `yaml:"playbook-artifact"` //nolint:tagliatelle
+	Timezone             string                                      `yaml:"time-zone"`         //nolint:tagliatelle
 }
 
 type navigatorSettingsFormat struct {
@@ -115,6 +117,7 @@ func GenerateNavigatorSettings(settings *NavigatorSettings) (string, error) {
 			PlaybookArtifact: navigatorSettingsFormatPlaybookArtifact{
 				Enable: true,
 			},
+			Timezone: settings.Timezone,
 		},
 	}
 

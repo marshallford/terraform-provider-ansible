@@ -83,6 +83,7 @@ func (r *NavigatorRunResource) Run(ctx context.Context, diags *diag.Diagnostics,
 	diags.Append(data.ExecutionEnvironment.As(ctx, &eeModel, basetypes.ObjectAsOptions{})...)
 
 	var navigatorSettings ansible.NavigatorSettings
+	navigatorSettings.Timezone = data.Timezone.ValueString()
 	diags.Append(eeModel.Value(ctx, &navigatorSettings)...)
 
 	var optsModel AnsibleOptionsModel

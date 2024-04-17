@@ -12,6 +12,6 @@ This Terraform configuration creates an AWS EC2 instance using the [`hashicorp/a
 ## Steps
 
 1. Run `make bin` to install `ansible-builder` and `ansible-navigator` packages into a Python virtual environment.
-2. Run `make build` to build Ansible EE container image.
+2. Run `make build` to build the Ansible EEI (container image).
 3. Setup [AWS authentication](https://registry.terraform.io/providers/hashicorp/aws/latest/docs#authentication-and-configuration)
 4. Run `terraform init` and `terraform apply`

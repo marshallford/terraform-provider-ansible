@@ -4,6 +4,8 @@ import (
 	"context"
 	"errors"
 	"path/filepath"
+	"time"
+	_ "time/tzdata"
 	"unicode"
 
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
@@ -32,8 +34,6 @@ func (v stringIsAbsolutePathValidator) ValidateString(ctx context.Context, req v
 			"Not an absolute path",
 			"Must be an absolute path",
 		)
-
-		return
 	}
 }
 
@@ -163,4 +163,36 @@ func (v stringIsYAMLValidator) ValidateString(ctx context.Context, req validator
 
 func stringIsYAML() stringIsYAMLValidator {
 	return stringIsYAMLValidator{}
+}
+
+type stringIsIANATimezoneValidator struct{}
+
+func (v stringIsIANATimezoneValidator) Description(ctx context.Context) string {
+	return "string must be a valid IANA time zone"
+}
+
+func (v stringIsIANATimezoneValidator) MarkdownDescription(ctx context.Context) string {
+	return v.Description(ctx)
+}
+
+func (v stringIsIANATimezoneValidator) ValidateString(ctx context.Context, req validator.StringRequest, resp *validator.StringResponse) {
+	if req.ConfigValue.IsUnknown() || req.ConfigValue.IsNull() {
+		return
+	}
+
+	if req.ConfigValue.ValueString() == "local" {
+		return
+	}
+
+	if _, err := time.LoadLocation(req.ConfigValue.ValueString()); err != nil {
+		resp.Diagnostics.AddAttributeError(
+			req.Path,
+			"Not an IANA time zone",
+			"Must be an IANA time zone, use 'local' for the system time zone",
+		)
+	}
+}
+
+func stringIsIANATimezone() stringIsIANATimezoneValidator {
+	return stringIsIANATimezoneValidator{}
 }
