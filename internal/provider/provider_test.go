@@ -6,8 +6,6 @@ import (
 	"github.com/marshallford/terraform-provider-ansible/internal/provider"
 )
 
-const programPath = "../../.venv/bin/ansible-navigator" // TODO improve
-
 var testAccProtoV6ProviderFactories = map[string]func() (tfprotov6.ProviderServer, error){ //nolint:gochecknoglobals
 	"ansible": providerserver.NewProtocol6WithError(provider.New("test")()),
 }

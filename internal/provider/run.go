@@ -77,7 +77,6 @@ func (r *NavigatorRunResource) Run(ctx context.Context, diags *diag.Diagnostics,
 	defer cancel()
 
 	runDir := filepath.Join(r.opts.BaseRunDirectory, fmt.Sprintf("%s-%s-%d", navigatorRunDir, data.ID.ValueString(), runs))
-	privateKeysDir := filepath.Join(runDir, navigatorRunPrivateKeysDir)
 
 	var eeModel ExecutionEnvironmentModel
 	diags.Append(data.ExecutionEnvironment.As(ctx, &eeModel, basetypes.ObjectAsOptions{})...)
@@ -138,16 +137,13 @@ func (r *NavigatorRunResource) Run(ctx context.Context, diags *diag.Diagnostics,
 	err = ansible.CreateRunDir(runDir)
 	addError(diags, "Run directory not created", err)
 
-	err = ansible.CreateRunPrivateKeysDir(privateKeysDir)
-	addError(diags, "Private keys directory not created", err)
-
 	err = ansible.CreatePlaybookFile(runDir, data.Playbook.ValueString())
 	addError(diags, "Ansible playbook file not created", err)
 
 	err = ansible.CreateInventoryFile(runDir, data.Inventory.ValueString())
 	addError(diags, "Ansible inventory file not created", err)
 
-	err = ansible.CreatePrivateKeys(privateKeysDir, privateKeys, &navigatorSettings)
+	err = ansible.CreatePrivateKeys(runDir, privateKeys, &navigatorSettings)
 	addError(diags, "Private keys not created", err)
 
 	navigatorSettings.EnvironmentVariablesSet[navigatorRunOperationEnvVar] = operation.String()
@@ -195,7 +191,7 @@ func (r *NavigatorRunResource) Run(ctx context.Context, diags *diag.Diagnostics,
 
 	// TODO skip on destroy?
 	err = ansible.QueryPlaybookArtifact(runDir, artifactQueries)
-	addPathError(diags, path.Root("artifact_queries"), "Playbook artifact queries failed", err)
+	addPathError(diags, path.Root("artifact_queries"), "Playbook artifact queries failed ", err)
 
 	for name, model := range queriesModel {
 		diags.Append(model.Set(ctx, artifactQueries[name])...)
@@ -214,9 +210,9 @@ func (r *NavigatorRunResource) Run(ctx context.Context, diags *diag.Diagnostics,
 
 func (*NavigatorRunResource) ShouldRun(plan *NavigatorRunResourceModel, state *NavigatorRunResourceModel) bool {
 	attributeChanges := []bool{
-		plan.WorkingDirectory.Equal(state.WorkingDirectory),
 		plan.Playbook.Equal(state.Playbook),
 		plan.Inventory.Equal(state.Inventory),
+		plan.WorkingDirectory.Equal(state.WorkingDirectory),
 		plan.ExecutionEnvironment.Equal(state.ExecutionEnvironment),
 		plan.AnsibleOptions.Equal(state.AnsibleOptions), // TODO check nested attrs
 		plan.Triggers.Equal(state.Triggers),

@@ -30,28 +30,29 @@ func testAccLookPath(t *testing.T, file string) string {
 func testAccPreCheck(t *testing.T) {
 	t.Helper()
 
-	if _, err := exec.LookPath(programPath); err != nil {
-		t.Fatalf("%s program not installed via Makefile", filepath.Base(programPath))
+	if _, err := exec.LookPath(navigatorProgramPath); err != nil {
+		t.Fatalf("%s program not installed via Makefile", filepath.Base(navigatorProgramPath))
 	}
 
 	testAccLookPath(t, "docker")
 }
 
-func testAccAbsProgramPath(t *testing.T) string {
+// avoid this issue: https://github.com/hashicorp/terraform-plugin-testing/issues/277
+func testAccAbs(t *testing.T, programPath string) string { //nolint:unparam
 	t.Helper()
 
-	absProgramPath, err := filepath.Abs(programPath)
+	absPath, err := filepath.Abs(programPath)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	return absProgramPath
+	return absPath
 }
 
-func testAccPrependProgramToPath(t *testing.T) {
+func testAccPrependProgramsToPath(t *testing.T) {
 	t.Helper()
 
-	t.Setenv("PATH", fmt.Sprintf("%s:%s", filepath.Dir(testAccAbsProgramPath(t)), os.Getenv("PATH")))
+	t.Setenv("PATH", fmt.Sprintf("%s:%s", filepath.Dir(testAccAbs(t, navigatorProgramPath)), os.Getenv("PATH")))
 }
 
 func testAccResource(t *testing.T, name string, format ...any) string {

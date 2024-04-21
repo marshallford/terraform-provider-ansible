@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"path"
 	"path/filepath"
 	"strings"
 	"time"
@@ -11,6 +12,7 @@ import (
 
 const (
 	commandWaitDelay         = 10 * time.Second
+	privateKeysDir           = "private-keys"
 	playbookFilename         = "playbook.yaml"
 	inventoryFilename        = "inventory"
 	playbookArtifactFilename = "playbook-artifact.json"
@@ -64,7 +66,7 @@ func GenerateNavigatorRunCommand(workingDirectory string, ansibleNavigatorBinary
 	}
 
 	for _, key := range opts.PrivateKeys {
-		command.Args = append(command.Args, "--private-key", fmt.Sprintf("%s/%s", navigatorPrivateKeysDir, key))
+		command.Args = append(command.Args, "--private-key", fmt.Sprintf("%s/%s", eePrivateKeysDir, key))
 	}
 
 	return command
@@ -84,11 +86,7 @@ func CreateRunDir(dir string) error {
 		return fmt.Errorf("failed to create directory for run, %w", err)
 	}
 
-	return nil
-}
-
-func CreateRunPrivateKeysDir(dir string) error {
-	if err := os.Mkdir(dir, 0o700); err != nil { //nolint:gomnd
+	if err := os.Mkdir(path.Join(dir, privateKeysDir), 0o700); err != nil { //nolint:gomnd
 		return fmt.Errorf("failed to create private keys directory for run, %w", err)
 	}
 

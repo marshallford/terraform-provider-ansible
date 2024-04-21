@@ -7,13 +7,14 @@ import (
 	"context"
 	"fmt"
 	"os"
-	"path/filepath"
 
+	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/provider"
 	"github.com/hashicorp/terraform-plugin-framework/provider/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
+	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/marshallford/terraform-provider-ansible/pkg/ansible"
 )
@@ -45,6 +46,9 @@ func (p *AnsibleProvider) Schema(ctx context.Context, req provider.SchemaRequest
 				Description:         "Base directory in which to create run directories. On Unix systems this defaults to '$TMPDIR' if non-empty, else '/tmp'.",
 				MarkdownDescription: "Base directory in which to create run directories. On Unix systems this defaults to `$TMPDIR` if non-empty, else `/tmp`.",
 				Optional:            true,
+				Validators: []validator.String{
+					stringvalidator.LengthAtLeast(1),
+				},
 			},
 			"persist_run_directory": schema.BoolAttribute{
 				Description:         fmt.Sprintf("Remove run directory after the run completes. Useful when troubleshooting. Defaults to '%t'.", defaultProviderPersistRunDir),
@@ -86,14 +90,6 @@ func (p *AnsibleProvider) Configure(ctx context.Context, req provider.ConfigureR
 		opts.BaseRunDirectory = os.TempDir()
 	} else {
 		opts.BaseRunDirectory = data.BaseRunDirectory.ValueString()
-	}
-
-	if !filepath.IsAbs(opts.BaseRunDirectory) {
-		resp.Diagnostics.AddAttributeError(
-			path.Root("base_run_directory"),
-			"Base run directory must be an absolute path",
-			fmt.Sprintf("%s is not an absolute path", opts.BaseRunDirectory),
-		)
 	}
 
 	err := ansible.DirectoryPreflight(opts.BaseRunDirectory)

@@ -5,7 +5,7 @@ import (
 	"path/filepath"
 )
 
-const navigatorPrivateKeysDir = "/tmp/private-keys"
+const eePrivateKeysDir = "/tmp/private-keys"
 
 type PrivateKey struct {
 	Name string
@@ -14,7 +14,7 @@ type PrivateKey struct {
 
 func CreatePrivateKeys(dir string, keys []PrivateKey, settings *NavigatorSettings) error {
 	for _, key := range keys {
-		err := writeFile(filepath.Join(dir, key.Name), key.Data)
+		err := writeFile(filepath.Join(dir, privateKeysDir, key.Name), key.Data)
 		if err != nil {
 			return fmt.Errorf("failed to create private key file for run, %w", err)
 		}
@@ -25,7 +25,7 @@ func CreatePrivateKeys(dir string, keys []PrivateKey, settings *NavigatorSetting
 		settings.VolumeMounts = map[string]string{}
 	}
 
-	settings.VolumeMounts[dir] = navigatorPrivateKeysDir
+	settings.VolumeMounts[filepath.Join(dir, privateKeysDir)] = eePrivateKeysDir
 
 	return nil
 }
