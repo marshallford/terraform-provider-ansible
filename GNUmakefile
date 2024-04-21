@@ -33,7 +33,7 @@ lint/go:
 	$(GOLANGCI_LINT)
 
 lint/ansible: bin/ansible-navigator
-	$(ACTIVATE); ansible-lint complete-examples docs examples
+	$(ACTIVATE); ansible-lint docs examples
 
 install:
 	go install

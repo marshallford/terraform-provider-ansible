@@ -15,8 +15,8 @@ Run Ansible playbooks within Ansible execution environments using Terraform.
 
 ## Complete Examples
 
-* [AWS](./complete-examples/aws/)
-* [Libvirt](./complete-examples/libvirt/)
+* [AWS](./examples/complete/aws/)
+* [Libvirt](./examples/complete/libvirt/)
 
 ## Support Matrix
 
