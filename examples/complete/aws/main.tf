@@ -3,7 +3,7 @@ terraform {
   required_providers {
     aws = {
       source  = "hashicorp/aws"
-      version = "5.45.0"
+      version = "5.46.0"
     }
     tls = {
       source  = "hashicorp/tls"
@@ -11,7 +11,7 @@ terraform {
     }
     ansible = {
       source  = "marshallford/ansible"
-      version = "0.8.0"
+      version = "0.10.1"
     }
   }
 }
@@ -149,10 +149,10 @@ locals {
 }
 
 resource "ansible_navigator_run" "this" {
-  working_directory        = abspath("${path.root}/working-directory")
   playbook                 = file("${path.root}/playbook.yaml")
   inventory                = local.inventory
-  ansible_navigator_binary = abspath("${path.root}/.venv/bin/ansible-navigator")
+  working_directory        = "${path.root}/working-directory"
+  ansible_navigator_binary = "${path.root}/.venv/bin/ansible-navigator"
   execution_environment = {
     image = "ansible-execution-env-aws-example:v1"
     environment_variables_set = {

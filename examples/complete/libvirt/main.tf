@@ -11,7 +11,7 @@ terraform {
     }
     ansible = {
       source  = "marshallford/ansible"
-      version = "0.8.0"
+      version = "0.10.1"
     }
   }
 }
@@ -40,7 +40,7 @@ resource "libvirt_pool" "this" {
 resource "libvirt_volume" "ubuntu" {
   name   = "ubuntu.qcow2"
   pool   = libvirt_pool.this.name
-  source = "https://cloud-images.ubuntu.com/releases/22.04/release-20240319/ubuntu-22.04-server-cloudimg-amd64.img"
+  source = "https://cloud-images.ubuntu.com/releases/22.04/release-20240416/ubuntu-22.04-server-cloudimg-amd64.img"
   format = "qcow2"
 }
 
@@ -113,10 +113,10 @@ locals {
 }
 
 resource "ansible_navigator_run" "this" {
-  working_directory        = abspath("${path.root}/working-directory")
   playbook                 = file("${path.root}/playbook.yaml")
   inventory                = local.inventory
-  ansible_navigator_binary = abspath("${path.root}/.venv/bin/ansible-navigator")
+  working_directory        = "${path.root}/working-directory"
+  ansible_navigator_binary = "${path.root}/.venv/bin/ansible-navigator"
   execution_environment = {
     container_options = [
       "--net=host", # required because libvirt nat network is on same host as EE
