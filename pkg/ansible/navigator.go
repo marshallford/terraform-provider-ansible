@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"strings"
 )
 
@@ -14,6 +15,7 @@ var (
 	ErrDirectory           = errors.New("directory is not valid")
 	ErrContainerEnginePath = errors.New("container engine (podman or docker) must exist in PATH")
 	ErrContainerEngine     = errors.New("container engine is not running or usable")
+	ErrNavigatorAbsPath    = fmt.Errorf("absolute path of %s cannot be represented", NavigatorProgram)
 	ErrNavigatorPath       = fmt.Errorf("%s does not exist in PATH", NavigatorProgram)
 	ErrNavigator           = fmt.Errorf("%s is not functional", NavigatorProgram)
 )
@@ -71,10 +73,18 @@ func ContainerEnginePreflight(containerEngine string) error {
 	return nil
 }
 
-func NavigatorPath() (string, error) {
-	path, err := exec.LookPath(NavigatorProgram)
+func NavigatorPath(path string) (string, error) {
+	if path == "" {
+		path, err := exec.LookPath(NavigatorProgram)
+		if err != nil {
+			return "", ErrNavigatorPath
+		}
+
+		return path, nil
+	}
+	path, err := filepath.Abs(path)
 	if err != nil {
-		return "", ErrNavigatorPath
+		return "", fmt.Errorf("%w, %w", ErrNavigatorAbsPath, err)
 	}
 
 	return path, nil
