@@ -37,8 +37,7 @@ func testAccPreCheck(t *testing.T) {
 	testAccLookPath(t, "docker")
 }
 
-// avoid this issue: https://github.com/hashicorp/terraform-plugin-testing/issues/277
-func testAccAbs(t *testing.T, programPath string) string { //nolint:unparam
+func testAccAbs(t *testing.T, programPath string) string {
 	t.Helper()
 
 	absPath, err := filepath.Abs(programPath)

@@ -21,7 +21,7 @@ func TestAccNavigatorRun_ansible_options(t *testing.T) {
 		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
 		Steps: []resource.TestStep{
 			{
-				Config: testAccResource(t, filepath.Join("navigator_run", "ansible_options"), testAccAbs(t, navigatorProgramPath)),
+				Config: testAccResource(t, filepath.Join("navigator_run", "ansible_options"), navigatorProgramPath),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestMatchResourceAttr(navigatorRunResource, "command", regexp.MustCompile("--force-handlers --skip-tags tag1,tag2 --start-at-task task name --limit host1,host2 --tags tag3,tag4")),
 				),
@@ -38,7 +38,7 @@ func TestAccNavigatorRun_artifact_queries(t *testing.T) {
 		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
 		Steps: []resource.TestStep{
 			{
-				Config: testAccResource(t, filepath.Join("navigator_run", "artifact_queries"), testAccAbs(t, navigatorProgramPath)),
+				Config: testAccResource(t, filepath.Join("navigator_run", "artifact_queries"), navigatorProgramPath),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestMatchResourceAttr(navigatorRunResource, "artifact_queries.stdout.result", regexp.MustCompile("ok=3")),
 					resource.TestCheckResourceAttr(navigatorRunResource, "artifact_queries.file.result", "YWNj"),
@@ -48,7 +48,7 @@ func TestAccNavigatorRun_artifact_queries(t *testing.T) {
 	})
 }
 
-func TestAccNavigatorRun_basic_path(t *testing.T) { //nolint:paralleltest
+func TestAccNavigatorRun_basic_binary_path(t *testing.T) { //nolint:paralleltest
 	testAccPrependProgramsToPath(t)
 
 	resource.Test(t, resource.TestCase{
@@ -56,7 +56,7 @@ func TestAccNavigatorRun_basic_path(t *testing.T) { //nolint:paralleltest
 		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
 		Steps: []resource.TestStep{
 			{
-				Config: testAccResource(t, filepath.Join("navigator_run", "basic_path")),
+				Config: testAccResource(t, filepath.Join("navigator_run", "basic_binary_path")),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttrSet(navigatorRunResource, "id"),
 					resource.TestCheckResourceAttrSet(navigatorRunResource, "command"),
@@ -79,7 +79,7 @@ func TestAccNavigatorRun_basic(t *testing.T) {
 		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
 		Steps: []resource.TestStep{
 			{
-				Config: testAccResource(t, filepath.Join("navigator_run", "basic"), testAccAbs(t, navigatorProgramPath)),
+				Config: testAccResource(t, filepath.Join("navigator_run", "basic"), navigatorProgramPath),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttrSet(navigatorRunResource, "id"),
 					resource.TestCheckResourceAttrSet(navigatorRunResource, "command"),
@@ -101,7 +101,7 @@ func TestAccNavigatorRun_env_vars(t *testing.T) {
 		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
 		Steps: []resource.TestStep{
 			{
-				Config: testAccResource(t, filepath.Join("navigator_run", "env_vars"), testAccAbs(t, navigatorProgramPath)),
+				Config: testAccResource(t, filepath.Join("navigator_run", "env_vars"), navigatorProgramPath),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttrSet(navigatorRunResource, "id"),
 				),
@@ -121,7 +121,26 @@ func TestAccNavigatorRun_private_keys(t *testing.T) {
 		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
 		Steps: []resource.TestStep{
 			{
-				Config: testAccResource(t, filepath.Join("navigator_run", "private_keys"), testAccAbs(t, navigatorProgramPath), port, privateKey),
+				Config: testAccResource(t, filepath.Join("navigator_run", "private_keys"), navigatorProgramPath, port, privateKey),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttrSet(navigatorRunResource, "id"),
+				),
+			},
+		},
+	})
+}
+
+func TestAccNavigatorRun_relative_binary(t *testing.T) {
+	t.Parallel()
+
+	workingDirectory := t.TempDir()
+
+	resource.Test(t, resource.TestCase{
+		PreCheck:                 func() { testAccPreCheck(t) },
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		Steps: []resource.TestStep{
+			{
+				Config: testAccResource(t, filepath.Join("navigator_run", "relative_binary"), navigatorProgramPath, workingDirectory),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttrSet(navigatorRunResource, "id"),
 				),
@@ -133,12 +152,15 @@ func TestAccNavigatorRun_private_keys(t *testing.T) {
 func TestAccNavigatorRun_role(t *testing.T) {
 	t.Parallel()
 
+	// https://github.com/hashicorp/terraform-plugin-testing/issues/277
+	workingDirectory := filepath.Join("testdata", "navigator_run", "role-workdir")
+
 	resource.Test(t, resource.TestCase{
 		PreCheck:                 func() { testAccPreCheck(t) },
 		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
 		Steps: []resource.TestStep{
 			{
-				Config: testAccResource(t, filepath.Join("navigator_run", "role"), testAccAbs(t, navigatorProgramPath), filepath.Join("testdata", "navigator_run", "role-workdir")),
+				Config: testAccResource(t, filepath.Join("navigator_run", "role"), navigatorProgramPath, workingDirectory),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttrSet(navigatorRunResource, "id"),
 				),
@@ -158,14 +180,14 @@ func TestAccNavigatorRun_errors(t *testing.T) {
 		{
 			name: "artifact_query",
 			resourceFormat: func(t *testing.T) []any { //nolint:thelper
-				return []any{testAccAbs(t, navigatorProgramPath)}
+				return []any{navigatorProgramPath}
 			},
 			expected: regexp.MustCompile("Playbook artifact queries failed"),
 		},
 		{
 			name: "env_var_name",
 			resourceFormat: func(t *testing.T) []any { //nolint:thelper
-				return []any{testAccAbs(t, navigatorProgramPath)}
+				return []any{navigatorProgramPath}
 			},
 			expected: regexp.MustCompile("must not be empty|must consist only of printable ASCII characters"),
 		},
@@ -179,42 +201,42 @@ func TestAccNavigatorRun_errors(t *testing.T) {
 		{
 			name: "playbook_yaml",
 			resourceFormat: func(t *testing.T) []any { //nolint:thelper
-				return []any{testAccAbs(t, navigatorProgramPath)}
+				return []any{navigatorProgramPath}
 			},
 			expected: regexp.MustCompile("Not valid YAML"),
 		},
 		{
 			name: "playbook",
 			resourceFormat: func(t *testing.T) []any { //nolint:thelper
-				return []any{testAccAbs(t, navigatorProgramPath)}
+				return []any{navigatorProgramPath}
 			},
 			expected: regexp.MustCompile("Ansible navigator run failed"),
 		},
 		{
 			name: "private_keys",
 			resourceFormat: func(t *testing.T) []any { //nolint:thelper
-				return []any{testAccAbs(t, navigatorProgramPath)}
+				return []any{navigatorProgramPath}
 			},
 			expected: regexp.MustCompile("Not a SSH private key|Not an unencrypted SSH private key"),
 		},
 		{
 			name: "timeout",
 			resourceFormat: func(t *testing.T) []any { //nolint:thelper
-				return []any{testAccAbs(t, navigatorProgramPath)}
+				return []any{navigatorProgramPath}
 			},
 			expected: regexp.MustCompile("Ansible navigator run timed out"),
 		},
 		{
 			name: "timezone",
 			resourceFormat: func(t *testing.T) []any { //nolint:thelper
-				return []any{testAccAbs(t, navigatorProgramPath)}
+				return []any{navigatorProgramPath}
 			},
 			expected: regexp.MustCompile("Not an IANA time zone"),
 		},
 		{
 			name: "working_directory",
 			resourceFormat: func(t *testing.T) []any { //nolint:thelper
-				return []any{testAccAbs(t, navigatorProgramPath), filepath.Join(t.TempDir(), "non-existent")}
+				return []any{navigatorProgramPath, filepath.Join(t.TempDir(), "non-existent")}
 			},
 			expected: regexp.MustCompile("Working directory preflight check"),
 		},

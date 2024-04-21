@@ -125,11 +125,8 @@ func (r *NavigatorRunResource) Run(ctx context.Context, diags *diag.Diagnostics,
 	err = ansible.ContainerEnginePreflight(navigatorSettings.ContainerEngine)
 	addPathError(diags, path.Root("execution_environment").AtMapKey("container_engine"), "Container engine preflight check", err)
 
-	ansibleNavigatorBinary := data.AnsibleNavigatorBinary.ValueString()
-	if data.AnsibleNavigatorBinary.IsNull() {
-		ansibleNavigatorBinary, err = ansible.NavigatorPath()
-		addError(diags, "Ansible navigator not found", err)
-	}
+	ansibleNavigatorBinary, err := ansible.NavigatorPath(data.AnsibleNavigatorBinary.ValueString())
+	addError(diags, "Ansible navigator not found", err)
 
 	err = ansible.NavigatorPreflight(ansibleNavigatorBinary)
 	addPathError(diags, path.Root("ansible_navigator_binary"), "Ansible navigator preflight check", err)
