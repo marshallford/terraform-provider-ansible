@@ -9,8 +9,6 @@ on: # yamllint disable-line rule:truthy
     # - edited
     branches:
     - main
-    paths-ignore:
-    - README.md
 
 permissions:
   contents: read
