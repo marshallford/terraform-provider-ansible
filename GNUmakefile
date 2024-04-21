@@ -11,6 +11,9 @@ DOCKER_RUN := $(DOCKER) run $(DOCKER_FLAGS)
 EDITORCONFIG_CHECKER_VERSION ?= 2.7.2
 EDITORCONFIG_CHECKER := $(DOCKER_RUN) -v=$(CURDIR):/check docker.io/mstruebing/editorconfig-checker:$(EDITORCONFIG_CHECKER_VERSION)
 
+SHELLCHECK_VERSION ?= 0.10.0
+SHELLCHECK := $(DOCKER_RUN) -v=$(CURDIR):/mnt docker.io/koalaman/shellcheck:v$(SHELLCHECK_VERSION)
+
 YAMLLINT_VERSION ?= 0.31.0
 YAMLLINT := $(DOCKER_RUN) -v=$(CURDIR):/code docker.io/pipelinecomponents/yamllint:$(YAMLLINT_VERSION) yamllint
 
@@ -21,10 +24,13 @@ VENV := .venv
 VENV_STAMP := $(VENV)/stamp
 ACTIVATE := . $(VENV)/bin/activate
 
-lint: lint/editorconfig lint/yamllint lint/go lint/ansible
+lint: lint/editorconfig lint/shellcheck lint/yamllint lint/go lint/ansible
 
 lint/editorconfig:
 	$(EDITORCONFIG_CHECKER)
+
+lint/shellcheck:
+	$(SHELLCHECK) $(shell find . -type f -not -path '*/\$(VENV)/*' -name '*.sh')
 
 lint/yamllint:
 	$(YAMLLINT) .
@@ -59,4 +65,4 @@ $(VENV_STAMP): requirements.txt
 	$(ACTIVATE); pip install -qr requirements.txt
 	touch $(VENV_STAMP)
 
-.PHONY: lint lint/editorconfig lint/yamllint lint/go lint/ansible install test test/pkg test/acc docs deps bin/ansible-navigator
+.PHONY: lint lint/editorconfig lint/shellcheck lint/yamllint lint/go lint/ansible install test test/pkg test/acc docs deps bin/ansible-navigator
