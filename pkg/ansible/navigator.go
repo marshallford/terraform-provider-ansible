@@ -72,12 +72,12 @@ func ContainerEnginePreflight(containerEngine string) error {
 }
 
 func NavigatorPath() (string, error) {
-	absolutePath, err := exec.LookPath(NavigatorProgram)
+	path, err := exec.LookPath(NavigatorProgram)
 	if err != nil {
 		return "", ErrNavigatorPath
 	}
 
-	return absolutePath, nil
+	return path, nil
 }
 
 // TODO include output in error

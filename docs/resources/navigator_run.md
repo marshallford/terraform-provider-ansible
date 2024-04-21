@@ -13,10 +13,9 @@ Run an Ansible playbook within an execution environment (EE). Requires `ansible-
 ## Example Usage
 
 ```terraform
-# inline playbook and inventory
+# 1. inline playbook and inventory
 resource "ansible_navigator_run" "inline" {
-  working_directory = "/some/dir"
-  playbook          = <<-EOT
+  playbook = <<-EOT
   - hosts: some_group
     become: false
     tasks:
@@ -39,21 +38,31 @@ resource "ansible_navigator_run" "inline" {
   })
 }
 
-# existing playbook and inventory
-locals {
-  dir = "/some/dir"
-}
-
+# 2. existing playbook and inventory
 resource "ansible_navigator_run" "existing" {
-  working_directory = local.dir
-  playbook          = file("${local.dir}/playbook.yaml")
-  inventory         = file("${local.dir}/inventory/baremetal.yaml")
+  playbook  = file("playbook.yaml")
+  inventory = file("inventory/baremetal.yaml")
 }
 
-# set and pass environment variables
+# 3. use custom modules, module utils, filter plugins, and roles
+
+# ansible.cfg file in some-directory
+# [defaults]
+# library=library
+# module_utils=module_utils
+# filter_plugins=filter_plugins
+# roles_path=roles
+# ...
+
+resource "ansible_navigator_run" "working_directory" {
+  playbook          = "..."
+  inventory         = "..."
+  working_directory = "some-directory"
+}
+
+# 4. set and pass environment variables
 resource "ansible_navigator_run" "environment_variables" {
-  working_directory = "/home/username/ansible-project"
-  playbook          = <<-EOT
+  playbook  = <<-EOT
   - hosts: all
     tasks:
     - ansible.builtin.debug:
@@ -62,10 +71,10 @@ resource "ansible_navigator_run" "environment_variables" {
       - "{{ lookup('ansible.builtin.env', 'SOME_VAR') }}"
       - "{{ lookup('ansible.builtin.env', 'EDITOR') }}"
   EOT
-  inventory         = "..."
+  inventory = "..."
   execution_environment = {
     environment_variables_set = {
-      "SOME_VAR" = "foobar"
+      "SOME_VAR" = "some-value"
     }
     environment_variables_pass = [
       "EDITOR",
@@ -73,11 +82,10 @@ resource "ansible_navigator_run" "environment_variables" {
   }
 }
 
-# ansible playbook options
+# 5. ansible playbook options
 resource "ansible_navigator_run" "ansible_options" {
-  working_directory = "/some/dir"
-  playbook          = "..."
-  inventory         = "..."
+  playbook  = "..."
+  inventory = "..."
   ansible_options = {
     force_handlers = true               # --force-handlers
     skip_tags      = ["tag1", "tag2"]   # --skip-tags tag1,tag2
@@ -87,10 +95,9 @@ resource "ansible_navigator_run" "ansible_options" {
   }
 }
 
-# run on destroy
+# 6. run on destroy
 resource "ansible_navigator_run" "destroy" {
-  working_directory = "/some/dir"
-  playbook          = <<-EOT
+  playbook       = <<-EOT
   - hosts: all
     tasks:
     - ansible.builtin.set_fact:
@@ -99,15 +106,14 @@ resource "ansible_navigator_run" "destroy" {
         msg: "resource is being destroyed!"
       when: destroy
   EOT
-  inventory         = "..."
-  run_on_destroy    = true
+  inventory      = "..."
+  run_on_destroy = true
 }
 
-# triggers and replacement triggers
+# 7. triggers and replacement triggers
 resource "ansible_navigator_run" "triggers" {
-  working_directory = "/some/dir"
-  playbook          = "..."
-  inventory         = "..."
+  playbook  = "..."
+  inventory = "..."
   triggers = {
     somekey = some_resource.example.id # re-run playbook when id changes
   }
@@ -116,11 +122,10 @@ resource "ansible_navigator_run" "triggers" {
   }
 }
 
-# artifact queries -- get playbook stdout
+# 8. artifact queries -- get playbook stdout
 resource "ansible_navigator_run" "artifact_query_stdout_example" {
-  working_directory = "/some/dir"
-  playbook          = "..."
-  inventory         = "..."
+  playbook  = "..."
+  inventory = "..."
   artifact_queries = {
     "stdout" = {
       jsonpath = "$.stdout"
@@ -132,10 +137,9 @@ output "playbook_stdout" {
   value = join("\n", jsondecode(ansible_navigator_run.artifact_query_stdout_example.artifact_queries.stdout.result))
 }
 
-# artifact queries -- get file contents
+# 9. artifact queries -- get file contents
 resource "ansible_navigator_run" "artifact_query_file_example" {
-  working_directory = "/some/dir"
-  playbook          = <<-EOT
+  playbook  = <<-EOT
   - name: Get file
     hosts: all
     become: false
@@ -144,7 +148,7 @@ resource "ansible_navigator_run" "artifact_query_file_example" {
       ansible.builtin.slurp:
         src: /etc/resolv.conf
   EOT
-  inventory         = "..."
+  inventory = "..."
   artifact_queries = {
     "resolv_conf" = {
       jsonpath = "$.plays[?(@.__play_name=='Get file')].tasks[?(@.__task=='resolv.conf')].res.content"
@@ -164,11 +168,10 @@ output "resolv_conf" {
 
 - `inventory` (String) Ansible [inventory](https://docs.ansible.com/ansible/latest/getting_started/get_started_inventory.html) contents.
 - `playbook` (String) Ansible [playbook](https://docs.ansible.com/ansible/latest/playbook_guide/playbooks_intro.html) contents.
-- `working_directory` (String) Absolute directory which `ansible-navigator` is run from. Recommended to be the root Ansible [content directory](https://docs.ansible.com/ansible/latest/tips_tricks/sample_setup.html#sample-directory-layout) (sometimes called the project directory), which is likely to contain `ansible.cfg`, `roles/`, etc.
 
 ### Optional
 
-- `ansible_navigator_binary` (String) Absolute path to the `ansible-navigator` binary. By default `$PATH` is searched.
+- `ansible_navigator_binary` (String) Path to the `ansible-navigator` binary. By default `$PATH` is searched.
 - `ansible_options` (Attributes) Ansible [playbook](https://docs.ansible.com/ansible/latest/cli/ansible-playbook.html) run related configuration. (see [below for nested schema](#nestedatt--ansible_options))
 - `artifact_queries` (Attributes Map) Query the playbook artifact with [JSONPath](https://goessner.net/articles/JsonPath/). The [playbook artifact](https://access.redhat.com/documentation/en-us/red_hat_ansible_automation_platform/2.0-ea/html/ansible_navigator_creator_guide/assembly-troubleshooting-navigator_ansible-navigator#proc-review-artifact_troubleshooting-navigator) contains detailed information about every play and task, as well as the stdout from the playbook run. (see [below for nested schema](#nestedatt--artifact_queries))
 - `execution_environment` (Attributes) [Execution environment](https://ansible.readthedocs.io/en/latest/getting_started_ee/index.html) related configuration. (see [below for nested schema](#nestedatt--execution_environment))
@@ -177,6 +180,7 @@ output "resolv_conf" {
 - `timeouts` (Attributes) (see [below for nested schema](#nestedatt--timeouts))
 - `timezone` (String) IANA time zone, use `local` for the system time zone. Defaults to `UTC`.
 - `triggers` (Map of String) Arbitrary map of values that, when changed, will run the playbook again. Serves as alternative way to trigger a run without changing the inventory or playbook.
+- `working_directory` (String) Directory which `ansible-navigator` is run from. Recommended to be the root Ansible [content directory](https://docs.ansible.com/ansible/latest/tips_tricks/sample_setup.html#sample-directory-layout) (sometimes called the project directory), which is likely to contain `ansible.cfg`, `roles/`, etc.
 
 ### Read-Only
 

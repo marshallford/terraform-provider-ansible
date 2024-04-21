@@ -29,7 +29,6 @@ import (
 const (
 	navigatorRunOperationEnvVar        = "ANSIBLE_TF_OPERATION"
 	navigatorRunDir                    = "tf-ansible-navigator-run"
-	navigatorRunPrivateKeysDir         = "private-keys"
 	defaultNavigatorRunTimeout         = 10 * time.Minute
 	defaultNavigatorRunContainerEngine = "auto"
 	defaultNavigatorRunImage           = "ghcr.io/ansible/creator-ee:v24.2.0"
@@ -49,9 +48,9 @@ type NavigatorRunResource struct {
 }
 
 type NavigatorRunResourceModel struct {
-	WorkingDirectory       types.String   `tfsdk:"working_directory"`
 	Playbook               types.String   `tfsdk:"playbook"`
 	Inventory              types.String   `tfsdk:"inventory"`
+	WorkingDirectory       types.String   `tfsdk:"working_directory"`
 	ExecutionEnvironment   types.Object   `tfsdk:"execution_environment"`
 	AnsibleNavigatorBinary types.String   `tfsdk:"ansible_navigator_binary"`
 	AnsibleOptions         types.Object   `tfsdk:"ansible_options"`
@@ -227,14 +226,6 @@ func (r *NavigatorRunResource) Schema(ctx context.Context, req resource.SchemaRe
 		MarkdownDescription: fmt.Sprintf("Run an Ansible playbook within an execution environment (EE). Requires `%s` and a container engine to run the EEI.", ansible.NavigatorProgram),
 		Attributes: map[string]schema.Attribute{
 			// required
-			"working_directory": schema.StringAttribute{
-				Description:         fmt.Sprintf("Absolute directory which '%s' is run from. Recommended to be the root Ansible content directory (sometimes called the project directory), which is likely to contain 'ansible.cfg', 'roles/', etc.", ansible.NavigatorProgram),
-				MarkdownDescription: fmt.Sprintf("Absolute directory which `%s` is run from. Recommended to be the root Ansible [content directory](https://docs.ansible.com/ansible/latest/tips_tricks/sample_setup.html#sample-directory-layout) (sometimes called the project directory), which is likely to contain `ansible.cfg`, `roles/`, etc.", ansible.NavigatorProgram),
-				Required:            true,
-				Validators: []validator.String{
-					stringIsAbsolutePath(),
-				},
-			},
 			"playbook": schema.StringAttribute{
 				Description:         "Ansible playbook contents.",
 				MarkdownDescription: "Ansible [playbook](https://docs.ansible.com/ansible/latest/playbook_guide/playbooks_intro.html) contents.",
@@ -247,8 +238,21 @@ func (r *NavigatorRunResource) Schema(ctx context.Context, req resource.SchemaRe
 				Description:         "Ansible inventory contents.",
 				MarkdownDescription: "Ansible [inventory](https://docs.ansible.com/ansible/latest/getting_started/get_started_inventory.html) contents.",
 				Required:            true,
+				Validators: []validator.String{
+					stringvalidator.LengthAtLeast(1),
+				},
 			},
 			// optional
+			"working_directory": schema.StringAttribute{
+				Description:         fmt.Sprintf("Directory which '%s' is run from. Recommended to be the root Ansible content directory (sometimes called the project directory), which is likely to contain 'ansible.cfg', 'roles/', etc.", ansible.NavigatorProgram),
+				MarkdownDescription: fmt.Sprintf("Directory which `%s` is run from. Recommended to be the root Ansible [content directory](https://docs.ansible.com/ansible/latest/tips_tricks/sample_setup.html#sample-directory-layout) (sometimes called the project directory), which is likely to contain `ansible.cfg`, `roles/`, etc.", ansible.NavigatorProgram),
+				Optional:            true,
+				Computed:            true,
+				Default:             stringdefault.StaticString("."),
+				Validators: []validator.String{
+					stringvalidator.LengthAtLeast(1),
+				},
+			},
 			"execution_environment": schema.SingleNestedAttribute{
 				Description:         "Execution environment related configuration.",
 				MarkdownDescription: "[Execution environment](https://ansible.readthedocs.io/en/latest/getting_started_ee/index.html) related configuration.",
@@ -327,11 +331,11 @@ func (r *NavigatorRunResource) Schema(ctx context.Context, req resource.SchemaRe
 				},
 			},
 			"ansible_navigator_binary": schema.StringAttribute{
-				Description:         fmt.Sprintf("Absolute path to the '%s' binary. By default '$PATH' is searched.", ansible.NavigatorProgram),
-				MarkdownDescription: fmt.Sprintf("Absolute path to the `%s` binary. By default `$PATH` is searched.", ansible.NavigatorProgram),
+				Description:         fmt.Sprintf("Path to the '%s' binary. By default '$PATH' is searched.", ansible.NavigatorProgram),
+				MarkdownDescription: fmt.Sprintf("Path to the `%s` binary. By default `$PATH` is searched.", ansible.NavigatorProgram),
 				Optional:            true,
 				Validators: []validator.String{
-					stringIsAbsolutePath(),
+					stringvalidator.LengthAtLeast(1),
 				},
 			},
 			"ansible_options": schema.SingleNestedAttribute{
