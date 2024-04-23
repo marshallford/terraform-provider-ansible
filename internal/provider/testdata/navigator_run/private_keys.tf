@@ -16,6 +16,7 @@ resource "ansible_navigator_run" "test" {
         test = {
           ansible_host = "127.0.0.1"
           ansible_port = "%d"
+          ansible_ssh_common_args = "-o UserKnownHostsFile=/dev/null"
         }
       }
     }

@@ -131,7 +131,7 @@ locals {
   inventory = yamlencode({
     all = {
       vars = {
-        ansible_ssh_extra_args = "-o ProxyCommand=\"sh -c \\\"aws ssm start-session --target %h --document-name AWS-StartSSHSession --parameters 'portNumber=%p'\\\"\""
+        ansible_ssh_common_args = "-o ProxyCommand=\"sh -c \\\"aws ssm start-session --target %h --document-name AWS-StartSSHSession --parameters 'portNumber=%p'\\\"\""
       }
       children = {
         example_group = {
