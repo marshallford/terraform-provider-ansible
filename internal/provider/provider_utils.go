@@ -1,9 +1,12 @@
 package provider
 
 import (
+	"context"
 	"fmt"
 	"strings"
+	"time"
 
+	"github.com/hashicorp/terraform-plugin-framework-timeouts/resource/timeouts"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
@@ -26,6 +29,19 @@ var terraformOperations = []string{"create", "update", "delete"} //nolint:gochec
 
 func (op TerraformOperation) String() string {
 	return terraformOperations[op]
+}
+
+func TerraformOperationTimeout(ctx context.Context, operation TerraformOperation, value timeouts.Value, defaultTimeout time.Duration) (time.Duration, diag.Diagnostics) {
+	switch operation {
+	case terraformOperationCreate:
+		return value.Create(ctx, defaultTimeout)
+	case terraformOperationUpdate:
+		return value.Update(ctx, defaultTimeout)
+	case terraformOperationDelete:
+		return value.Delete(ctx, defaultTimeout)
+	default:
+		return defaultTimeout, nil
+	}
 }
 
 func unknownProviderValue(value path.Path) (string, string) {
@@ -71,7 +87,7 @@ func configureResourceClient(req resource.ConfigureRequest, resp *resource.Confi
 
 func addError(diags *diag.Diagnostics, summary string, err error) bool {
 	if err != nil {
-		diags.AddError(summary, fmt.Sprintf("unexpected error: %s", err))
+		diags.AddError(summary, fmt.Sprintf("Unexpected error: %s", err))
 
 		return true
 	}

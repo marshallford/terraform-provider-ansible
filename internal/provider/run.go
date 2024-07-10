@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"path/filepath"
-	"time"
 
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/path"
@@ -52,28 +51,16 @@ func IncrementRuns(ctx context.Context, diags *diag.Diagnostics, getKey GetKey, 
 	return runs
 }
 
-func (r *NavigatorRunResource) Run(ctx context.Context, diags *diag.Diagnostics, data *NavigatorRunResourceModel, runs uint32, operation TerraformOperation) { //nolint:cyclop
+func (r NavigatorRunResource) Run(ctx context.Context, diags *diag.Diagnostics, data *NavigatorRunResourceModel, runs uint32, operation TerraformOperation) { //nolint:cyclop
 	var err error
 
-	var timeout time.Duration
-	var newDiags diag.Diagnostics
-
-	switch operation {
-	case terraformOperationCreate:
-		timeout, newDiags = data.Timeouts.Create(ctx, defaultNavigatorRunTimeout)
-	case terraformOperationUpdate:
-		timeout, newDiags = data.Timeouts.Update(ctx, defaultNavigatorRunTimeout)
-	case terraformOperationDelete:
-		timeout, newDiags = data.Timeouts.Delete(ctx, defaultNavigatorRunTimeout)
-	}
-
+	timeout, newDiags := TerraformOperationTimeout(ctx, operation, data.Timeouts, defaultNavigatorRunTimeout)
 	diags.Append(newDiags...)
 	if diags.HasError() {
 		return
 	}
 
 	ctx, cancel := context.WithTimeout(ctx, timeout)
-
 	defer cancel()
 
 	runDir := filepath.Join(r.opts.BaseRunDirectory, fmt.Sprintf("%s-%s-%d", navigatorRunDir, data.ID.ValueString(), runs))
@@ -153,9 +140,9 @@ func (r *NavigatorRunResource) Run(ctx context.Context, diags *diag.Diagnostics,
 	addError(diags, "Ansible navigator settings file not created", err)
 
 	command := ansible.GenerateNavigatorRunCommand(
+		runDir,
 		data.WorkingDirectory.ValueString(),
 		ansibleNavigatorBinary,
-		runDir,
 		&ansibleOptions,
 	)
 
@@ -205,7 +192,7 @@ func (r *NavigatorRunResource) Run(ctx context.Context, diags *diag.Diagnostics,
 	}
 }
 
-func (*NavigatorRunResource) ShouldRun(plan *NavigatorRunResourceModel, state *NavigatorRunResourceModel) bool {
+func (NavigatorRunResource) ShouldRun(plan *NavigatorRunResourceModel, state *NavigatorRunResourceModel) bool {
 	attributeChanges := []bool{
 		plan.Playbook.Equal(state.Playbook),
 		plan.Inventory.Equal(state.Inventory),

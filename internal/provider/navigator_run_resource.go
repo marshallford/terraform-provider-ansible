@@ -31,7 +31,7 @@ const (
 	navigatorRunDir                    = "tf-ansible-navigator-run"
 	defaultNavigatorRunTimeout         = 10 * time.Minute
 	defaultNavigatorRunContainerEngine = "auto"
-	defaultNavigatorRunImage           = "ghcr.io/ansible/creator-ee:v24.2.0"
+	defaultNavigatorRunImage           = "ghcr.io/ansible/community-ansible-dev-tools:v24.7.0"
 	defaultNavigatorRunPullPolicy      = "tag"
 	defaultNavigatorRunTimezone        = "UTC"
 	defaultNavigatorRunOnDestroy       = false

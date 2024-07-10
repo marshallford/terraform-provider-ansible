@@ -29,7 +29,7 @@ type RunOptions struct {
 	PrivateKeys   []string
 }
 
-func GenerateNavigatorRunCommand(workingDirectory string, ansibleNavigatorBinary string, runDir string, opts *RunOptions) *exec.Cmd {
+func GenerateNavigatorRunCommand(runDir string, workingDir string, ansibleNavigatorBinary string, opts *RunOptions) *exec.Cmd {
 	command := exec.Command(ansibleNavigatorBinary, []string{ // #nosec G204
 		"run",
 		filepath.Join(runDir, playbookFilename),
@@ -40,7 +40,7 @@ func GenerateNavigatorRunCommand(workingDirectory string, ansibleNavigatorBinary
 		"--log-file",
 		filepath.Join(runDir, navigatorLogFilename),
 	}...)
-	command.Dir = workingDirectory
+	command.Dir = workingDir
 
 	command.Env = append(os.Environ(), fmt.Sprintf("ANSIBLE_NAVIGATOR_CONFIG=%s", filepath.Join(runDir, navigatorSettingsFilename)))
 	command.WaitDelay = commandWaitDelay
@@ -82,11 +82,11 @@ func ExecNavigatorRunCommand(command *exec.Cmd) (string, error) {
 }
 
 func CreateRunDir(dir string) error {
-	if err := os.Mkdir(dir, 0o700); err != nil { //nolint:gomnd
+	if err := os.Mkdir(dir, 0o700); err != nil { //nolint:gomnd,mnd
 		return fmt.Errorf("failed to create directory for run, %w", err)
 	}
 
-	if err := os.Mkdir(path.Join(dir, privateKeysDir), 0o700); err != nil { //nolint:gomnd
+	if err := os.Mkdir(path.Join(dir, privateKeysDir), 0o700); err != nil { //nolint:gomnd,mnd
 		return fmt.Errorf("failed to create private keys directory for run, %w", err)
 	}
 

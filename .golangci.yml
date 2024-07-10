@@ -10,12 +10,10 @@ linters:
   enable-all: true
   disable:
   - depguard
-  - exhaustivestruct
   - exhaustruct
   - funlen
   - godot
   - godox
-  - interfacer
   - lll
   - perfsprint
   - revive
