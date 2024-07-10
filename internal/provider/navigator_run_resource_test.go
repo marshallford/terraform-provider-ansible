@@ -133,14 +133,14 @@ func TestAccNavigatorRun_private_keys(t *testing.T) {
 func TestAccNavigatorRun_relative_binary(t *testing.T) {
 	t.Parallel()
 
-	workingDirectory := t.TempDir()
+	workingDir := t.TempDir()
 
 	resource.Test(t, resource.TestCase{
 		PreCheck:                 func() { testAccPreCheck(t) },
 		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
 		Steps: []resource.TestStep{
 			{
-				Config: testAccResource(t, filepath.Join("navigator_run", "relative_binary"), navigatorProgramPath, workingDirectory),
+				Config: testAccResource(t, filepath.Join("navigator_run", "relative_binary"), navigatorProgramPath, workingDir),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttrSet(navigatorRunResource, "id"),
 				),
@@ -153,14 +153,14 @@ func TestAccNavigatorRun_role(t *testing.T) {
 	t.Parallel()
 
 	// https://github.com/hashicorp/terraform-plugin-testing/issues/277
-	workingDirectory := filepath.Join("testdata", "navigator_run", "role-workdir")
+	workingDir := filepath.Join("testdata", "navigator_run", "role-working-dir")
 
 	resource.Test(t, resource.TestCase{
 		PreCheck:                 func() { testAccPreCheck(t) },
 		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
 		Steps: []resource.TestStep{
 			{
-				Config: testAccResource(t, filepath.Join("navigator_run", "role"), navigatorProgramPath, workingDirectory),
+				Config: testAccResource(t, filepath.Join("navigator_run", "role"), navigatorProgramPath, workingDir),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttrSet(navigatorRunResource, "id"),
 				),

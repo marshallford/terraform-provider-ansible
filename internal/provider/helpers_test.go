@@ -51,7 +51,7 @@ func testAccAbs(t *testing.T, programPath string) string {
 func testAccPrependProgramsToPath(t *testing.T) {
 	t.Helper()
 
-	t.Setenv("PATH", fmt.Sprintf("%s:%s", filepath.Dir(testAccAbs(t, navigatorProgramPath)), os.Getenv("PATH")))
+	t.Setenv("PATH", fmt.Sprintf("%s%c%s", filepath.Dir(testAccAbs(t, navigatorProgramPath)), os.PathListSeparator, os.Getenv("PATH")))
 }
 
 func testAccResource(t *testing.T, name string, format ...any) string {
