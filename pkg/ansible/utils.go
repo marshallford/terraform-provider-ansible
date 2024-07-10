@@ -19,7 +19,7 @@ func programExistsOnPath(program string) error {
 }
 
 func writeFile(path string, contents string) error {
-	return os.WriteFile(path, []byte(contents), 0o600) //nolint:gomnd
+	return os.WriteFile(path, []byte(contents), 0o600) //nolint:gomnd,mnd
 }
 
 func jsonPath(data []byte, template string) (string, error) {

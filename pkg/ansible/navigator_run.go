@@ -82,11 +82,11 @@ func ExecNavigatorRunCommand(command *exec.Cmd) (string, error) {
 }
 
 func CreateRunDir(dir string) error {
-	if err := os.Mkdir(dir, 0o700); err != nil { //nolint:gomnd
+	if err := os.Mkdir(dir, 0o700); err != nil { //nolint:gomnd,mnd
 		return fmt.Errorf("failed to create directory for run, %w", err)
 	}
 
-	if err := os.Mkdir(path.Join(dir, privateKeysDir), 0o700); err != nil { //nolint:gomnd
+	if err := os.Mkdir(path.Join(dir, privateKeysDir), 0o700); err != nil { //nolint:gomnd,mnd
 		return fmt.Errorf("failed to create private keys directory for run, %w", err)
 	}
 
