@@ -1,5 +1,5 @@
 resource "ansible_navigator_run" "test" {
-  ansible_navigator_binary = "%s"
+  ansible_navigator_binary = var.ansible_navigator_binary
   playbook                 = <<-EOT
   - hosts: localhost
     become: false
@@ -10,5 +10,15 @@ resource "ansible_navigator_run" "test" {
         that: test_role == "test"
   EOT
   inventory                = "# localhost"
-  working_directory        = "%s"
+  working_directory        = var.working_directory
+}
+
+variable "ansible_navigator_binary" {
+  type     = string
+  nullable = false
+}
+
+variable "working_directory" {
+  type     = string
+  nullable = false
 }

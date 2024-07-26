@@ -1,6 +1,3 @@
-// Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
-
 package provider
 
 import (
@@ -84,20 +81,19 @@ func (p *AnsibleProvider) Configure(ctx context.Context, req provider.ConfigureR
 		return
 	}
 
-	var opts providerOptions
+	opts := providerOptions{
+		BaseRunDirectory:    os.TempDir(),
+		PersistRunDirectory: defaultProviderPersistRunDir,
+	}
 
-	if data.BaseRunDirectory.IsNull() {
-		opts.BaseRunDirectory = os.TempDir()
-	} else {
+	if !data.BaseRunDirectory.IsNull() {
 		opts.BaseRunDirectory = data.BaseRunDirectory.ValueString()
 	}
 
 	err := ansible.DirectoryPreflight(opts.BaseRunDirectory)
 	addPathError(&resp.Diagnostics, path.Root("base_run_directory"), "Base run directory preflight check", err)
 
-	if data.PersistRunDirectory.IsNull() {
-		opts.PersistRunDirectory = defaultProviderPersistRunDir
-	} else {
+	if !data.PersistRunDirectory.IsNull() {
 		opts.PersistRunDirectory = data.PersistRunDirectory.ValueBool()
 	}
 

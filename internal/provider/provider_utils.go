@@ -16,6 +16,7 @@ const (
 	terraformOperationCreate = iota
 	terraformOperationUpdate = iota
 	terraformOperationDelete = iota
+	diagDetailPrefix         = "Underlying error details"
 )
 
 type providerOptions struct {
@@ -23,15 +24,15 @@ type providerOptions struct {
 	PersistRunDirectory bool
 }
 
-type TerraformOperation int
+type terraformOperation int
 
 var terraformOperations = []string{"create", "update", "delete"} //nolint:gochecknoglobals
 
-func (op TerraformOperation) String() string {
+func (op terraformOperation) String() string {
 	return terraformOperations[op]
 }
 
-func TerraformOperationTimeout(ctx context.Context, operation TerraformOperation, value timeouts.Value, defaultTimeout time.Duration) (time.Duration, diag.Diagnostics) {
+func terraformOperationTimeout(ctx context.Context, operation terraformOperation, value timeouts.Value, defaultTimeout time.Duration) (time.Duration, diag.Diagnostics) {
 	switch operation {
 	case terraformOperationCreate:
 		return value.Create(ctx, defaultTimeout)
@@ -87,7 +88,7 @@ func configureResourceClient(req resource.ConfigureRequest, resp *resource.Confi
 
 func addError(diags *diag.Diagnostics, summary string, err error) bool {
 	if err != nil {
-		diags.AddError(summary, fmt.Sprintf("Unexpected error: %s", err))
+		diags.AddError(summary, fmt.Sprintf("%s: %s", diagDetailPrefix, err))
 
 		return true
 	}
@@ -95,9 +96,9 @@ func addError(diags *diag.Diagnostics, summary string, err error) bool {
 	return false
 }
 
-func addPathError(diags *diag.Diagnostics, path path.Path, summary string, err error) bool { //nolint:unparam
+func addPathError(diags *diag.Diagnostics, path path.Path, summary string, err error) bool {
 	if err != nil {
-		diags.AddAttributeError(path, summary, err.Error())
+		diags.AddAttributeError(path, summary, fmt.Sprintf("%s: %s", diagDetailPrefix, err))
 
 		return true
 	}
@@ -107,7 +108,7 @@ func addPathError(diags *diag.Diagnostics, path path.Path, summary string, err e
 
 func addWarning(diags *diag.Diagnostics, summary string, err error) bool { //nolint:unparam
 	if err != nil {
-		diags.AddError(summary, err.Error())
+		diags.AddWarning(summary, fmt.Sprintf("%s: %s", diagDetailPrefix, err))
 
 		return true
 	}

@@ -1,5 +1,5 @@
 resource "ansible_navigator_run" "test" {
-  ansible_navigator_binary = "%s"
+  ansible_navigator_binary = var.ansible_navigator_binary
   playbook                 = <<-EOT
   - hosts: some_group
     become: false
@@ -21,4 +21,10 @@ resource "ansible_navigator_run" "test" {
       }
     }
   })
+  run_on_destroy = true
+}
+
+variable "ansible_navigator_binary" {
+  type     = string
+  nullable = false
 }

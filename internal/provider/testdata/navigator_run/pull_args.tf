@@ -5,16 +5,22 @@ resource "ansible_navigator_run" "test" {
     become: false
   EOT
   inventory                = "# localhost"
-  ansible_options = {
-    force_handlers = true
-    skip_tags      = ["tag1", "tag2"]
-    start_at_task  = "task name"
-    limit          = ["host1", "host2"]
-    tags           = ["tag3", "tag4"]
+  execution_environment = {
+    pull_arguments = var.pull_arguments
+  }
+  artifact_queries = {
+    pull_args = {
+      jsonpath = "$.settings_entries.ansible-navigator.execution-environment.pull.arguments"
+    }
   }
 }
 
 variable "ansible_navigator_binary" {
   type     = string
+  nullable = false
+}
+
+variable "pull_arguments" {
+  type     = list(string)
   nullable = false
 }
