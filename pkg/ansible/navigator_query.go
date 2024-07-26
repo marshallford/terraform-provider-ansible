@@ -31,3 +31,9 @@ func QueryPlaybookArtifact(dir string, queries map[string]ArtifactQuery) error {
 
 	return nil
 }
+
+func ValidateJSONPathExpression(expression string) error {
+	_, err := jsonPathParse(expression)
+
+	return err
+}

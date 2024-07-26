@@ -8,6 +8,7 @@ import (
 	"unicode"
 
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
+	"github.com/marshallford/terraform-provider-ansible/pkg/ansible"
 	"golang.org/x/crypto/ssh"
 	"gopkg.in/yaml.v3"
 )
@@ -71,7 +72,7 @@ func (v stringIsEnvVarNameValidator) ValidateString(ctx context.Context, req val
 	if req.ConfigValue.ValueString() == "" {
 		resp.Diagnostics.AddAttributeError(
 			req.Path,
-			"Not an environment variable name",
+			"Not a valid environment variable name",
 			"Environment variable name must not be empty",
 		)
 
@@ -82,7 +83,7 @@ func (v stringIsEnvVarNameValidator) ValidateString(ctx context.Context, req val
 		if r > unicode.MaxASCII || !unicode.IsPrint(r) || r == '=' {
 			resp.Diagnostics.AddAttributeError(
 				req.Path,
-				"Not an environment variable name",
+				"Not a valid environment variable name",
 				"Environment variable name must consist only of printable ASCII characters other than '='",
 			)
 
@@ -98,7 +99,7 @@ func stringIsEnvVarName() stringIsEnvVarNameValidator {
 type stringIsYAMLValidator struct{}
 
 func (v stringIsYAMLValidator) Description(ctx context.Context) string {
-	return "string must be valid YAML"
+	return "string must be YAML"
 }
 
 func (v stringIsYAMLValidator) MarkdownDescription(ctx context.Context) string {
@@ -112,24 +113,12 @@ func (v stringIsYAMLValidator) ValidateString(ctx context.Context, req validator
 
 	var output interface{}
 	err := yaml.Unmarshal([]byte(req.ConfigValue.ValueString()), &output)
-	if err != nil {
-		resp.Diagnostics.AddAttributeError(
-			req.Path,
-			"Not valid YAML",
-			"Must be valid YAML",
-		)
-
+	if addPathError(&resp.Diagnostics, req.Path, "Not valid YAML", err) {
 		return
 	}
 
 	_, err = yaml.Marshal(output)
-	if err != nil {
-		resp.Diagnostics.AddAttributeError(
-			req.Path,
-			"Not valid YAML",
-			"Must be valid YAML",
-		)
-	}
+	addPathError(&resp.Diagnostics, req.Path, "Not valid YAML", err)
 }
 
 func stringIsYAML() stringIsYAMLValidator {
@@ -139,7 +128,7 @@ func stringIsYAML() stringIsYAMLValidator {
 type stringIsIANATimezoneValidator struct{}
 
 func (v stringIsIANATimezoneValidator) Description(ctx context.Context) string {
-	return "string must be a valid IANA time zone"
+	return "string must be an IANA time zone"
 }
 
 func (v stringIsIANATimezoneValidator) MarkdownDescription(ctx context.Context) string {
@@ -155,15 +144,33 @@ func (v stringIsIANATimezoneValidator) ValidateString(ctx context.Context, req v
 		return
 	}
 
-	if _, err := time.LoadLocation(req.ConfigValue.ValueString()); err != nil {
-		resp.Diagnostics.AddAttributeError(
-			req.Path,
-			"Not an IANA time zone",
-			"Must be an IANA time zone, use 'local' for the system time zone",
-		)
-	}
+	_, err := time.LoadLocation(req.ConfigValue.ValueString())
+	addPathError(&resp.Diagnostics, req.Path, "Not a valid IANA time zone, use 'local' for the system time zone", err)
 }
 
 func stringIsIANATimezone() stringIsIANATimezoneValidator {
 	return stringIsIANATimezoneValidator{}
+}
+
+type stringIsIsJSONPathExpressionValidator struct{}
+
+func (v stringIsIsJSONPathExpressionValidator) Description(ctx context.Context) string {
+	return "string must be a JSONPath expression"
+}
+
+func (v stringIsIsJSONPathExpressionValidator) MarkdownDescription(ctx context.Context) string {
+	return v.Description(ctx)
+}
+
+func (v stringIsIsJSONPathExpressionValidator) ValidateString(ctx context.Context, req validator.StringRequest, resp *validator.StringResponse) {
+	if req.ConfigValue.IsUnknown() || req.ConfigValue.IsNull() {
+		return
+	}
+
+	err := ansible.ValidateJSONPathExpression(req.ConfigValue.ValueString())
+	addPathError(&resp.Diagnostics, req.Path, "Not a valid JSONPath expression", err)
+}
+
+func stringIsIsJSONPathExpression() stringIsIsJSONPathExpressionValidator {
+	return stringIsIsJSONPathExpressionValidator{}
 }

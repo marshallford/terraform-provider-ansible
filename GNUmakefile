@@ -8,13 +8,13 @@ endif
 DOCKER := docker
 DOCKER_RUN := $(DOCKER) run $(DOCKER_FLAGS)
 
-EDITORCONFIG_CHECKER_VERSION ?= 2.7.2
-EDITORCONFIG_CHECKER := $(DOCKER_RUN) -v=$(CURDIR):/check docker.io/mstruebing/editorconfig-checker:$(EDITORCONFIG_CHECKER_VERSION)
+EDITORCONFIG_CHECKER_VERSION ?= 3.0.3
+EDITORCONFIG_CHECKER := $(DOCKER_RUN) -v=$(CURDIR):/check docker.io/mstruebing/editorconfig-checker:v$(EDITORCONFIG_CHECKER_VERSION)
 
 SHELLCHECK_VERSION ?= 0.10.0
 SHELLCHECK := $(DOCKER_RUN) -v=$(CURDIR):/mnt docker.io/koalaman/shellcheck:v$(SHELLCHECK_VERSION)
 
-YAMLLINT_VERSION ?= 0.31.0
+YAMLLINT_VERSION ?= 0.31.3
 YAMLLINT := $(DOCKER_RUN) -v=$(CURDIR):/code docker.io/pipelinecomponents/yamllint:$(YAMLLINT_VERSION) yamllint
 
 GOLANGCI_LINT_VERSION ?= 1.59.1

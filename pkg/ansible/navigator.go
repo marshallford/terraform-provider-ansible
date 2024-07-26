@@ -6,22 +6,33 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"slices"
 	"strings"
 )
 
-const NavigatorProgram = "ansible-navigator"
-
-var (
-	ErrDirectory           = errors.New("directory is not valid")
-	ErrContainerEnginePath = errors.New("container engine (podman or docker) must exist in PATH")
-	ErrContainerEngine     = errors.New("container engine is not running or usable")
-	ErrNavigatorAbsPath    = fmt.Errorf("absolute path of %s cannot be represented", NavigatorProgram)
-	ErrNavigatorPath       = fmt.Errorf("%s does not exist in PATH", NavigatorProgram)
-	ErrNavigator           = fmt.Errorf("%s is not functional", NavigatorProgram)
+const (
+	NavigatorProgram    = "ansible-navigator"
+	ContainerEngineAuto = "auto"
 )
 
-func ContainerEngineOptions() []string {
-	return []string{"auto", "podman", "docker"}
+var (
+	ErrDirectory               = errors.New("directory is not valid")
+	ErrContainerEngineValidate = errors.New("container engine is not valid")
+	ErrContainerEnginePath     = errors.New("container engine must exist in PATH")
+	ErrContainerEngineRunning  = errors.New("container engine is not running or usable")
+	ErrNavigatorAbsPath        = fmt.Errorf("absolute path of %s cannot be represented", NavigatorProgram)
+	ErrNavigatorPath           = fmt.Errorf("%s does not exist in PATH", NavigatorProgram)
+	ErrNavigator               = fmt.Errorf("%s is not functional", NavigatorProgram)
+)
+
+func ContainerEngineOptions(auto bool) []string {
+	containerEngines := []string{"podman", "docker"}
+
+	if auto {
+		containerEngines = append(containerEngines, ContainerEngineAuto)
+	}
+
+	return containerEngines
 }
 
 func PullPolicyOptions() []string {
@@ -42,32 +53,31 @@ func DirectoryPreflight(dir string) error {
 }
 
 func ContainerEnginePreflight(containerEngine string) error {
-	podman := programExistsOnPath("podman")
-	docker := programExistsOnPath("docker")
-
-	if containerEngine == "podman" && podman != nil {
-		return podman
+	if !slices.Contains(ContainerEngineOptions(true), containerEngine) {
+		return fmt.Errorf("%w, %s is not an option", ErrContainerEngineValidate, containerEngine)
 	}
 
-	if containerEngine == "docker" && docker != nil {
-		return docker
+	if containerEngine != ContainerEngineAuto && programExistsOnPath(containerEngine) != nil {
+		return fmt.Errorf("%w, %s does not", ErrContainerEnginePath, containerEngine)
 	}
 
-	if containerEngine == "auto" {
-		if podman != nil && docker != nil {
-			return ErrContainerEnginePath
-		}
+	if containerEngine == ContainerEngineAuto {
+		for _, option := range ContainerEngineOptions(false) {
+			if programExistsOnPath(option) == nil {
+				containerEngine = option
 
-		if podman == nil {
-			containerEngine = "podman"
-		} else {
-			containerEngine = "docker"
+				break
+			}
 		}
+	}
+
+	if containerEngine == ContainerEngineAuto {
+		return ErrContainerEnginePath
 	}
 
 	command := exec.Command(containerEngine, "info")
 	if err := command.Run(); err != nil {
-		return fmt.Errorf("%w, '%s info' command failed, %w", ErrContainerEngine, containerEngine, err)
+		return fmt.Errorf("%w, '%s info' command failed, %w", ErrContainerEngineRunning, containerEngine, err)
 	}
 
 	return nil

@@ -13,8 +13,22 @@ import (
 	"testing"
 
 	"github.com/gliderlabs/ssh"
+	"github.com/hashicorp/terraform-plugin-testing/config"
 	gossh "golang.org/x/crypto/ssh"
 )
+
+const (
+	navigatorProgramPath = "../../.venv/bin/ansible-navigator" // TODO improve
+)
+
+func testAccDefaultConfigVariables(t *testing.T) config.Variables {
+	t.Helper()
+
+	return config.Variables{
+		"base_run_directory":       config.StringVariable(t.TempDir()),
+		"ansible_navigator_binary": config.StringVariable(navigatorProgramPath),
+	}
+}
 
 func testAccLookPath(t *testing.T, file string) string {
 	t.Helper()
@@ -54,22 +68,20 @@ func testAccPrependProgramsToPath(t *testing.T) {
 	t.Setenv("PATH", fmt.Sprintf("%s%c%s", filepath.Dir(testAccAbs(t, navigatorProgramPath)), os.PathListSeparator, os.Getenv("PATH")))
 }
 
-func testAccResource(t *testing.T, name string, format ...any) string {
+func testAccFile(t *testing.T, name string) string {
 	t.Helper()
-
-	baseRunDirectory := t.TempDir()
 
 	providerData, err := os.ReadFile(filepath.Join("testdata", "provider.tf"))
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	resourceData, err := os.ReadFile(filepath.Join("testdata", fmt.Sprintf("%s.tf", name)))
+	fileData, err := os.ReadFile(filepath.Join("testdata", fmt.Sprintf("%s.tf", name)))
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	return fmt.Sprintf(string(providerData), baseRunDirectory) + fmt.Sprintf(string(resourceData), format...)
+	return string(fileData) + string(providerData)
 }
 
 func sshKeygen(t *testing.T) (string, string) {

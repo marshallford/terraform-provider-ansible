@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"regexp"
-	"time"
 
 	"github.com/google/uuid"
 	"github.com/hashicorp/terraform-plugin-framework-timeouts/resource/timeouts"
@@ -23,18 +22,8 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
+	"github.com/hashicorp/terraform-plugin-framework/types/basetypes"
 	"github.com/marshallford/terraform-provider-ansible/pkg/ansible"
-)
-
-const (
-	navigatorRunOperationEnvVar        = "ANSIBLE_TF_OPERATION"
-	navigatorRunDir                    = "tf-ansible-navigator-run"
-	defaultNavigatorRunTimeout         = 10 * time.Minute
-	defaultNavigatorRunContainerEngine = "auto"
-	defaultNavigatorRunImage           = "ghcr.io/ansible/community-ansible-dev-tools:v24.7.0"
-	defaultNavigatorRunPullPolicy      = "tag"
-	defaultNavigatorRunTimezone        = "UTC"
-	defaultNavigatorRunOnDestroy       = false
 )
 
 var _ resource.Resource = &NavigatorRunResource{}
@@ -143,30 +132,30 @@ func (m ExecutionEnvironmentModel) Value(ctx context.Context, settings *ansible.
 	return diags
 }
 
-func (m AnsibleOptionsModel) Value(ctx context.Context, opts *ansible.RunOptions) diag.Diagnostics {
+func (m AnsibleOptionsModel) Value(ctx context.Context, options *ansible.Options) diag.Diagnostics {
 	var diags diag.Diagnostics
 
-	opts.ForceHandlers = m.ForceHandlers.ValueBool()
+	options.ForceHandlers = m.ForceHandlers.ValueBool()
 
 	var skipTags []string
 	if !m.SkipTags.IsNull() {
 		diags.Append(m.SkipTags.ElementsAs(ctx, &skipTags, false)...)
 	}
-	opts.SkipTags = skipTags
+	options.SkipTags = skipTags
 
-	opts.StartAtTask = m.StartAtTask.ValueString()
+	options.StartAtTask = m.StartAtTask.ValueString()
 
 	var limit []string
 	if !m.Limit.IsNull() {
 		diags.Append(m.Limit.ElementsAs(ctx, &limit, false)...)
 	}
-	opts.Limit = limit
+	options.Limit = limit
 
 	var tags []string
 	if !m.Tags.IsNull() {
 		diags.Append(m.Tags.ElementsAs(ctx, &tags, false)...)
 	}
-	opts.Tags = tags
+	options.Tags = tags
 
 	var privateKeysModel []PrivateKeyModel
 	if !m.PrivateKeys.IsNull() {
@@ -177,7 +166,7 @@ func (m AnsibleOptionsModel) Value(ctx context.Context, opts *ansible.RunOptions
 	for _, privateKeyModel := range privateKeysModel {
 		privateKeys = append(privateKeys, privateKeyModel.Name.ValueString())
 	}
-	opts.PrivateKeys = privateKeys
+	options.PrivateKeys = privateKeys
 
 	return diags
 }
@@ -212,6 +201,74 @@ func (m *ArtifactQueryModel) Set(ctx context.Context, query ansible.ArtifactQuer
 
 	m.JSONPath = types.StringValue(query.JSONPath)
 	m.Result = types.StringValue(query.Result)
+
+	return diags
+}
+
+func (m NavigatorRunResourceModel) Value(ctx context.Context, run *navigatorRun, opts *providerOptions, runs uint32) diag.Diagnostics {
+	var diags diag.Diagnostics
+
+	run.dir = runDir(opts.BaseRunDirectory, m.ID.ValueString(), runs)
+	run.persistDir = opts.PersistRunDirectory
+	run.playbook = m.Playbook.ValueString()
+	run.inventory = m.Inventory.ValueString()
+	run.workingDir = m.WorkingDirectory.ValueString()
+	run.navigatorBinary = m.AnsibleNavigatorBinary.ValueString()
+
+	var eeModel ExecutionEnvironmentModel
+	diags.Append(m.ExecutionEnvironment.As(ctx, &eeModel, basetypes.ObjectAsOptions{})...)
+
+	run.navigatorSettings.Timezone = m.Timezone.ValueString()
+	diags.Append(eeModel.Value(ctx, &run.navigatorSettings)...)
+
+	var optsModel AnsibleOptionsModel
+	diags.Append(m.AnsibleOptions.As(ctx, &optsModel, basetypes.ObjectAsOptions{UnhandledNullAsEmpty: true})...)
+
+	diags.Append(optsModel.Value(ctx, &run.options)...)
+
+	var privateKeysModel []PrivateKeyModel
+	if !optsModel.PrivateKeys.IsNull() {
+		diags.Append(optsModel.PrivateKeys.ElementsAs(ctx, &privateKeysModel, false)...)
+	}
+
+	run.privateKeys = make([]ansible.PrivateKey, 0, len(privateKeysModel))
+	for _, model := range privateKeysModel {
+		var key ansible.PrivateKey
+
+		diags.Append(model.Value(ctx, &key)...)
+		run.privateKeys = append(run.privateKeys, key)
+	}
+
+	var queriesModel map[string]ArtifactQueryModel
+	diags.Append(m.ArtifactQueries.ElementsAs(ctx, &queriesModel, false)...)
+
+	run.artifactQueries = map[string]ansible.ArtifactQuery{}
+	for name, model := range queriesModel {
+		var query ansible.ArtifactQuery
+
+		diags.Append(model.Value(ctx, &query)...)
+		run.artifactQueries[name] = query
+	}
+
+	return diags
+}
+
+func (m *NavigatorRunResourceModel) Set(ctx context.Context, run navigatorRun) diag.Diagnostics {
+	var diags diag.Diagnostics
+
+	m.Command = types.StringValue(run.command)
+
+	var queriesModel map[string]ArtifactQueryModel
+	diags.Append(m.ArtifactQueries.ElementsAs(ctx, &queriesModel, false)...)
+
+	for name, model := range queriesModel {
+		diags.Append(model.Set(ctx, run.artifactQueries[name])...)
+		queriesModel[name] = model
+	}
+
+	newQueriesModel, newDiags := types.MapValueFrom(ctx, types.ObjectType{AttrTypes: ArtifactQueryModel{}.AttrTypes()}, queriesModel)
+	diags.Append(newDiags...)
+	m.ArtifactQueries = newQueriesModel
 
 	return diags
 }
@@ -272,13 +329,13 @@ func (r *NavigatorRunResource) Schema(ctx context.Context, req resource.SchemaRe
 				)),
 				Attributes: map[string]schema.Attribute{
 					"container_engine": schema.StringAttribute{
-						Description:         fmt.Sprintf("Container engine responsible for running the execution environment container image. Options: %s. Defaults to '%s'.", wrapElementsJoin(ansible.ContainerEngineOptions(), "'"), defaultNavigatorRunContainerEngine),
-						MarkdownDescription: fmt.Sprintf("[Container engine](https://ansible.readthedocs.io/projects/navigator/settings/#container-engine) responsible for running the execution environment container image. Options: %s. Defaults to `%s`.", wrapElementsJoin(ansible.ContainerEngineOptions(), "`"), defaultNavigatorRunContainerEngine),
+						Description:         fmt.Sprintf("Container engine responsible for running the execution environment container image. Options: %s. Defaults to '%s'.", wrapElementsJoin(ansible.ContainerEngineOptions(true), "'"), defaultNavigatorRunContainerEngine),
+						MarkdownDescription: fmt.Sprintf("[Container engine](https://ansible.readthedocs.io/projects/navigator/settings/#container-engine) responsible for running the execution environment container image. Options: %s. Defaults to `%s`.", wrapElementsJoin(ansible.ContainerEngineOptions(true), "`"), defaultNavigatorRunContainerEngine),
 						Optional:            true,
 						Computed:            true,
 						Default:             stringdefault.StaticString(defaultNavigatorRunContainerEngine),
 						Validators: []validator.String{
-							stringvalidator.OneOf(ansible.ContainerEngineOptions()...),
+							stringvalidator.OneOf(ansible.ContainerEngineOptions(true)...),
 						},
 					},
 					"environment_variables_pass": schema.ListAttribute{
@@ -406,8 +463,8 @@ func (r *NavigatorRunResource) Schema(ctx context.Context, req resource.SchemaRe
 				},
 			},
 			"run_on_destroy": schema.BoolAttribute{
-				Description:         fmt.Sprintf("Run playbook on destroy. The environment variable '%s' is set to '%s' during the run to allow for conditional plays, tasks, etc. Defaults to '%t'.", navigatorRunOperationEnvVar, TerraformOperation(terraformOperationDelete).String(), defaultNavigatorRunOnDestroy),
-				MarkdownDescription: fmt.Sprintf("Run playbook on destroy. The environment variable `%s` is set to `%s` during the run to allow for conditional plays, tasks, etc. Defaults to `%t`.", navigatorRunOperationEnvVar, TerraformOperation(terraformOperationDelete).String(), defaultNavigatorRunOnDestroy),
+				Description:         fmt.Sprintf("Run playbook on destroy. The environment variable '%s' is set to '%s' during the run to allow for conditional plays, tasks, etc. Defaults to '%t'.", navigatorRunOperationEnvVar, terraformOperation(terraformOperationDelete).String(), defaultNavigatorRunOnDestroy),
+				MarkdownDescription: fmt.Sprintf("Run playbook on destroy. The environment variable `%s` is set to `%s` during the run to allow for conditional plays, tasks, etc. Defaults to `%t`.", navigatorRunOperationEnvVar, terraformOperation(terraformOperationDelete).String(), defaultNavigatorRunOnDestroy),
 				Optional:            true,
 				Computed:            true,
 				Default:             booldefault.StaticBool(defaultNavigatorRunOnDestroy),
@@ -435,6 +492,9 @@ func (r *NavigatorRunResource) Schema(ctx context.Context, req resource.SchemaRe
 						"jsonpath": schema.StringAttribute{
 							Description: "JSONPath expression.",
 							Required:    true,
+							Validators: []validator.String{
+								stringIsIsJSONPathExpression(),
+							},
 						},
 						"result": schema.StringAttribute{
 							Description: "Result of the query. Result may be empty if a field or map key cannot be located.",
@@ -467,6 +527,26 @@ func (r *NavigatorRunResource) Schema(ctx context.Context, req resource.SchemaRe
 	}
 }
 
+func (NavigatorRunResource) ShouldRun(plan *NavigatorRunResourceModel, state *NavigatorRunResourceModel) bool {
+	attributeChanges := []bool{
+		plan.Playbook.Equal(state.Playbook),
+		plan.Inventory.Equal(state.Inventory),
+		plan.WorkingDirectory.Equal(state.WorkingDirectory),
+		plan.ExecutionEnvironment.Equal(state.ExecutionEnvironment),
+		plan.AnsibleOptions.Equal(state.AnsibleOptions), // TODO check nested attrs
+		plan.Triggers.Equal(state.Triggers),
+		plan.ArtifactQueries.Equal(state.ArtifactQueries),
+	}
+
+	for _, attributeChange := range attributeChanges {
+		if !attributeChange {
+			return true
+		}
+	}
+
+	return false
+}
+
 func (r *NavigatorRunResource) Configure(ctx context.Context, req resource.ConfigureRequest, resp *resource.ConfigureResponse) {
 	opts, ok := configureResourceClient(req, resp)
 	if !ok {
@@ -486,14 +566,33 @@ func (r *NavigatorRunResource) Create(ctx context.Context, req resource.CreateRe
 	}
 
 	runs := uint32(1)
-	SetRuns(ctx, &resp.Diagnostics, resp.Private.SetKey, runs)
+	setRuns(ctx, &resp.Diagnostics, resp.Private.SetKey, runs)
 
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
+	timeout, newDiags := terraformOperationTimeout(ctx, terraformOperationCreate, data.Timeouts, defaultNavigatorRunTimeout)
+	resp.Diagnostics.Append(newDiags...)
+
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	ctx, cancel := context.WithTimeout(ctx, timeout)
+	defer cancel()
+
 	data.ID = types.StringValue(uuid.New().String())
-	r.Run(ctx, &resp.Diagnostics, data, runs, terraformOperationCreate)
+
+	var navigatorRun navigatorRun
+	resp.Diagnostics.Append(data.Value(ctx, &navigatorRun, r.opts, runs)...)
+
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	run(&resp.Diagnostics, timeout, terraformOperationCreate, &navigatorRun)
+	resp.Diagnostics.Append(data.Set(ctx, navigatorRun)...)
 
 	if resp.Diagnostics.HasError() {
 		return
@@ -515,23 +614,47 @@ func (r *NavigatorRunResource) Update(ctx context.Context, req resource.UpdateRe
 		return
 	}
 
-	if r.ShouldRun(data, state) {
-		runs := IncrementRuns(ctx, &resp.Diagnostics, req.Private.GetKey, resp.Private.SetKey)
-
-		if resp.Diagnostics.HasError() {
-			return
+	defer func() {
+		if !resp.Diagnostics.HasError() {
+			resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
 		}
+	}()
 
-		r.Run(ctx, &resp.Diagnostics, data, runs, terraformOperationUpdate)
-
-		if resp.Diagnostics.HasError() {
-			return
-		}
-	} else {
+	if !r.ShouldRun(data, state) {
 		data.Command = state.Command
+
+		return
 	}
 
-	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
+	runs := incrementRuns(ctx, &resp.Diagnostics, req.Private.GetKey, resp.Private.SetKey)
+
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	timeout, newDiags := terraformOperationTimeout(ctx, terraformOperationUpdate, data.Timeouts, defaultNavigatorRunTimeout)
+	resp.Diagnostics.Append(newDiags...)
+
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	ctx, cancel := context.WithTimeout(ctx, timeout)
+	defer cancel()
+
+	var navigatorRun navigatorRun
+	resp.Diagnostics.Append(data.Value(ctx, &navigatorRun, r.opts, runs)...)
+
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	run(&resp.Diagnostics, timeout, terraformOperationUpdate, &navigatorRun)
+	resp.Diagnostics.Append(data.Set(ctx, navigatorRun)...)
+
+	if resp.Diagnostics.HasError() {
+		return
+	}
 }
 
 func (r *NavigatorRunResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) {
@@ -543,13 +666,32 @@ func (r *NavigatorRunResource) Delete(ctx context.Context, req resource.DeleteRe
 		return
 	}
 
-	runs := IncrementRuns(ctx, &resp.Diagnostics, req.Private.GetKey, resp.Private.SetKey)
+	if !data.RunOnDestroy.ValueBool() {
+		return
+	}
+
+	runs := incrementRuns(ctx, &resp.Diagnostics, req.Private.GetKey, resp.Private.SetKey)
 
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
-	if data.RunOnDestroy.ValueBool() {
-		r.Run(ctx, &resp.Diagnostics, data, runs, terraformOperationDelete)
+	timeout, newDiags := terraformOperationTimeout(ctx, terraformOperationDelete, data.Timeouts, defaultNavigatorRunTimeout)
+	resp.Diagnostics.Append(newDiags...)
+
+	if resp.Diagnostics.HasError() {
+		return
 	}
+
+	ctx, cancel := context.WithTimeout(ctx, timeout)
+	defer cancel()
+
+	var navigatorRun navigatorRun
+	resp.Diagnostics.Append(data.Value(ctx, &navigatorRun, r.opts, runs)...)
+
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	run(&resp.Diagnostics, timeout, terraformOperationDelete, &navigatorRun)
 }

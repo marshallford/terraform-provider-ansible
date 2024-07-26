@@ -20,7 +20,7 @@ const (
 	navigatorRunLogFilename  = "output.log"
 )
 
-type RunOptions struct {
+type Options struct {
 	ForceHandlers bool
 	SkipTags      []string
 	StartAtTask   string
@@ -29,7 +29,7 @@ type RunOptions struct {
 	PrivateKeys   []string
 }
 
-func GenerateNavigatorRunCommand(runDir string, workingDir string, ansibleNavigatorBinary string, opts *RunOptions) *exec.Cmd {
+func GenerateNavigatorRunCommand(runDir string, workingDir string, ansibleNavigatorBinary string, options *Options) *exec.Cmd {
 	command := exec.Command(ansibleNavigatorBinary, []string{ // #nosec G204
 		"run",
 		filepath.Join(runDir, playbookFilename),
@@ -45,27 +45,27 @@ func GenerateNavigatorRunCommand(runDir string, workingDir string, ansibleNaviga
 	command.Env = append(os.Environ(), fmt.Sprintf("ANSIBLE_NAVIGATOR_CONFIG=%s", filepath.Join(runDir, navigatorSettingsFilename)))
 	command.WaitDelay = commandWaitDelay
 
-	if opts.ForceHandlers {
+	if options.ForceHandlers {
 		command.Args = append(command.Args, "--force-handlers")
 	}
 
-	if len(opts.SkipTags) > 0 {
-		command.Args = append(command.Args, "--skip-tags", strings.Join(opts.SkipTags, ","))
+	if len(options.SkipTags) > 0 {
+		command.Args = append(command.Args, "--skip-tags", strings.Join(options.SkipTags, ","))
 	}
 
-	if opts.StartAtTask != "" {
-		command.Args = append(command.Args, "--start-at-task", opts.StartAtTask)
+	if options.StartAtTask != "" {
+		command.Args = append(command.Args, "--start-at-task", options.StartAtTask)
 	}
 
-	if len(opts.Limit) > 0 {
-		command.Args = append(command.Args, "--limit", strings.Join(opts.Limit, ","))
+	if len(options.Limit) > 0 {
+		command.Args = append(command.Args, "--limit", strings.Join(options.Limit, ","))
 	}
 
-	if len(opts.Tags) > 0 {
-		command.Args = append(command.Args, "--tags", strings.Join(opts.Tags, ","))
+	if len(options.Tags) > 0 {
+		command.Args = append(command.Args, "--tags", strings.Join(options.Tags, ","))
 	}
 
-	for _, key := range opts.PrivateKeys {
+	for _, key := range options.PrivateKeys {
 		command.Args = append(command.Args, "--private-key", fmt.Sprintf("%s/%s", eePrivateKeysDir, key))
 	}
 
