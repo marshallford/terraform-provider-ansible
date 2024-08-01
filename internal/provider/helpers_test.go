@@ -5,7 +5,9 @@ import (
 	"crypto/ed25519"
 	"encoding/base64"
 	"encoding/pem"
+	"errors"
 	"fmt"
+	"maps"
 	"net"
 	"os"
 	"os/exec"
@@ -14,6 +16,8 @@ import (
 
 	"github.com/gliderlabs/ssh"
 	"github.com/hashicorp/terraform-plugin-testing/config"
+	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
+	"github.com/hashicorp/terraform-plugin-testing/terraform"
 	gossh "golang.org/x/crypto/ssh"
 )
 
@@ -21,7 +25,9 @@ const (
 	navigatorProgramPath = "../../.venv/bin/ansible-navigator" // TODO improve
 )
 
-func testAccDefaultConfigVariables(t *testing.T) config.Variables {
+var ErrTestCheckFunc = errors.New("test check func")
+
+func testDefaultConfigVariables(t *testing.T) config.Variables {
 	t.Helper()
 
 	return config.Variables{
@@ -30,7 +36,16 @@ func testAccDefaultConfigVariables(t *testing.T) config.Variables {
 	}
 }
 
-func testAccLookPath(t *testing.T, file string) string {
+func testConfigVariables(t *testing.T, overrides config.Variables) config.Variables {
+	t.Helper()
+
+	variables := testDefaultConfigVariables(t)
+	maps.Copy(variables, overrides)
+
+	return variables
+}
+
+func testLookPath(t *testing.T, file string) string {
 	t.Helper()
 
 	path, err := exec.LookPath(file)
@@ -41,17 +56,17 @@ func testAccLookPath(t *testing.T, file string) string {
 	return path
 }
 
-func testAccPreCheck(t *testing.T) {
+func testPreCheck(t *testing.T) {
 	t.Helper()
 
 	if _, err := exec.LookPath(navigatorProgramPath); err != nil {
 		t.Fatalf("%s program not installed via Makefile", filepath.Base(navigatorProgramPath))
 	}
 
-	testAccLookPath(t, "docker")
+	testLookPath(t, "docker")
 }
 
-func testAccAbs(t *testing.T, programPath string) string {
+func testAbsPath(t *testing.T, programPath string) string {
 	t.Helper()
 
 	absPath, err := filepath.Abs(programPath)
@@ -62,13 +77,13 @@ func testAccAbs(t *testing.T, programPath string) string {
 	return absPath
 }
 
-func testAccPrependProgramsToPath(t *testing.T) {
+func testPrependProgramsToPath(t *testing.T) {
 	t.Helper()
 
-	t.Setenv("PATH", fmt.Sprintf("%s%c%s", filepath.Dir(testAccAbs(t, navigatorProgramPath)), os.PathListSeparator, os.Getenv("PATH")))
+	t.Setenv("PATH", fmt.Sprintf("%s%c%s", filepath.Dir(testAbsPath(t, navigatorProgramPath)), os.PathListSeparator, os.Getenv("PATH")))
 }
 
-func testAccFile(t *testing.T, name string) string {
+func testTerraformFile(t *testing.T, name string) string {
 	t.Helper()
 
 	providerData, err := os.ReadFile(filepath.Join("testdata", "provider.tf"))
@@ -84,7 +99,7 @@ func testAccFile(t *testing.T, name string) string {
 	return string(fileData) + string(providerData)
 }
 
-func sshKeygen(t *testing.T) (string, string) {
+func testSSHKeygen(t *testing.T) (string, string) {
 	t.Helper()
 
 	pub, priv, err := ed25519.GenerateKey(nil)
@@ -105,7 +120,7 @@ func sshKeygen(t *testing.T) (string, string) {
 	return fmt.Sprintf("ssh-ed25519 %s", base64.StdEncoding.EncodeToString(publicKey.Marshal())), string(pem.EncodeToMemory(privateKey))
 }
 
-func sshServer(t *testing.T, publicKey string) int {
+func testSSHServer(t *testing.T, publicKey string) int {
 	t.Helper()
 
 	listener, err := net.Listen("tcp", "localhost:0")
@@ -151,4 +166,56 @@ func sshServer(t *testing.T, publicKey string) int {
 	}
 
 	return addr.Port
+}
+
+// https://github.com/hashicorp/terraform-provider-random/blob/main/internal/provider/resource_integer_test.go
+func testExtractResourceAttr(resourceName string, attributeName string, attributeValue *string) resource.TestCheckFunc { //nolint:unparam
+	return func(s *terraform.State) error {
+		resourceState, ok := s.RootModule().Resources[resourceName]
+
+		if !ok {
+			return fmt.Errorf("%w, resource name %s not found in state", ErrTestCheckFunc, resourceName)
+		}
+
+		attrValue, ok := resourceState.Primary.Attributes[attributeName]
+
+		if !ok {
+			return fmt.Errorf("%w, attribute %s not found in resource %s state", ErrTestCheckFunc, attributeName, resourceName)
+		}
+
+		*attributeValue = attrValue
+
+		return nil
+	}
+}
+
+// https://github.com/hashicorp/terraform-provider-random/blob/main/internal/provider/resource_integer_test.go
+func testCheckAttributeValuesDiffer(i *string, j *string) resource.TestCheckFunc {
+	return func(s *terraform.State) error {
+		if testStringValue(i) == testStringValue(j) {
+			return fmt.Errorf("%w, attribute values are the same, got %s", ErrTestCheckFunc, testStringValue(i))
+		}
+
+		return nil
+	}
+}
+
+// https://github.com/hashicorp/terraform-provider-random/blob/main/internal/provider/resource_integer_test.go
+func testCheckAttributeValuesEqual(i *string, j *string) resource.TestCheckFunc {
+	return func(s *terraform.State) error {
+		if testStringValue(i) != testStringValue(j) {
+			return fmt.Errorf("%w, attribute values are different, got %s and %s", ErrTestCheckFunc, testStringValue(i), testStringValue(j))
+		}
+
+		return nil
+	}
+}
+
+// https://github.com/hashicorp/terraform-provider-random/blob/main/internal/provider/resource_integer_test.go
+func testStringValue(sPtr *string) string {
+	if sPtr == nil {
+		return ""
+	}
+
+	return *sPtr
 }

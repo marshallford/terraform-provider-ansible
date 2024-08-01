@@ -19,3 +19,7 @@ linters:
   - revive
   - wrapcheck
   - wsl
+
+linters-settings:
+  varnamelen:
+    ignore-map-index-ok: true

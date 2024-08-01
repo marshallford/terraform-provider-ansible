@@ -26,7 +26,10 @@ import (
 	"github.com/marshallford/terraform-provider-ansible/pkg/ansible"
 )
 
-var _ resource.Resource = &NavigatorRunResource{}
+var (
+	_ resource.Resource               = &NavigatorRunResource{}
+	_ resource.ResourceWithModifyPlan = &NavigatorRunResource{}
+)
 
 func NewNavigatorRunResource() resource.Resource { //nolint:ireturn
 	return &NavigatorRunResource{}
@@ -266,9 +269,9 @@ func (m *NavigatorRunResourceModel) Set(ctx context.Context, run navigatorRun) d
 		queriesModel[name] = model
 	}
 
-	newQueriesModel, newDiags := types.MapValueFrom(ctx, types.ObjectType{AttrTypes: ArtifactQueryModel{}.AttrTypes()}, queriesModel)
+	queriesValue, newDiags := types.MapValueFrom(ctx, types.ObjectType{AttrTypes: ArtifactQueryModel{}.AttrTypes()}, queriesModel)
 	diags.Append(newDiags...)
-	m.ArtifactQueries = newQueriesModel
+	m.ArtifactQueries = queriesValue
 
 	return diags
 }
@@ -499,6 +502,9 @@ func (r *NavigatorRunResource) Schema(ctx context.Context, req resource.SchemaRe
 						"result": schema.StringAttribute{
 							Description: "Result of the query. Result may be empty if a field or map key cannot be located.",
 							Computed:    true,
+							PlanModifiers: []planmodifier.String{
+								stringplanmodifier.UseStateForUnknown(),
+							},
 						},
 					},
 				},
@@ -515,6 +521,9 @@ func (r *NavigatorRunResource) Schema(ctx context.Context, req resource.SchemaRe
 				Description:         fmt.Sprintf("Generated '%s' run command. Useful for troubleshooting.", ansible.NavigatorProgram),
 				MarkdownDescription: fmt.Sprintf("Generated `%s` run command. Useful for troubleshooting.", ansible.NavigatorProgram),
 				Computed:            true,
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
 			// timeouts
 			// TODO include defaultNavigatorRunTimeout in description
@@ -528,12 +537,14 @@ func (r *NavigatorRunResource) Schema(ctx context.Context, req resource.SchemaRe
 }
 
 func (NavigatorRunResource) ShouldRun(plan *NavigatorRunResourceModel, state *NavigatorRunResourceModel) bool {
+	// skip ansible_navigator_binary, run_on_destroy, timeouts
 	attributeChanges := []bool{
 		plan.Playbook.Equal(state.Playbook),
 		plan.Inventory.Equal(state.Inventory),
 		plan.WorkingDirectory.Equal(state.WorkingDirectory),
 		plan.ExecutionEnvironment.Equal(state.ExecutionEnvironment),
 		plan.AnsibleOptions.Equal(state.AnsibleOptions), // TODO check nested attrs
+		plan.Timezone.Equal(state.Timezone),
 		plan.Triggers.Equal(state.Triggers),
 		plan.ArtifactQueries.Equal(state.ArtifactQueries),
 	}
@@ -554,6 +565,53 @@ func (r *NavigatorRunResource) Configure(ctx context.Context, req resource.Confi
 	}
 
 	r.opts = opts
+}
+
+func (r *NavigatorRunResource) ModifyPlan(ctx context.Context, req resource.ModifyPlanRequest, resp *resource.ModifyPlanResponse) {
+	var data, state *NavigatorRunResourceModel
+
+	resp.Diagnostics.Append(req.Plan.Get(ctx, &data)...)
+	resp.Diagnostics.Append(req.State.Get(ctx, &state)...)
+
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	if req.Plan.Raw.IsNull() && state.RunOnDestroy.ValueBool() {
+		resp.Diagnostics.AddWarning(
+			"Resource Destruction Considerations",
+			"Applying this resource destruction with 'run_on_destroy' enabled will run the playbook as configured in state. "+
+				"The playbook run must complete successfully to remove the resource from Terraform state. ",
+		)
+	}
+
+	if req.State.Raw.IsNull() || req.Plan.Raw.IsNull() {
+		return
+	}
+
+	if !r.ShouldRun(data, state) {
+		return
+	}
+
+	var artifactQueriesPlanModel map[string]ArtifactQueryModel
+	resp.Diagnostics.Append(data.ArtifactQueries.ElementsAs(ctx, &artifactQueriesPlanModel, false)...)
+
+	for name, model := range artifactQueriesPlanModel {
+		model.Result = types.StringUnknown()
+		artifactQueriesPlanModel[name] = model
+	}
+
+	artifactQueriesPlanValue, newDiags := types.MapValueFrom(ctx, types.ObjectType{AttrTypes: ArtifactQueryModel{}.AttrTypes()}, artifactQueriesPlanModel)
+	resp.Diagnostics.Append(newDiags...)
+
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	data.ArtifactQueries = artifactQueriesPlanValue
+	data.Command = types.StringUnknown()
+
+	resp.Diagnostics.Append(resp.Plan.Set(ctx, &data)...)
 }
 
 func (r *NavigatorRunResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
@@ -621,8 +679,6 @@ func (r *NavigatorRunResource) Update(ctx context.Context, req resource.UpdateRe
 	}()
 
 	if !r.ShouldRun(data, state) {
-		data.Command = state.Command
-
 		return
 	}
 
