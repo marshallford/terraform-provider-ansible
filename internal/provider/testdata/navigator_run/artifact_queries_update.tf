@@ -8,7 +8,7 @@ resource "ansible_navigator_run" "test" {
     - name: write file
       ansible.builtin.copy:
         dest: /tmp/test
-        content: acc
+        content: acc_update
     - name: get file
       ansible.builtin.slurp:
         src: /tmp/test

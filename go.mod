@@ -1,6 +1,6 @@
 module github.com/marshallford/terraform-provider-ansible
 
-go 1.22.2
+go 1.22.5
 
 require (
 	github.com/gliderlabs/ssh v0.3.7
