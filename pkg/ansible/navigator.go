@@ -83,7 +83,7 @@ func ContainerEnginePreflight(containerEngine string) error {
 	return nil
 }
 
-func NavigatorPath(path string) (string, error) {
+func NavigatorPathPreflight(path string) (string, error) {
 	if path == "" {
 		path, err := exec.LookPath(NavigatorProgram)
 		if err != nil {
