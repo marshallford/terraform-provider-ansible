@@ -352,9 +352,9 @@ func TestAccNavigatorRun_errors(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			t.Parallel()
 
-			variables := testDefaultConfigVariables(t)
+			variables := config.Variables{}
 			if test.variables != nil {
-				variables = testConfigVariables(t, test.variables(t))
+				variables = test.variables(t)
 			}
 
 			resource.Test(t, resource.TestCase{
@@ -363,7 +363,7 @@ func TestAccNavigatorRun_errors(t *testing.T) {
 				Steps: []resource.TestStep{
 					{
 						Config:          testTerraformFile(t, filepath.Join("navigator_run", "errors", test.name)),
-						ConfigVariables: variables,
+						ConfigVariables: testConfigVariables(t, variables),
 						ExpectError:     test.expected,
 					},
 				},

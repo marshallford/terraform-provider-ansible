@@ -9,6 +9,7 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/path"
+	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/marshallford/terraform-provider-ansible/pkg/ansible"
 )
 
@@ -75,20 +76,30 @@ type navigatorRun struct {
 	command           string
 }
 
-func run(diags *diag.Diagnostics, timeout time.Duration, operation terraformOperation, run *navigatorRun) {
+func run(ctx context.Context, diags *diag.Diagnostics, timeout time.Duration, operation terraformOperation, run *navigatorRun) {
 	var err error
 
+	ctx = tflog.SetField(ctx, "dir", run.dir)
+	ctx = tflog.SetField(ctx, "workingDir", run.workingDir)
+	tflog.Debug(ctx, "starting run")
+
+	tflog.Trace(ctx, "directory preflight")
 	err = ansible.DirectoryPreflight(run.workingDir)
 	addPathError(diags, path.Root("working_directory"), "Working directory preflight check", err)
 
+	tflog.Trace(ctx, "container engine preflight")
 	err = ansible.ContainerEnginePreflight(run.navigatorSettings.ContainerEngine)
 	addPathError(diags, path.Root("execution_environment").AtMapKey("container_engine"), "Container engine preflight check", err)
 
-	binary, err := ansible.NavigatorPath(run.navigatorBinary)
+	tflog.Trace(ctx, "navigator path preflight")
+	binary, err := ansible.NavigatorPathPreflight(run.navigatorBinary)
 	addPathError(diags, path.Root("ansible_navigator_binary"), "Ansible navigator not found", err)
 
+	tflog.Trace(ctx, "navigator preflight")
 	err = ansible.NavigatorPreflight(binary)
 	addPathError(diags, path.Root("ansible_navigator_binary"), "Ansible navigator preflight check", err)
+
+	tflog.Trace(ctx, "creating directories and files")
 
 	err = ansible.CreateRunDir(run.dir)
 	addError(diags, "Run directory not created", err)
@@ -111,13 +122,6 @@ func run(diags *diag.Diagnostics, timeout time.Duration, operation terraformOper
 	err = ansible.CreateNavigatorSettingsFile(run.dir, navigatorSettingsContents)
 	addError(diags, "Ansible navigator settings file not created", err)
 
-	command := ansible.GenerateNavigatorRunCommand(
-		run.dir,
-		run.workingDir,
-		binary,
-		&run.options,
-	)
-
 	if diags.HasError() {
 		if !run.persistDir {
 			err = ansible.RemoveRunDir(run.dir)
@@ -126,6 +130,13 @@ func run(diags *diag.Diagnostics, timeout time.Duration, operation terraformOper
 
 		return
 	}
+
+	command := ansible.GenerateNavigatorRunCommand(
+		run.dir,
+		run.workingDir,
+		binary,
+		&run.options,
+	)
 
 	run.command = command.String()
 

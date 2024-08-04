@@ -23,6 +23,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-framework/types/basetypes"
+	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/marshallford/terraform-provider-ansible/pkg/ansible"
 )
 
@@ -590,6 +591,8 @@ func (r *NavigatorRunResource) ModifyPlan(ctx context.Context, req resource.Modi
 	}
 
 	if !r.ShouldRun(data, state) {
+		tflog.Debug(ctx, "skipping run")
+
 		return
 	}
 
@@ -630,6 +633,8 @@ func (r *NavigatorRunResource) Create(ctx context.Context, req resource.CreateRe
 		return
 	}
 
+	tflog.SetField(ctx, "runs", runs)
+
 	timeout, newDiags := terraformOperationTimeout(ctx, terraformOperationCreate, data.Timeouts, defaultNavigatorRunTimeout)
 	resp.Diagnostics.Append(newDiags...)
 
@@ -649,7 +654,7 @@ func (r *NavigatorRunResource) Create(ctx context.Context, req resource.CreateRe
 		return
 	}
 
-	run(&resp.Diagnostics, timeout, terraformOperationCreate, &navigatorRun)
+	run(ctx, &resp.Diagnostics, timeout, terraformOperationCreate, &navigatorRun)
 	resp.Diagnostics.Append(data.Set(ctx, navigatorRun)...)
 
 	if resp.Diagnostics.HasError() {
@@ -679,6 +684,8 @@ func (r *NavigatorRunResource) Update(ctx context.Context, req resource.UpdateRe
 	}()
 
 	if !r.ShouldRun(data, state) {
+		tflog.Debug(ctx, "skipping run")
+
 		return
 	}
 
@@ -687,6 +694,8 @@ func (r *NavigatorRunResource) Update(ctx context.Context, req resource.UpdateRe
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
+	tflog.SetField(ctx, "runs", runs)
 
 	timeout, newDiags := terraformOperationTimeout(ctx, terraformOperationUpdate, data.Timeouts, defaultNavigatorRunTimeout)
 	resp.Diagnostics.Append(newDiags...)
@@ -705,7 +714,7 @@ func (r *NavigatorRunResource) Update(ctx context.Context, req resource.UpdateRe
 		return
 	}
 
-	run(&resp.Diagnostics, timeout, terraformOperationUpdate, &navigatorRun)
+	run(ctx, &resp.Diagnostics, timeout, terraformOperationUpdate, &navigatorRun)
 	resp.Diagnostics.Append(data.Set(ctx, navigatorRun)...)
 
 	if resp.Diagnostics.HasError() {
@@ -723,6 +732,8 @@ func (r *NavigatorRunResource) Delete(ctx context.Context, req resource.DeleteRe
 	}
 
 	if !data.RunOnDestroy.ValueBool() {
+		tflog.Debug(ctx, "skipping run, 'run_on_destroy' disabled")
+
 		return
 	}
 
@@ -731,6 +742,8 @@ func (r *NavigatorRunResource) Delete(ctx context.Context, req resource.DeleteRe
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
+	tflog.SetField(ctx, "runs", runs)
 
 	timeout, newDiags := terraformOperationTimeout(ctx, terraformOperationDelete, data.Timeouts, defaultNavigatorRunTimeout)
 	resp.Diagnostics.Append(newDiags...)
@@ -749,5 +762,5 @@ func (r *NavigatorRunResource) Delete(ctx context.Context, req resource.DeleteRe
 		return
 	}
 
-	run(&resp.Diagnostics, timeout, terraformOperationDelete, &navigatorRun)
+	run(ctx, &resp.Diagnostics, timeout, terraformOperationDelete, &navigatorRun)
 }
