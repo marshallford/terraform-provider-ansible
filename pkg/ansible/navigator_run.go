@@ -42,6 +42,7 @@ func GenerateNavigatorRunCommand(runDir string, workingDir string, ansibleNaviga
 	}...)
 	command.Dir = workingDir
 
+	// TODO allow settings env vars directly for when EE is disabled
 	command.Env = append(os.Environ(), fmt.Sprintf("ANSIBLE_NAVIGATOR_CONFIG=%s", filepath.Join(runDir, navigatorSettingsFilename)))
 	command.WaitDelay = commandWaitDelay
 

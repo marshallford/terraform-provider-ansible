@@ -18,6 +18,7 @@ const (
 	navigatorRunOperationEnvVar        = "ANSIBLE_TF_OPERATION"
 	defaultNavigatorRunTimeout         = 10 * time.Minute
 	defaultNavigatorRunContainerEngine = ansible.ContainerEngineAuto
+	defaultNavigatorRunEEEnabled       = true
 	defaultNavigatorRunImage           = "ghcr.io/ansible/community-ansible-dev-tools:v24.7.2"
 	defaultNavigatorRunPullPolicy      = "tag"
 	defaultNavigatorRunTimezone        = "UTC"
@@ -87,9 +88,15 @@ func run(ctx context.Context, diags *diag.Diagnostics, timeout time.Duration, op
 	err = ansible.DirectoryPreflight(run.workingDir)
 	addPathError(diags, path.Root("working_directory"), "Working directory preflight check", err)
 
-	tflog.Trace(ctx, "container engine preflight")
-	err = ansible.ContainerEnginePreflight(run.navigatorSettings.ContainerEngine)
-	addPathError(diags, path.Root("execution_environment").AtMapKey("container_engine"), "Container engine preflight check", err)
+	if run.navigatorSettings.EEEnabled {
+		tflog.Trace(ctx, "container engine preflight")
+		err = ansible.ContainerEnginePreflight(run.navigatorSettings.ContainerEngine)
+		addPathError(diags, path.Root("execution_environment").AtMapKey("container_engine"), "Container engine preflight check", err)
+	} else {
+		tflog.Trace(ctx, "playbook preflight")
+		err = ansible.PlaybookPreflight()
+		addPathError(diags, path.Root("execution_environment").AtMapKey("enabled"), "Ansible playbook preflight check", err)
+	}
 
 	tflog.Trace(ctx, "navigator path preflight")
 	binary, err := ansible.NavigatorPathPreflight(run.navigatorBinary)

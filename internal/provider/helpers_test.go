@@ -22,7 +22,9 @@ import (
 )
 
 const (
-	navigatorProgramPath = "../../.venv/bin/ansible-navigator" // TODO improve
+	// TODO improve
+	navigatorProgramPath = "../../.venv/bin/ansible-navigator"
+	playbookProgramPath  = "../../.venv/bin/ansible-playbook"
 )
 
 var ErrTestCheckFunc = errors.New("test check func")
@@ -77,10 +79,16 @@ func testAbsPath(t *testing.T, programPath string) string {
 	return absPath
 }
 
-func testPrependProgramsToPath(t *testing.T) {
+func testPrependNavigatorToPath(t *testing.T) {
 	t.Helper()
 
 	t.Setenv("PATH", fmt.Sprintf("%s%c%s", filepath.Dir(testAbsPath(t, navigatorProgramPath)), os.PathListSeparator, os.Getenv("PATH")))
+}
+
+func testPrependPlaybookToPath(t *testing.T) {
+	t.Helper()
+
+	t.Setenv("PATH", fmt.Sprintf("%s%c%s", filepath.Dir(testAbsPath(t, playbookProgramPath)), os.PathListSeparator, os.Getenv("PATH")))
 }
 
 func testTerraformFile(t *testing.T, name string) string {
