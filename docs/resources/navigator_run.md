@@ -3,12 +3,12 @@
 page_title: "ansible_navigator_run Resource - terraform-provider-ansible"
 subcategory: ""
 description: |-
-  Run an Ansible playbook within an execution environment (EE). Requires ansible-navigator and a container engine to run the EEI.
+  Run an Ansible playbook. Requires ansible-navigator and a container engine to run within an execution environment (EE).
 ---
 
 # ansible_navigator_run (Resource)
 
-Run an Ansible playbook within an execution environment (EE). Requires `ansible-navigator` and a container engine to run the EEI.
+Run an Ansible playbook. Requires `ansible-navigator` and a container engine to run within an execution environment (EE).
 
 ## Example Usage
 
@@ -174,7 +174,7 @@ output "resolv_conf" {
 - `ansible_navigator_binary` (String) Path to the `ansible-navigator` binary. By default `$PATH` is searched.
 - `ansible_options` (Attributes) Ansible [playbook](https://docs.ansible.com/ansible/latest/cli/ansible-playbook.html) run related configuration. (see [below for nested schema](#nestedatt--ansible_options))
 - `artifact_queries` (Attributes Map) Query the playbook artifact with [JSONPath](https://goessner.net/articles/JsonPath/). The [playbook artifact](https://access.redhat.com/documentation/en-us/red_hat_ansible_automation_platform/2.0-ea/html/ansible_navigator_creator_guide/assembly-troubleshooting-navigator_ansible-navigator#proc-review-artifact_troubleshooting-navigator) contains detailed information about every play and task, as well as the stdout from the playbook run. (see [below for nested schema](#nestedatt--artifact_queries))
-- `execution_environment` (Attributes) [Execution environment](https://ansible.readthedocs.io/en/latest/getting_started_ee/index.html) related configuration. (see [below for nested schema](#nestedatt--execution_environment))
+- `execution_environment` (Attributes) [Execution environment](https://ansible.readthedocs.io/en/latest/getting_started_ee/index.html) (EE) related configuration. (see [below for nested schema](#nestedatt--execution_environment))
 - `replacement_triggers` (Map of String) Arbitrary map of values that, when changed, will recreate the resource. Similar to `triggers`, but will cause `id` to change. Useful when combined with `run_on_destroy`.
 - `run_on_destroy` (Boolean) Run playbook on destroy. The environment variable `ANSIBLE_TF_OPERATION` is set to `delete` during the run to allow for conditional plays, tasks, etc. Defaults to `false`.
 - `timeouts` (Attributes) (see [below for nested schema](#nestedatt--timeouts))
@@ -228,6 +228,7 @@ Optional:
 
 - `container_engine` (String) [Container engine](https://ansible.readthedocs.io/projects/navigator/settings/#container-engine) responsible for running the execution environment container image. Options: `podman`, `docker`, `auto`. Defaults to `auto`.
 - `container_options` (List of String) [Extra parameters](https://ansible.readthedocs.io/projects/navigator/settings/#container-options) passed to the container engine command.
+- `enabled` (Boolean) Enable or disable the use of an execution environment. Disabling requires `ansible-playbook` and is only recommended when without a container engine. Defaults to `true`.
 - `environment_variables_pass` (List of String) Existing environment variables to be [passed](https://ansible.readthedocs.io/projects/navigator/settings/#pass-environment-variable) through to and set within the execution environment.
 - `environment_variables_set` (Map of String) Environment variables to be [set](https://ansible.readthedocs.io/projects/navigator/settings/#set-environment-variable) within the execution environment. By default `ANSIBLE_TF_OPERATION` is set to the current CRUD operation (`create`, `update`, `delete`).
 - `image` (String) Name of the execution environment container [image](https://ansible.readthedocs.io/projects/navigator/settings/#execution-environment-image). Defaults to `ghcr.io/ansible/community-ansible-dev-tools:v24.7.2`.

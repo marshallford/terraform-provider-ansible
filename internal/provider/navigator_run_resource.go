@@ -59,6 +59,7 @@ type NavigatorRunResourceModel struct {
 
 type ExecutionEnvironmentModel struct {
 	ContainerEngine          types.String `tfsdk:"container_engine"`
+	Enabled                  types.Bool   `tfsdk:"enabled"`
 	EnvironmentVariablesPass types.List   `tfsdk:"environment_variables_pass"`
 	EnvironmentVariablesSet  types.Map    `tfsdk:"environment_variables_set"`
 	Image                    types.String `tfsdk:"image"`
@@ -89,6 +90,7 @@ type ArtifactQueryModel struct {
 func (ExecutionEnvironmentModel) AttrTypes() map[string]attr.Type {
 	return map[string]attr.Type{
 		"container_engine":           types.StringType,
+		"enabled":                    types.BoolType,
 		"environment_variables_pass": types.ListType{ElemType: types.StringType},
 		"environment_variables_set":  types.MapType{ElemType: types.StringType},
 		"image":                      types.StringType,
@@ -102,6 +104,8 @@ func (m ExecutionEnvironmentModel) Value(ctx context.Context, settings *ansible.
 	var diags diag.Diagnostics
 
 	settings.ContainerEngine = m.ContainerEngine.ValueString()
+
+	settings.EEEnabled = m.Enabled.ValueBool()
 
 	var envVarsPass []string
 	if !m.EnvironmentVariablesPass.IsNull() {
@@ -283,8 +287,8 @@ func (r *NavigatorRunResource) Metadata(ctx context.Context, req resource.Metada
 
 func (r *NavigatorRunResource) Schema(ctx context.Context, req resource.SchemaRequest, resp *resource.SchemaResponse) {
 	resp.Schema = schema.Schema{
-		Description:         fmt.Sprintf("Run an Ansible playbook within an execution environment (EE). Requires '%s' and a container engine to run the EEI.", ansible.NavigatorProgram),
-		MarkdownDescription: fmt.Sprintf("Run an Ansible playbook within an execution environment (EE). Requires `%s` and a container engine to run the EEI.", ansible.NavigatorProgram),
+		Description:         fmt.Sprintf("Run an Ansible playbook. Requires '%s' and a container engine to run within an execution environment (EE).", ansible.NavigatorProgram),
+		MarkdownDescription: fmt.Sprintf("Run an Ansible playbook. Requires `%s` and a container engine to run within an execution environment (EE).", ansible.NavigatorProgram),
 		Attributes: map[string]schema.Attribute{
 			// required
 			"playbook": schema.StringAttribute{
@@ -315,14 +319,15 @@ func (r *NavigatorRunResource) Schema(ctx context.Context, req resource.SchemaRe
 				},
 			},
 			"execution_environment": schema.SingleNestedAttribute{
-				Description:         "Execution environment related configuration.",
-				MarkdownDescription: "[Execution environment](https://ansible.readthedocs.io/en/latest/getting_started_ee/index.html) related configuration.",
+				Description:         "Execution environment (EE) related configuration.",
+				MarkdownDescription: "[Execution environment](https://ansible.readthedocs.io/en/latest/getting_started_ee/index.html) (EE) related configuration.",
 				Optional:            true,
 				Computed:            true,
 				Default: objectdefault.StaticValue(types.ObjectValueMust(
 					ExecutionEnvironmentModel{}.AttrTypes(),
 					map[string]attr.Value{
 						"container_engine":           types.StringValue(defaultNavigatorRunContainerEngine),
+						"enabled":                    types.BoolValue(defaultNavigatorRunEEEnabled),
 						"environment_variables_pass": types.ListNull(types.StringType),
 						"environment_variables_set":  types.MapNull(types.StringType),
 						"image":                      types.StringValue(defaultNavigatorRunImage),
@@ -341,6 +346,13 @@ func (r *NavigatorRunResource) Schema(ctx context.Context, req resource.SchemaRe
 						Validators: []validator.String{
 							stringvalidator.OneOf(ansible.ContainerEngineOptions(true)...),
 						},
+					},
+					"enabled": schema.BoolAttribute{ // TODO update docs/readme/repo to reflect this option
+						Description:         fmt.Sprintf("Enable or disable the use of an execution environment. Disabling requires '%s' and is only recommended when without a container engine. Defaults to '%t'.", ansible.PlaybookProgram, defaultNavigatorRunEEEnabled),
+						MarkdownDescription: fmt.Sprintf("Enable or disable the use of an execution environment. Disabling requires `%s` and is only recommended when without a container engine. Defaults to `%t`.", ansible.PlaybookProgram, defaultNavigatorRunEEEnabled),
+						Optional:            true,
+						Computed:            true,
+						Default:             booldefault.StaticBool(defaultNavigatorRunEEEnabled),
 					},
 					"environment_variables_pass": schema.ListAttribute{
 						Description:         "Existing environment variables to be passed through to and set within the execution environment.",

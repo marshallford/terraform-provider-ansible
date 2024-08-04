@@ -79,30 +79,6 @@ func TestAccNavigatorRun_artifact_queries(t *testing.T) {
 	})
 }
 
-func TestAccNavigatorRun_basic_binary_path(t *testing.T) { //nolint:paralleltest
-	testPrependProgramsToPath(t)
-
-	resource.Test(t, resource.TestCase{
-		PreCheck:                 func() { testPreCheck(t) },
-		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
-		Steps: []resource.TestStep{
-			{
-				Config:          testTerraformFile(t, filepath.Join("navigator_run", "basic_binary_path")),
-				ConfigVariables: testDefaultConfigVariables(t),
-				Check: resource.ComposeAggregateTestCheckFunc(
-					resource.TestCheckResourceAttrSet(navigatorRunResource, "id"),
-					resource.TestCheckResourceAttrSet(navigatorRunResource, "command"),
-					resource.TestCheckNoResourceAttr(navigatorRunResource, "ansible_navigator_binary"),
-					resource.TestCheckNoResourceAttr(navigatorRunResource, "ansible_options"),
-					resource.TestCheckNoResourceAttr(navigatorRunResource, "triggers"),
-					resource.TestCheckNoResourceAttr(navigatorRunResource, "replacement_triggers"),
-					resource.TestCheckNoResourceAttr(navigatorRunResource, "artifact_queries"),
-				),
-			},
-		},
-	})
-}
-
 func TestAccNavigatorRun_basic(t *testing.T) {
 	t.Parallel()
 
@@ -114,12 +90,20 @@ func TestAccNavigatorRun_basic(t *testing.T) {
 				Config:          testTerraformFile(t, filepath.Join("navigator_run", "basic")),
 				ConfigVariables: testDefaultConfigVariables(t),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					resource.TestCheckResourceAttrSet(navigatorRunResource, "id"),
-					resource.TestCheckResourceAttrSet(navigatorRunResource, "command"),
+					resource.TestCheckResourceAttrSet(navigatorRunResource, "playbook"),
+					resource.TestCheckResourceAttrSet(navigatorRunResource, "inventory"),
+					resource.TestCheckResourceAttrSet(navigatorRunResource, "working_directory"),
+					// resource.TestCheckResourceAttrSet(navigatorRunResource, "execution_environment"), TODO check elements
+					resource.TestCheckResourceAttrSet(navigatorRunResource, "ansible_navigator_binary"),
 					resource.TestCheckNoResourceAttr(navigatorRunResource, "ansible_options"),
+					resource.TestCheckResourceAttrSet(navigatorRunResource, "timezone"),
+					resource.TestCheckResourceAttrSet(navigatorRunResource, "run_on_destroy"),
 					resource.TestCheckNoResourceAttr(navigatorRunResource, "triggers"),
 					resource.TestCheckNoResourceAttr(navigatorRunResource, "replacement_triggers"),
 					resource.TestCheckNoResourceAttr(navigatorRunResource, "artifact_queries"),
+					resource.TestCheckResourceAttrSet(navigatorRunResource, "id"),
+					resource.TestCheckResourceAttrSet(navigatorRunResource, "command"),
+					resource.TestCheckNoResourceAttr(navigatorRunResource, "timeouts"),
 				),
 			},
 			{
@@ -130,6 +114,44 @@ func TestAccNavigatorRun_basic(t *testing.T) {
 						plancheck.ExpectEmptyPlan(),
 					},
 				},
+			},
+		},
+	})
+}
+
+func TestAccNavigatorRun_binary_in_path(t *testing.T) { //nolint:paralleltest
+	testPrependNavigatorToPath(t)
+
+	resource.Test(t, resource.TestCase{
+		PreCheck:                 func() { testPreCheck(t) },
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		Steps: []resource.TestStep{
+			{
+				Config:          testTerraformFile(t, filepath.Join("navigator_run", "binary_in_path")),
+				ConfigVariables: testDefaultConfigVariables(t),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttrSet(navigatorRunResource, "id"),
+					resource.TestCheckResourceAttrSet(navigatorRunResource, "command"),
+				),
+			},
+		},
+	})
+}
+
+func TestAccNavigatorRun_ee_disabled(t *testing.T) { //nolint:paralleltest
+	testPrependPlaybookToPath(t)
+
+	resource.Test(t, resource.TestCase{
+		PreCheck:                 func() { testPreCheck(t) },
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		Steps: []resource.TestStep{
+			{
+				Config:          testTerraformFile(t, filepath.Join("navigator_run", "ee_disabled")),
+				ConfigVariables: testDefaultConfigVariables(t),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttrSet(navigatorRunResource, "id"),
+					resource.TestCheckResourceAttrSet(navigatorRunResource, "command"),
+				),
 			},
 		},
 	})

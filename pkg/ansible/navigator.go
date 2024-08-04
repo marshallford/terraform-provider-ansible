@@ -12,6 +12,7 @@ import (
 
 const (
 	NavigatorProgram    = "ansible-navigator"
+	PlaybookProgram     = "ansible-playbook"
 	ContainerEngineAuto = "auto"
 )
 
@@ -23,6 +24,8 @@ var (
 	ErrNavigatorAbsPath        = fmt.Errorf("absolute path of %s cannot be represented", NavigatorProgram)
 	ErrNavigatorPath           = fmt.Errorf("%s does not exist in PATH", NavigatorProgram)
 	ErrNavigator               = fmt.Errorf("%s is not functional", NavigatorProgram)
+	ErrPlaybookPath            = fmt.Errorf("%s does not exist in PATH", PlaybookProgram)
+	ErrPlaybook                = fmt.Errorf("%s is not functional", PlaybookProgram)
 )
 
 func ContainerEngineOptions(auto bool) []string {
@@ -111,6 +114,26 @@ func NavigatorPreflight(binary string) error {
 
 	if !strings.HasPrefix(string(stdoutStderr), NavigatorProgram) {
 		return fmt.Errorf("%w, '%s --version' command output not expected", ErrNavigator, binary)
+	}
+
+	return nil
+}
+
+// TODO include output in error
+// TODO require a min version
+func PlaybookPreflight() error {
+	if err := programExistsOnPath(PlaybookProgram); err != nil {
+		return fmt.Errorf("%w, ansible is required when running without an execution environment", ErrPlaybookPath)
+	}
+
+	command := exec.Command(PlaybookProgram, "--version")
+	stdoutStderr, err := command.CombinedOutput()
+	if err != nil {
+		return fmt.Errorf("%w, '%s --version' command failed, %w", ErrPlaybook, PlaybookProgram, err)
+	}
+
+	if !strings.HasPrefix(string(stdoutStderr), PlaybookProgram) {
+		return fmt.Errorf("%w, '%s --version' command output not expected", ErrPlaybook, PlaybookProgram)
 	}
 
 	return nil

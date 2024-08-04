@@ -4,7 +4,30 @@
 [![Go Report Card](https://goreportcard.com/badge/github.com/marshallford/terraform-provider-ansible)](https://goreportcard.com/report/github.com/marshallford/terraform-provider-ansible)
 [![Acceptance Coverage](https://marshallford.github.io/terraform-provider-ansible/badge.svg)](https://marshallford.github.io/terraform-provider-ansible/cover.html)
 
-Run Ansible playbooks within Ansible execution environments using Terraform.
+Run Ansible playbooks using Terraform.
+
+```terraform
+resource "ansible_navigator_run" "example" {
+  playbook = <<-EOT
+  - hosts: some_group
+    become: false
+    tasks:
+    - ansible.builtin.debug:
+        msg: "{{ some_var }}"
+  EOT
+  inventory = yamlencode({
+    all = {
+      children = {
+        some_group = {
+          hosts = {
+            local = { ansible_connection = "local", some_var = "hello world!" }
+          }
+        }
+      }
+    }
+  })
+}
+```
 
 ## Features
 

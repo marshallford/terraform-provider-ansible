@@ -12,6 +12,7 @@ const navigatorSettingsFilename = "ansible-navigator.yaml"
 
 type NavigatorSettings struct {
 	Timeout                  time.Duration
+	EEEnabled                bool
 	ContainerEngine          string
 	EnvironmentVariablesPass []string
 	EnvironmentVariablesSet  map[string]string
@@ -97,7 +98,7 @@ func GenerateNavigatorSettings(settings *NavigatorSettings) (string, error) {
 			},
 			ExecutionEnvironment: navigatorSettingsFormatExecutionEnvironment{
 				ContainerEngine: settings.ContainerEngine,
-				Enabled:         true,
+				Enabled:         settings.EEEnabled,
 				EnvironmentVariables: navigatorSettingsFormatEnvironmentVariables{
 					Pass: settings.EnvironmentVariablesPass,
 					Set:  settings.EnvironmentVariablesSet,
