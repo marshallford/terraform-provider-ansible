@@ -3,13 +3,25 @@ package ansible
 import (
 	"fmt"
 	"path/filepath"
+	"strings"
 )
 
-const eePrivateKeysDir = "/tmp/private-keys"
+const (
+	privateKeysDir   = "private-keys"
+	eePrivateKeysDir = "/tmp/private-keys" // TODO assumes EE is unix-like with a /tmp dir
+)
 
 type PrivateKey struct {
 	Name string
 	Data string
+}
+
+func privateKeyPath(dir string, key string, eeEnabled bool) string {
+	if eeEnabled {
+		return strings.Join([]string{eePrivateKeysDir, key}, "/") // assume EE is unix-like
+	}
+
+	return filepath.Join(dir, privateKeysDir, key)
 }
 
 func CreatePrivateKeys(dir string, keys []PrivateKey, settings *NavigatorSettings) error {
@@ -18,6 +30,10 @@ func CreatePrivateKeys(dir string, keys []PrivateKey, settings *NavigatorSetting
 		if err != nil {
 			return fmt.Errorf("failed to create private key file for run, %w", err)
 		}
+	}
+
+	if !settings.EEEnabled {
+		return nil
 	}
 
 	// TODO better option?
