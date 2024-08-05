@@ -24,7 +24,10 @@ VENV := .venv
 VENV_STAMP := $(VENV)/stamp
 ACTIVATE := . $(VENV)/bin/activate
 
-lint: lint/editorconfig lint/shellcheck lint/yamllint lint/go lint/ansible
+lint: lint/terraform lint/editorconfig lint/shellcheck lint/yamllint lint/go lint/ansible
+
+lint/terraform:
+	terraform fmt -recursive -check
 
 lint/editorconfig:
 	$(EDITORCONFIG_CHECKER)
@@ -65,4 +68,4 @@ $(VENV_STAMP): requirements.txt
 	$(ACTIVATE); pip install -qr requirements.txt
 	touch $(VENV_STAMP)
 
-.PHONY: lint lint/editorconfig lint/shellcheck lint/yamllint lint/go lint/ansible install test test/pkg test/acc docs deps bin/ansible-navigator
+.PHONY: lint lint/terraform lint/editorconfig lint/shellcheck lint/yamllint lint/go lint/ansible install test test/pkg test/acc docs deps bin/ansible-navigator
