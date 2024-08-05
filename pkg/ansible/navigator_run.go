@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
-	"path"
 	"path/filepath"
 	"strings"
 	"time"
@@ -12,7 +11,6 @@ import (
 
 const (
 	commandWaitDelay         = 10 * time.Second
-	privateKeysDir           = "private-keys"
 	playbookFilename         = "playbook.yaml"
 	inventoryFilename        = "inventory"
 	playbookArtifactFilename = "playbook-artifact.json"
@@ -29,7 +27,7 @@ type Options struct {
 	PrivateKeys   []string
 }
 
-func GenerateNavigatorRunCommand(runDir string, workingDir string, ansibleNavigatorBinary string, options *Options) *exec.Cmd {
+func GenerateNavigatorRunCommand(runDir string, workingDir string, ansibleNavigatorBinary string, eeEnabled bool, options *Options) *exec.Cmd {
 	command := exec.Command(ansibleNavigatorBinary, []string{ // #nosec G204
 		"run",
 		filepath.Join(runDir, playbookFilename),
@@ -42,7 +40,7 @@ func GenerateNavigatorRunCommand(runDir string, workingDir string, ansibleNaviga
 	}...)
 	command.Dir = workingDir
 
-	// TODO allow settings env vars directly for when EE is disabled
+	// TODO allow setting env vars directly for when EE is disabled
 	command.Env = append(os.Environ(), fmt.Sprintf("ANSIBLE_NAVIGATOR_CONFIG=%s", filepath.Join(runDir, navigatorSettingsFilename)))
 	command.WaitDelay = commandWaitDelay
 
@@ -67,7 +65,7 @@ func GenerateNavigatorRunCommand(runDir string, workingDir string, ansibleNaviga
 	}
 
 	for _, key := range options.PrivateKeys {
-		command.Args = append(command.Args, "--private-key", fmt.Sprintf("%s/%s", eePrivateKeysDir, key))
+		command.Args = append(command.Args, "--private-key", privateKeyPath(runDir, key, eeEnabled))
 	}
 
 	return command
@@ -87,7 +85,7 @@ func CreateRunDir(dir string) error {
 		return fmt.Errorf("failed to create directory for run, %w", err)
 	}
 
-	if err := os.Mkdir(path.Join(dir, privateKeysDir), 0o700); err != nil { //nolint:gomnd,mnd
+	if err := os.Mkdir(filepath.Join(dir, privateKeysDir), 0o700); err != nil { //nolint:gomnd,mnd
 		return fmt.Errorf("failed to create private keys directory for run, %w", err)
 	}
 

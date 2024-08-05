@@ -142,6 +142,7 @@ func run(ctx context.Context, diags *diag.Diagnostics, timeout time.Duration, op
 		run.dir,
 		run.workingDir,
 		binary,
+		run.navigatorSettings.EEEnabled,
 		&run.options,
 	)
 
