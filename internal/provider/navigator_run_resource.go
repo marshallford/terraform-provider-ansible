@@ -100,6 +100,22 @@ func (ExecutionEnvironmentModel) AttrTypes() map[string]attr.Type {
 	}
 }
 
+func (m ExecutionEnvironmentModel) Defaults() basetypes.ObjectValue {
+	return types.ObjectValueMust(
+		ExecutionEnvironmentModel{}.AttrTypes(),
+		map[string]attr.Value{
+			"container_engine":           types.StringValue(defaultNavigatorRunContainerEngine),
+			"enabled":                    types.BoolValue(defaultNavigatorRunEEEnabled),
+			"environment_variables_pass": types.ListNull(types.StringType),
+			"environment_variables_set":  types.MapNull(types.StringType),
+			"image":                      types.StringValue(defaultNavigatorRunImage),
+			"pull_arguments":             types.ListNull(types.StringType),
+			"pull_policy":                types.StringValue(defaultNavigatorRunPullPolicy),
+			"container_options":          types.ListNull(types.StringType),
+		},
+	)
+}
+
 func (m ExecutionEnvironmentModel) Value(ctx context.Context, settings *ansible.NavigatorSettings) diag.Diagnostics {
 	var diags diag.Diagnostics
 
@@ -285,6 +301,7 @@ func (r *NavigatorRunResource) Metadata(ctx context.Context, req resource.Metada
 	resp.TypeName = fmt.Sprintf("%s_navigator_run", req.ProviderTypeName)
 }
 
+//nolint:dupl
 func (r *NavigatorRunResource) Schema(ctx context.Context, req resource.SchemaRequest, resp *resource.SchemaResponse) {
 	resp.Schema = schema.Schema{
 		Description:         fmt.Sprintf("Run an Ansible playbook. Requires '%s' and a container engine to run within an execution environment (EE).", ansible.NavigatorProgram),
@@ -313,7 +330,7 @@ func (r *NavigatorRunResource) Schema(ctx context.Context, req resource.SchemaRe
 				MarkdownDescription: fmt.Sprintf("Directory which `%s` is run from. Recommended to be the root Ansible [content directory](https://docs.ansible.com/ansible/latest/tips_tricks/sample_setup.html#sample-directory-layout) (sometimes called the project directory), which is likely to contain `ansible.cfg`, `roles/`, etc.", ansible.NavigatorProgram),
 				Optional:            true,
 				Computed:            true,
-				Default:             stringdefault.StaticString("."),
+				Default:             stringdefault.StaticString(defaultNavigatorRunWorkingDir),
 				Validators: []validator.String{
 					stringvalidator.LengthAtLeast(1),
 				},
@@ -323,19 +340,7 @@ func (r *NavigatorRunResource) Schema(ctx context.Context, req resource.SchemaRe
 				MarkdownDescription: "[Execution environment](https://ansible.readthedocs.io/en/latest/getting_started_ee/index.html) (EE) related configuration.",
 				Optional:            true,
 				Computed:            true,
-				Default: objectdefault.StaticValue(types.ObjectValueMust(
-					ExecutionEnvironmentModel{}.AttrTypes(),
-					map[string]attr.Value{
-						"container_engine":           types.StringValue(defaultNavigatorRunContainerEngine),
-						"enabled":                    types.BoolValue(defaultNavigatorRunEEEnabled),
-						"environment_variables_pass": types.ListNull(types.StringType),
-						"environment_variables_set":  types.MapNull(types.StringType),
-						"image":                      types.StringValue(defaultNavigatorRunImage),
-						"pull_arguments":             types.ListNull(types.StringType),
-						"pull_policy":                types.StringValue(defaultNavigatorRunPullPolicy),
-						"container_options":          types.ListNull(types.StringType),
-					},
-				)),
+				Default:             objectdefault.StaticValue(ExecutionEnvironmentModel{}.Defaults()),
 				Attributes: map[string]schema.Attribute{
 					"container_engine": schema.StringAttribute{
 						Description:         fmt.Sprintf("Container engine responsible for running the execution environment container image. Options: %s. Defaults to '%s'.", wrapElementsJoin(ansible.ContainerEngineOptions(true), "'"), defaultNavigatorRunContainerEngine),
@@ -347,7 +352,7 @@ func (r *NavigatorRunResource) Schema(ctx context.Context, req resource.SchemaRe
 							stringvalidator.OneOf(ansible.ContainerEngineOptions(true)...),
 						},
 					},
-					"enabled": schema.BoolAttribute{ // TODO update docs/readme/repo to reflect this option
+					"enabled": schema.BoolAttribute{
 						Description:         fmt.Sprintf("Enable or disable the use of an execution environment. Disabling requires '%s' and is only recommended when without a container engine. Defaults to '%t'.", ansible.PlaybookProgram, defaultNavigatorRunEEEnabled),
 						MarkdownDescription: fmt.Sprintf("Enable or disable the use of an execution environment. Disabling requires `%s` and is only recommended when without a container engine. Defaults to `%t`.", ansible.PlaybookProgram, defaultNavigatorRunEEEnabled),
 						Optional:            true,
@@ -364,8 +369,8 @@ func (r *NavigatorRunResource) Schema(ctx context.Context, req resource.SchemaRe
 						},
 					},
 					"environment_variables_set": schema.MapAttribute{
-						Description:         fmt.Sprintf("Environment variables to be set within the execution environment. By default '%s' is set to the current CRUD operation (%s).", navigatorRunOperationEnvVar, wrapElementsJoin(terraformOperations, "'")),
-						MarkdownDescription: fmt.Sprintf("Environment variables to be [set](https://ansible.readthedocs.io/projects/navigator/settings/#set-environment-variable) within the execution environment. By default `%s` is set to the current CRUD operation (%s).", navigatorRunOperationEnvVar, wrapElementsJoin(terraformOperations, "`")),
+						Description:         fmt.Sprintf("Environment variables to be set within the execution environment. By default '%s' is set to the current CRUD operation (%s).", navigatorRunOperationEnvVar, wrapElementsJoin(remove(terraformOperations, "read"), "'")),
+						MarkdownDescription: fmt.Sprintf("Environment variables to be [set](https://ansible.readthedocs.io/projects/navigator/settings/#set-environment-variable) within the execution environment. By default `%s` is set to the current CRUD operation (%s).", navigatorRunOperationEnvVar, wrapElementsJoin(remove(terraformOperations, "read"), "`")),
 						Optional:            true,
 						ElementType:         types.StringType,
 						Validators: []validator.Map{
@@ -647,7 +652,7 @@ func (r *NavigatorRunResource) Create(ctx context.Context, req resource.CreateRe
 
 	tflog.SetField(ctx, "runs", runs)
 
-	timeout, newDiags := terraformOperationTimeout(ctx, terraformOperationCreate, data.Timeouts, defaultNavigatorRunTimeout)
+	timeout, newDiags := terraformOperationResourceTimeout(ctx, terraformOperationCreate, data.Timeouts, defaultNavigatorRunTimeout)
 	resp.Diagnostics.Append(newDiags...)
 
 	if resp.Diagnostics.HasError() {
@@ -709,7 +714,7 @@ func (r *NavigatorRunResource) Update(ctx context.Context, req resource.UpdateRe
 
 	tflog.SetField(ctx, "runs", runs)
 
-	timeout, newDiags := terraformOperationTimeout(ctx, terraformOperationUpdate, data.Timeouts, defaultNavigatorRunTimeout)
+	timeout, newDiags := terraformOperationResourceTimeout(ctx, terraformOperationUpdate, data.Timeouts, defaultNavigatorRunTimeout)
 	resp.Diagnostics.Append(newDiags...)
 
 	if resp.Diagnostics.HasError() {
@@ -757,7 +762,7 @@ func (r *NavigatorRunResource) Delete(ctx context.Context, req resource.DeleteRe
 
 	tflog.SetField(ctx, "runs", runs)
 
-	timeout, newDiags := terraformOperationTimeout(ctx, terraformOperationDelete, data.Timeouts, defaultNavigatorRunTimeout)
+	timeout, newDiags := terraformOperationResourceTimeout(ctx, terraformOperationDelete, data.Timeouts, defaultNavigatorRunTimeout)
 	resp.Diagnostics.Append(newDiags...)
 
 	if resp.Diagnostics.HasError() {

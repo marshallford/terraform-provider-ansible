@@ -18,7 +18,7 @@ const (
 	navigatorRunResource = "ansible_navigator_run.test"
 )
 
-func TestAccNavigatorRun_ansible_options(t *testing.T) {
+func TestAccNavigatorRunResource_ansible_options(t *testing.T) {
 	t.Parallel()
 
 	resource.Test(t, resource.TestCase{
@@ -26,7 +26,7 @@ func TestAccNavigatorRun_ansible_options(t *testing.T) {
 		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
 		Steps: []resource.TestStep{
 			{
-				Config:          testTerraformFile(t, filepath.Join("navigator_run", "ansible_options")),
+				Config:          testTerraformFile(t, filepath.Join("navigator_run_resource", "ansible_options")),
 				ConfigVariables: testDefaultConfigVariables(t),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestMatchResourceAttr(navigatorRunResource, "command", regexp.MustCompile("--force-handlers --skip-tags tag1,tag2 --start-at-task task name --limit host1,host2 --tags tag3,tag4")),
@@ -36,9 +36,11 @@ func TestAccNavigatorRun_ansible_options(t *testing.T) {
 	})
 }
 
-func TestAccNavigatorRun_artifact_queries(t *testing.T) {
+func TestAccNavigatorRunResource_artifact_queries(t *testing.T) {
 	t.Parallel()
 
+	fileContents := "acc"
+	fileContentsUpdate := "acc_update"
 	var resourceCommand, resourceCommandUpdate string
 
 	resource.Test(t, resource.TestCase{
@@ -46,19 +48,23 @@ func TestAccNavigatorRun_artifact_queries(t *testing.T) {
 		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
 		Steps: []resource.TestStep{
 			{
-				Config:          testTerraformFile(t, filepath.Join("navigator_run", "artifact_queries")),
-				ConfigVariables: testDefaultConfigVariables(t),
+				Config: testTerraformFile(t, filepath.Join("navigator_run_resource", "artifact_queries")),
+				ConfigVariables: testConfigVariables(t, config.Variables{
+					"file_contents": config.StringVariable(fileContents),
+				}),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestMatchResourceAttr(navigatorRunResource, "artifact_queries.stdout.result", regexp.MustCompile("ok=3")),
 					testExtractResourceAttr(navigatorRunResource, "command", &resourceCommand),
 				),
 				ConfigStateChecks: []statecheck.StateCheck{
-					statecheck.ExpectKnownOutputValue("file_contents", knownvalue.StringExact("acc")),
+					statecheck.ExpectKnownOutputValue("file_contents", knownvalue.StringExact(fileContents)),
 				},
 			},
 			{
-				Config:          testTerraformFile(t, filepath.Join("navigator_run", "artifact_queries_update")),
-				ConfigVariables: testDefaultConfigVariables(t),
+				Config: testTerraformFile(t, filepath.Join("navigator_run_resource", "artifact_queries")),
+				ConfigVariables: testConfigVariables(t, config.Variables{
+					"file_contents": config.StringVariable(fileContentsUpdate),
+				}),
 				ConfigPlanChecks: resource.ConfigPlanChecks{
 					PreApply: []plancheck.PlanCheck{
 						plancheck.ExpectNonEmptyPlan(),
@@ -72,14 +78,14 @@ func TestAccNavigatorRun_artifact_queries(t *testing.T) {
 					testCheckAttributeValuesDiffer(&resourceCommand, &resourceCommandUpdate),
 				),
 				ConfigStateChecks: []statecheck.StateCheck{
-					statecheck.ExpectKnownOutputValue("file_contents", knownvalue.StringExact("acc_update")),
+					statecheck.ExpectKnownOutputValue("file_contents", knownvalue.StringExact(fileContentsUpdate)),
 				},
 			},
 		},
 	})
 }
 
-func TestAccNavigatorRun_basic(t *testing.T) {
+func TestAccNavigatorRunResource_basic(t *testing.T) {
 	t.Parallel()
 
 	resource.Test(t, resource.TestCase{
@@ -87,7 +93,7 @@ func TestAccNavigatorRun_basic(t *testing.T) {
 		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
 		Steps: []resource.TestStep{
 			{
-				Config:          testTerraformFile(t, filepath.Join("navigator_run", "basic")),
+				Config:          testTerraformFile(t, filepath.Join("navigator_run_resource", "basic")),
 				ConfigVariables: testDefaultConfigVariables(t),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttrSet(navigatorRunResource, "playbook"),
@@ -107,7 +113,7 @@ func TestAccNavigatorRun_basic(t *testing.T) {
 				),
 			},
 			{
-				Config:          testTerraformFile(t, filepath.Join("navigator_run", "basic")),
+				Config:          testTerraformFile(t, filepath.Join("navigator_run_resource", "basic")),
 				ConfigVariables: testDefaultConfigVariables(t),
 				ConfigPlanChecks: resource.ConfigPlanChecks{
 					PreApply: []plancheck.PlanCheck{
@@ -119,7 +125,7 @@ func TestAccNavigatorRun_basic(t *testing.T) {
 	})
 }
 
-func TestAccNavigatorRun_binary_in_path(t *testing.T) { //nolint:paralleltest
+func TestAccNavigatorRunResource_binary_in_path(t *testing.T) { //nolint:paralleltest
 	testPrependNavigatorToPath(t)
 
 	resource.Test(t, resource.TestCase{
@@ -127,7 +133,7 @@ func TestAccNavigatorRun_binary_in_path(t *testing.T) { //nolint:paralleltest
 		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
 		Steps: []resource.TestStep{
 			{
-				Config:          testTerraformFile(t, filepath.Join("navigator_run", "binary_in_path")),
+				Config:          testTerraformFile(t, filepath.Join("navigator_run_resource", "binary_in_path")),
 				ConfigVariables: testDefaultConfigVariables(t),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttrSet(navigatorRunResource, "id"),
@@ -138,7 +144,7 @@ func TestAccNavigatorRun_binary_in_path(t *testing.T) { //nolint:paralleltest
 	})
 }
 
-func TestAccNavigatorRun_ee_disabled(t *testing.T) { //nolint:paralleltest
+func TestAccNavigatorRunResource_ee_disabled(t *testing.T) { //nolint:paralleltest
 	testPrependPlaybookToPath(t)
 
 	resource.Test(t, resource.TestCase{
@@ -146,7 +152,7 @@ func TestAccNavigatorRun_ee_disabled(t *testing.T) { //nolint:paralleltest
 		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
 		Steps: []resource.TestStep{
 			{
-				Config:          testTerraformFile(t, filepath.Join("navigator_run", "ee_disabled")),
+				Config:          testTerraformFile(t, filepath.Join("navigator_run_resource", "ee_disabled")),
 				ConfigVariables: testDefaultConfigVariables(t),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttrSet(navigatorRunResource, "id"),
@@ -157,7 +163,7 @@ func TestAccNavigatorRun_ee_disabled(t *testing.T) { //nolint:paralleltest
 	})
 }
 
-func TestAccNavigatorRun_env_vars(t *testing.T) {
+func TestAccNavigatorRunResource_env_vars(t *testing.T) {
 	t.Parallel()
 
 	resource.Test(t, resource.TestCase{
@@ -165,16 +171,20 @@ func TestAccNavigatorRun_env_vars(t *testing.T) {
 		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
 		Steps: []resource.TestStep{
 			{
-				Config:          testTerraformFile(t, filepath.Join("navigator_run", "env_vars")),
-				ConfigVariables: testDefaultConfigVariables(t),
+				Config: testTerraformFile(t, filepath.Join("navigator_run_resource", "env_vars")),
+				ConfigVariables: testConfigVariables(t, config.Variables{
+					"operation": config.StringVariable("create"),
+				}),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttrSet(navigatorRunResource, "id"),
 					resource.TestCheckResourceAttrSet(navigatorRunResource, "command"),
 				),
 			},
 			{
-				Config:          testTerraformFile(t, filepath.Join("navigator_run", "env_vars_update")),
-				ConfigVariables: testDefaultConfigVariables(t),
+				Config: testTerraformFile(t, filepath.Join("navigator_run_resource", "env_vars")),
+				ConfigVariables: testConfigVariables(t, config.Variables{
+					"operation": config.StringVariable("update"),
+				}),
 				ConfigPlanChecks: resource.ConfigPlanChecks{
 					PreApply: []plancheck.PlanCheck{
 						plancheck.ExpectNonEmptyPlan(),
@@ -185,59 +195,71 @@ func TestAccNavigatorRun_env_vars(t *testing.T) {
 	})
 }
 
-func TestAccNavigatorRun_private_keys_ee_disabled(t *testing.T) { //nolint:paralleltest
-	testPrependPlaybookToPath(t)
-
-	publicKey, privateKey := testSSHKeygen(t)
-	port := testSSHServer(t, publicKey)
-
-	resource.Test(t, resource.TestCase{
-		PreCheck:                 func() { testPreCheck(t) },
-		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
-		Steps: []resource.TestStep{
-			{
-				Config: testTerraformFile(t, filepath.Join("navigator_run", "private_keys")),
-				ConfigVariables: testConfigVariables(t, config.Variables{
-					"ee_enabled":       config.BoolVariable(false),
-					"private_key_data": config.StringVariable(privateKey),
-					"ssh_port":         config.IntegerVariable(port),
-				}),
-				Check: resource.ComposeAggregateTestCheckFunc(
-					resource.TestCheckResourceAttrSet(navigatorRunResource, "id"),
-					resource.TestCheckResourceAttrSet(navigatorRunResource, "command"),
-				),
+//nolint:dupl //TODO fix
+func TestAccNavigatorRunResource_private_keys(t *testing.T) { //nolint:paralleltest
+	tests := []struct {
+		name      string
+		variables func(*testing.T) config.Variables
+		setup     func(*testing.T)
+	}{
+		{
+			name: "ee_enabled",
+			variables: func(t *testing.T) config.Variables { //nolint:thelper
+				return config.Variables{
+					"ee_enabled": config.BoolVariable(true),
+				}
+			},
+			setup: func(t *testing.T) { //nolint:thelper
+				t.Parallel()
 			},
 		},
-	})
-}
-
-func TestAccNavigatorRun_private_keys(t *testing.T) {
-	t.Parallel()
-
-	publicKey, privateKey := testSSHKeygen(t)
-	port := testSSHServer(t, publicKey)
-
-	resource.Test(t, resource.TestCase{
-		PreCheck:                 func() { testPreCheck(t) },
-		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
-		Steps: []resource.TestStep{
-			{
-				Config: testTerraformFile(t, filepath.Join("navigator_run", "private_keys")),
-				ConfigVariables: testConfigVariables(t, config.Variables{
-					"ee_enabled":       config.BoolVariable(true),
-					"private_key_data": config.StringVariable(privateKey),
-					"ssh_port":         config.IntegerVariable(port),
-				}),
-				Check: resource.ComposeAggregateTestCheckFunc(
-					resource.TestCheckResourceAttrSet(navigatorRunResource, "id"),
-					resource.TestCheckResourceAttrSet(navigatorRunResource, "command"),
-				),
+		{
+			name: "ee_disabled",
+			variables: func(t *testing.T) config.Variables { //nolint:thelper
+				return config.Variables{
+					"ee_enabled": config.BoolVariable(false),
+				}
+			},
+			setup: func(t *testing.T) { //nolint:thelper
+				testPrependPlaybookToPath(t)
 			},
 		},
-	})
+	}
+
+	for _, test := range tests { //nolint:paralleltest
+		t.Run(test.name, func(t *testing.T) {
+			test.setup(t)
+
+			variables := config.Variables{}
+			if test.variables != nil {
+				variables = test.variables(t)
+			}
+
+			publicKey, privateKey := testSSHKeygen(t)
+			port := testSSHServer(t, publicKey)
+
+			variables["private_key_data"] = config.StringVariable(privateKey)
+			variables["ssh_port"] = config.IntegerVariable(port)
+
+			resource.Test(t, resource.TestCase{
+				PreCheck:                 func() { testPreCheck(t) },
+				ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+				Steps: []resource.TestStep{
+					{
+						Config:          testTerraformFile(t, filepath.Join("navigator_run_resource", "private_keys")),
+						ConfigVariables: testConfigVariables(t, variables),
+						Check: resource.ComposeAggregateTestCheckFunc(
+							resource.TestCheckResourceAttrSet(navigatorRunResource, "id"),
+							resource.TestCheckResourceAttrSet(navigatorRunResource, "command"),
+						),
+					},
+				},
+			})
+		})
+	}
 }
 
-func TestAccNavigatorRun_pull_args(t *testing.T) {
+func TestAccNavigatorRunResource_pull_args(t *testing.T) {
 	t.Parallel()
 
 	arg := "--tls-verify=true"
@@ -247,7 +269,7 @@ func TestAccNavigatorRun_pull_args(t *testing.T) {
 		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
 		Steps: []resource.TestStep{
 			{
-				Config: testTerraformFile(t, filepath.Join("navigator_run", "pull_args")),
+				Config: testTerraformFile(t, filepath.Join("navigator_run_resource", "pull_args")),
 				ConfigVariables: testConfigVariables(t, config.Variables{
 					"pull_arguments": config.ListVariable(config.StringVariable(arg)),
 				}),
@@ -259,7 +281,7 @@ func TestAccNavigatorRun_pull_args(t *testing.T) {
 	})
 }
 
-func TestAccNavigatorRun_relative_binary(t *testing.T) {
+func TestAccNavigatorRunResource_relative_binary(t *testing.T) {
 	t.Parallel()
 
 	resource.Test(t, resource.TestCase{
@@ -267,7 +289,7 @@ func TestAccNavigatorRun_relative_binary(t *testing.T) {
 		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
 		Steps: []resource.TestStep{
 			{
-				Config: testTerraformFile(t, filepath.Join("navigator_run", "relative_binary")),
+				Config: testTerraformFile(t, filepath.Join("navigator_run_resource", "relative_binary")),
 				ConfigVariables: testConfigVariables(t, config.Variables{
 					"working_directory": config.StringVariable(t.TempDir()),
 				}),
@@ -280,7 +302,7 @@ func TestAccNavigatorRun_relative_binary(t *testing.T) {
 	})
 }
 
-func TestAccNavigatorRun_role(t *testing.T) {
+func TestAccNavigatorRunResource_role(t *testing.T) {
 	t.Parallel()
 
 	resource.Test(t, resource.TestCase{
@@ -288,10 +310,10 @@ func TestAccNavigatorRun_role(t *testing.T) {
 		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
 		Steps: []resource.TestStep{
 			{
-				Config: testTerraformFile(t, filepath.Join("navigator_run", "role")),
+				Config: testTerraformFile(t, filepath.Join("navigator_run_resource", "role")),
 				ConfigVariables: testConfigVariables(t, config.Variables{
 					// https://github.com/hashicorp/terraform-plugin-testing/issues/277
-					"working_directory": config.StringVariable(filepath.Join("testdata", "navigator_run", "role-working-dir")),
+					"working_directory": config.StringVariable(filepath.Join("testdata", "navigator_run_resource", "role-working-dir")),
 				}),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttrSet(navigatorRunResource, "id"),
@@ -302,7 +324,7 @@ func TestAccNavigatorRun_role(t *testing.T) {
 	})
 }
 
-func TestAccNavigatorRun_skip_run(t *testing.T) {
+func TestAccNavigatorRunResource_skip_run(t *testing.T) {
 	t.Parallel()
 
 	var resourceCommand, resourceCommandUpdate string
@@ -312,7 +334,7 @@ func TestAccNavigatorRun_skip_run(t *testing.T) {
 		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
 		Steps: []resource.TestStep{
 			{
-				Config:          testTerraformFile(t, filepath.Join("navigator_run", "skip_run")),
+				Config:          testTerraformFile(t, filepath.Join("navigator_run_resource", "skip_run")),
 				ConfigVariables: testDefaultConfigVariables(t),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttrSet(navigatorRunResource, "id"),
@@ -321,7 +343,7 @@ func TestAccNavigatorRun_skip_run(t *testing.T) {
 				),
 			},
 			{
-				Config: testTerraformFile(t, filepath.Join("navigator_run", "skip_run_update")),
+				Config: testTerraformFile(t, filepath.Join("navigator_run_resource", "skip_run_update")),
 				ConfigVariables: testConfigVariables(t, config.Variables{
 					"ansible_navigator_binary": config.StringVariable(acctest.RandString(8)),
 				}),
