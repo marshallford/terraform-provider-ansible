@@ -22,4 +22,6 @@ linters:
 
 linters-settings:
   varnamelen:
+    ignore-type-assert-ok: true
     ignore-map-index-ok: true
+    ignore-chan-recv-ok: true

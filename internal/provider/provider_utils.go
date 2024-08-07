@@ -6,7 +6,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/hashicorp/terraform-plugin-framework-timeouts/resource/timeouts"
+	dataSourceTimeouts "github.com/hashicorp/terraform-plugin-framework-timeouts/datasource/timeouts"
+	resourceTimeouts "github.com/hashicorp/terraform-plugin-framework-timeouts/resource/timeouts"
+	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
@@ -14,6 +16,7 @@ import (
 
 const (
 	terraformOperationCreate = iota
+	terraformOperationRead   = iota
 	terraformOperationUpdate = iota
 	terraformOperationDelete = iota
 	diagDetailPrefix         = "Underlying error details"
@@ -26,16 +29,18 @@ type providerOptions struct {
 
 type terraformOperation int
 
-var terraformOperations = []string{"create", "update", "delete"} //nolint:gochecknoglobals
+var terraformOperations = []string{"create", "read", "update", "delete"} //nolint:gochecknoglobals
 
 func (op terraformOperation) String() string {
 	return terraformOperations[op]
 }
 
-func terraformOperationTimeout(ctx context.Context, operation terraformOperation, value timeouts.Value, defaultTimeout time.Duration) (time.Duration, diag.Diagnostics) {
+func terraformOperationResourceTimeout(ctx context.Context, operation terraformOperation, value resourceTimeouts.Value, defaultTimeout time.Duration) (time.Duration, diag.Diagnostics) {
 	switch operation {
 	case terraformOperationCreate:
 		return value.Create(ctx, defaultTimeout)
+	case terraformOperationRead:
+		return value.Read(ctx, defaultTimeout)
 	case terraformOperationUpdate:
 		return value.Update(ctx, defaultTimeout)
 	case terraformOperationDelete:
@@ -43,6 +48,10 @@ func terraformOperationTimeout(ctx context.Context, operation terraformOperation
 	default:
 		return defaultTimeout, nil
 	}
+}
+
+func terraformOperationDataSourceTimeout(ctx context.Context, value dataSourceTimeouts.Value, defaultTimeout time.Duration) (time.Duration, diag.Diagnostics) {
+	return value.Read(ctx, defaultTimeout)
 }
 
 func unknownProviderValue(value path.Path) (string, string) {
@@ -56,27 +65,27 @@ func unexpectedConfigureType(value string, providerData any) (string, string) {
 		fmt.Sprintf("Expected *providerOptions, got: %T. Please report this issue to the provider developers.", providerData)
 }
 
-// func configureDataSourceClient(req datasource.ConfigureRequest, resp *datasource.ConfigureResponse) (*providerOptions, bool) {
-// 	if req.ProviderData == nil {
-// 		return nil, false
-// 	}
+func configureDataSourceClient(req datasource.ConfigureRequest, resp *datasource.ConfigureResponse) (*providerOptions, bool) {
+	if req.ProviderData == nil {
+		return nil, false
+	}
 
-// 	opts, ok := req.ProviderData.(*providerOptions)
+	opts, ok := req.ProviderData.(*providerOptions)
 
-// 	if !ok {
-// 		summary, detail := unexpectedConfigureType("Data Source", req.ProviderData)
-// 		resp.Diagnostics.AddError(summary, detail)
-// 	}
+	if !ok {
+		summary, detail := unexpectedConfigureType("Data Source", req.ProviderData)
+		resp.Diagnostics.AddError(summary, detail)
+	}
 
-// 	return opts, ok
-// }
+	return opts, ok
+}
 
 func configureResourceClient(req resource.ConfigureRequest, resp *resource.ConfigureResponse) (*providerOptions, bool) {
 	if req.ProviderData == nil {
 		return nil, false
 	}
 
-	opts, ok := req.ProviderData.(*providerOptions) //nolint:varnamelen
+	opts, ok := req.ProviderData.(*providerOptions)
 
 	if !ok {
 		summary, detail := unexpectedConfigureType("Resource", req.ProviderData)
@@ -127,4 +136,15 @@ func wrapElements(input []string, wrap string) []string {
 
 func wrapElementsJoin(input []string, wrap string) string {
 	return strings.Join(wrapElements(input, wrap), ", ")
+}
+
+func remove[T comparable](l []T, item T) []T {
+	out := make([]T, 0)
+	for _, element := range l {
+		if element != item {
+			out = append(out, element)
+		}
+	}
+
+	return out
 }

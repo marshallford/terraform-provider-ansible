@@ -8,7 +8,7 @@ resource "ansible_navigator_run" "test" {
     - name: write file
       ansible.builtin.copy:
         dest: /tmp/test
-        content: acc_update
+        content: ${var.file_contents}
     - name: get file
       ansible.builtin.slurp:
         src: /tmp/test
@@ -29,6 +29,11 @@ output "file_contents" {
 }
 
 variable "ansible_navigator_binary" {
+  type     = string
+  nullable = false
+}
+
+variable "file_contents" {
   type     = string
   nullable = false
 }

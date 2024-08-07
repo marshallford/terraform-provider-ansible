@@ -1,4 +1,4 @@
-resource "ansible_navigator_run" "test" {
+data "ansible_navigator_run" "test" {
   ansible_navigator_binary = var.ansible_navigator_binary
   playbook                 = <<-EOT
   - name: Test
@@ -8,7 +8,7 @@ resource "ansible_navigator_run" "test" {
     - name: write file
       ansible.builtin.copy:
         dest: /tmp/test
-        content: acc
+        content: ${var.file_contents}
     - name: get file
       ansible.builtin.slurp:
         src: /tmp/test
@@ -25,10 +25,15 @@ resource "ansible_navigator_run" "test" {
 }
 
 output "file_contents" {
-  value = base64decode(ansible_navigator_run.test.artifact_queries.file_contents.result)
+  value = base64decode(data.ansible_navigator_run.test.artifact_queries.file_contents.result)
 }
 
 variable "ansible_navigator_binary" {
+  type     = string
+  nullable = false
+}
+
+variable "file_contents" {
   type     = string
   nullable = false
 }

@@ -9,7 +9,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 )
 
-func TestAccNavigatorRun_errors(t *testing.T) {
+func TestAccNavigatorRunResource_errors(t *testing.T) {
 	t.Parallel()
 
 	tests := []struct {
@@ -79,7 +79,7 @@ func TestAccNavigatorRun_errors(t *testing.T) {
 				ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
 				Steps: []resource.TestStep{
 					{
-						Config:          testTerraformFile(t, filepath.Join("navigator_run", "errors", test.name)),
+						Config:          testTerraformFile(t, filepath.Join("navigator_run_resource", "errors", test.name)),
 						ConfigVariables: testConfigVariables(t, variables),
 						ExpectError:     test.expected,
 					},

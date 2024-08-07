@@ -16,6 +16,7 @@ import (
 const (
 	navigatorRunDir                    = "tf-ansible-navigator-run"
 	navigatorRunOperationEnvVar        = "ANSIBLE_TF_OPERATION"
+	defaultNavigatorRunWorkingDir      = "."
 	defaultNavigatorRunTimeout         = 10 * time.Minute
 	defaultNavigatorRunContainerEngine = ansible.ContainerEngineAuto
 	defaultNavigatorRunEEEnabled       = true

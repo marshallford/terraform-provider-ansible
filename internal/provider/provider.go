@@ -108,7 +108,9 @@ func (p *AnsibleProvider) Resources(ctx context.Context) []func() resource.Resou
 }
 
 func (p *AnsibleProvider) DataSources(ctx context.Context) []func() datasource.DataSource {
-	return []func() datasource.DataSource{}
+	return []func() datasource.DataSource{
+		NewNavigatorRunDataSource,
+	}
 }
 
 func New(version string) func() provider.Provider {
