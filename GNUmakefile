@@ -8,6 +8,8 @@ endif
 DOCKER := docker
 DOCKER_RUN := $(DOCKER) run $(DOCKER_FLAGS)
 
+TERRAFORM_VERSION ?= 1.9.3
+
 EDITORCONFIG_CHECKER_VERSION ?= 3.0.3
 EDITORCONFIG_CHECKER := $(DOCKER_RUN) -v=$(CURDIR):/check docker.io/mstruebing/editorconfig-checker:v$(EDITORCONFIG_CHECKER_VERSION)
 
@@ -53,10 +55,10 @@ test/pkg:
 	go test ./pkg/... -v $(TESTARGS) -timeout 60m
 
 test/acc:
-	TF_ACC=1 go test ./internal/provider/... -v $(TESTARGS) -timeout 60m
+	TF_ACC=1 TFENV_TERRAFORM_VERSION=$(TERRAFORM_VERSION) go test ./internal/provider/... -v $(TESTARGS) -timeout 60m
 
 docs:
-	go generate ./...
+	TFENV_TERRAFORM_VERSION=$(TERRAFORM_VERSION) go generate ./...
 
 deps: bin/ansible-navigator
 

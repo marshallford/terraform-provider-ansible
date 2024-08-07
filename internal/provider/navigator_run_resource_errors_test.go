@@ -22,8 +22,12 @@ func TestAccNavigatorRunResource_errors(t *testing.T) {
 			expected: regexp.MustCompile("Not a valid JSONPath expression"),
 		},
 		{
-			name:     "env_var_name",
-			expected: regexp.MustCompile("must not be empty|must consist only of printable ASCII characters"),
+			name:     "env_var_name_empty",
+			expected: regexp.MustCompile("must not be empty"),
+		},
+		{
+			name:     "env_var_name_invalid",
+			expected: regexp.MustCompile("must consist only of printable ASCII characters"),
 		},
 		{
 			name: "navigator_preflight",
@@ -44,7 +48,7 @@ func TestAccNavigatorRunResource_errors(t *testing.T) {
 		},
 		{
 			name:     "private_keys",
-			expected: regexp.MustCompile("Not a SSH private key|Not an unencrypted SSH private key"),
+			expected: regexp.MustCompile("Not a SSH private key(?s)(.*)Not an unencrypted SSH private key"),
 		},
 		{
 			name:     "timeout",
