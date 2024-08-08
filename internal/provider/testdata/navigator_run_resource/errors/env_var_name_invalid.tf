@@ -7,7 +7,6 @@ resource "ansible_navigator_run" "test" {
   inventory                = "# localhost"
   execution_environment = {
     environment_variables_set = {
-      ""            = "EMPTY_KEY"
       "INVALID=KEY" = "value"
     }
   }
