@@ -74,11 +74,12 @@ type navigatorRun struct {
 	options           ansible.Options
 	navigatorSettings ansible.NavigatorSettings
 	privateKeys       []ansible.PrivateKey
+	knownHosts        []ansible.KnownHost
 	artifactQueries   map[string]ansible.ArtifactQuery
 	command           string
 }
 
-func run(ctx context.Context, diags *diag.Diagnostics, timeout time.Duration, operation terraformOperation, run *navigatorRun) {
+func run(ctx context.Context, diags *diag.Diagnostics, timeout time.Duration, operation terraformOperation, run *navigatorRun) { //nolint:cyclop
 	var err error
 
 	ctx = tflog.SetField(ctx, "dir", run.dir)
@@ -118,8 +119,15 @@ func run(ctx context.Context, diags *diag.Diagnostics, timeout time.Duration, op
 	err = ansible.CreateInventoryFile(run.dir, run.inventory)
 	addError(diags, "Ansible inventory file not created", err)
 
-	err = ansible.CreatePrivateKeys(run.dir, run.privateKeys, &run.navigatorSettings)
-	addError(diags, "Private keys not created", err)
+	if len(run.privateKeys) > 0 {
+		err = ansible.CreatePrivateKeys(run.dir, run.privateKeys, &run.navigatorSettings)
+		addError(diags, "Private keys not created", err)
+	}
+
+	if len(run.knownHosts) > 0 {
+		err = ansible.CreateKnownHosts(run.dir, run.knownHosts, &run.navigatorSettings)
+		addError(diags, "Known hosts not created", err)
+	}
 
 	run.navigatorSettings.EnvironmentVariablesSet[navigatorRunOperationEnvVar] = operation.String()
 	run.navigatorSettings.Timeout = timeout

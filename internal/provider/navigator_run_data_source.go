@@ -80,6 +80,13 @@ func (m NavigatorRunDataSourceModel) Value(ctx context.Context, run *navigatorRu
 		run.privateKeys = append(run.privateKeys, key)
 	}
 
+	var knownHosts []string
+	if !optsModel.KnownHosts.IsNull() {
+		diags.Append(optsModel.KnownHosts.ElementsAs(ctx, &knownHosts, false)...)
+	}
+
+	run.knownHosts = knownHosts
+
 	var queriesModel map[string]ArtifactQueryModel
 	diags.Append(m.ArtifactQueries.ElementsAs(ctx, &queriesModel, false)...)
 
@@ -321,6 +328,15 @@ func (d *NavigatorRunDataSource) Schema(ctx context.Context, req datasource.Sche
 									},
 								},
 							},
+						},
+					},
+					"known_hosts": schema.ListAttribute{
+						Description:         fmt.Sprintf("SSH known host entries. Effectively a list of host public keys. Can help protect against man-in-the-middle attacks by verifying the identity of hosts. Ansible variable '%s' set to path of 'known_hosts' file.", ansible.SSHKnownHostsFileVar),
+						MarkdownDescription: fmt.Sprintf("SSH known host entries. Effectively a list of host public keys. Can help protect against man-in-the-middle attacks by verifying the identity of hosts. Ansible variable `%s` set to path of `known_hosts` file.", ansible.SSHKnownHostsFileVar),
+						Optional:            true,
+						ElementType:         types.StringType,
+						Validators: []validator.List{
+							listvalidator.ValueStringsAre(stringIsSSHKnownHost()),
 						},
 					},
 				},

@@ -128,7 +128,7 @@ func testSSHKeygen(t *testing.T) (string, string) {
 	return fmt.Sprintf("ssh-ed25519 %s", base64.StdEncoding.EncodeToString(publicKey.Marshal())), string(pem.EncodeToMemory(privateKey))
 }
 
-func testSSHServer(t *testing.T, publicKey string) int {
+func testSSHServer(t *testing.T, clientPublicKey string, serverPrivateKey string) int {
 	t.Helper()
 
 	listener, err := net.Listen("tcp", "localhost:0")
@@ -147,7 +147,7 @@ func testSSHServer(t *testing.T, publicKey string) int {
 
 	err = sshServer.SetOption(
 		ssh.PublicKeyAuth(func(ctx ssh.Context, key ssh.PublicKey) bool {
-			allowed, _, _, _, err := ssh.ParseAuthorizedKey([]byte(publicKey))
+			allowed, _, _, _, err := ssh.ParseAuthorizedKey([]byte(clientPublicKey))
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -155,6 +155,11 @@ func testSSHServer(t *testing.T, publicKey string) int {
 			return ssh.KeysEqual(key, allowed)
 		}),
 	)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	err = sshServer.SetOption(ssh.HostKeyPEM([]byte(serverPrivateKey)))
 	if err != nil {
 		t.Fatal(err)
 	}

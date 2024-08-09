@@ -30,6 +30,10 @@ func TestAccNavigatorRunResource_errors(t *testing.T) {
 			expected: regexp.MustCompile("must consist only of printable ASCII characters"),
 		},
 		{
+			name:     "known_hosts",
+			expected: regexp.MustCompile("must not be empty(?s)(.*)illegal base64 data(?s)(.*)multiple known host entries"),
+		},
+		{
 			name: "navigator_preflight",
 			variables: func(t *testing.T) config.Variables { //nolint:thelper
 				return config.Variables{

@@ -16,6 +16,7 @@ const (
 	playbookArtifactFilename = "playbook-artifact.json"
 	navigatorLogFilename     = "ansible-navigator.log"
 	navigatorRunLogFilename  = "output.log"
+	SSHKnownHostsFileVar     = "ansible_ssh_known_hosts_file"
 )
 
 type Options struct {
@@ -25,6 +26,7 @@ type Options struct {
 	Limit         []string
 	Tags          []string
 	PrivateKeys   []string
+	KnownHosts    bool
 }
 
 func GenerateNavigatorRunCommand(runDir string, workingDir string, ansibleNavigatorBinary string, eeEnabled bool, options *Options) *exec.Cmd {
@@ -68,6 +70,11 @@ func GenerateNavigatorRunCommand(runDir string, workingDir string, ansibleNaviga
 		command.Args = append(command.Args, "--private-key", privateKeyPath(runDir, key, eeEnabled))
 	}
 
+	if options.KnownHosts {
+		command.Env = append(command.Env, "ANSIBLE_HOST_KEY_CHECKING=true") // ansible-runner sets to false if unset
+		command.Args = append(command.Args, "--extra-vars", fmt.Sprintf("%s=%s", SSHKnownHostsFileVar, knownHostsPath(runDir, eeEnabled)))
+	}
+
 	return command
 }
 
@@ -87,6 +94,10 @@ func CreateRunDir(dir string) error {
 
 	if err := os.Mkdir(filepath.Join(dir, privateKeysDir), 0o700); err != nil { //nolint:gomnd,mnd
 		return fmt.Errorf("failed to create private keys directory for run, %w", err)
+	}
+
+	if err := os.Mkdir(filepath.Join(dir, knownHostsDir), 0o700); err != nil { //nolint:gomnd,mnd
+		return fmt.Errorf("failed to create known hosts directory for run, %w", err)
 	}
 
 	return nil
