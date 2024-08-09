@@ -54,6 +54,48 @@ func stringIsSSHPrivateKey() stringIsSSHPrivateKeyValidator {
 	return stringIsSSHPrivateKeyValidator{}
 }
 
+type stringIsSSHKnownHostValidator struct{}
+
+func (v stringIsSSHKnownHostValidator) Description(ctx context.Context) string {
+	return "string must be a SSH known host entry"
+}
+
+func (v stringIsSSHKnownHostValidator) MarkdownDescription(ctx context.Context) string {
+	return v.Description(ctx)
+}
+
+func (v stringIsSSHKnownHostValidator) ValidateString(ctx context.Context, req validator.StringRequest, resp *validator.StringResponse) {
+	if req.ConfigValue.IsUnknown() || req.ConfigValue.IsNull() {
+		return
+	}
+
+	if req.ConfigValue.ValueString() == "" {
+		resp.Diagnostics.AddAttributeError(
+			req.Path,
+			"Not a SSH known host entry",
+			"Known host entry must not be empty",
+		)
+
+		return
+	}
+
+	_, _, _, _, rest, err := ssh.ParseKnownHosts([]byte(req.ConfigValue.ValueString())) //nolint:dogsled
+
+	addPathError(&resp.Diagnostics, req.Path, "Not a SSH known host entry", err)
+
+	if len(rest) > 0 {
+		resp.Diagnostics.AddAttributeError(
+			req.Path,
+			"Not a single SSH known host entry",
+			"Must not include multiple known host entries or additional data",
+		)
+	}
+}
+
+func stringIsSSHKnownHost() stringIsSSHKnownHostValidator {
+	return stringIsSSHKnownHostValidator{}
+}
+
 type stringIsEnvVarNameValidator struct{}
 
 func (v stringIsEnvVarNameValidator) Description(ctx context.Context) string {

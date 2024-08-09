@@ -29,7 +29,7 @@ resource "ansible_navigator_run" "existing" {
   inventory = file("inventory/baremetal.yaml")
 }
 
-# 3. configure ansible behavior with ansible.cfg placed in working directory (see example below)
+# 3. configure ansible with ansible.cfg placed in working directory (see example below)
 resource "ansible_navigator_run" "working_directory" {
   playbook          = "..."
   inventory         = "..."
@@ -113,8 +113,8 @@ output "playbook_stdout" {
   value = join("\n", jsondecode(ansible_navigator_run.artifact_query_stdout.artifact_queries.stdout.result))
 }
 
-# 9. specify ssh private keys
-resource "tls_private_key" "this" {
+# 9. ssh private keys
+resource "tls_private_key" "client" {
   algorithm = "ED25519"
 }
 
@@ -125,8 +125,29 @@ resource "ansible_navigator_run" "private_keys" {
     private_keys = [
       {
         name = "example"
-        data = tls_private_key.this.private_key_openssh
+        data = tls_private_key.client.private_key_openssh
       }
+    ]
+  }
+}
+
+# 10. ssh known hosts
+resource "tls_private_key" "server" {
+  algorithm = "ED25519"
+}
+
+resource "ansible_navigator_run" "known_hosts" {
+  playbook = "..."
+  inventory = yamlencode({
+    all = {
+      vars = {
+        ansible_ssh_common_args = "-o StrictHostKeyChecking=yes -o UserKnownHostsFile={{ ansible_ssh_known_hosts_file }}"
+      }
+    }
+  })
+  ansible_options = {
+    known_hosts = [
+      "10.0.0.1 ${tls_private_key.server.public_key_openssh}"
     ]
   }
 }

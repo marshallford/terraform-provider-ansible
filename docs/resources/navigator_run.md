@@ -44,7 +44,7 @@ resource "ansible_navigator_run" "existing" {
   inventory = file("inventory/baremetal.yaml")
 }
 
-# 3. configure ansible behavior with ansible.cfg placed in working directory (see example below)
+# 3. configure ansible with ansible.cfg placed in working directory (see example below)
 resource "ansible_navigator_run" "working_directory" {
   playbook          = "..."
   inventory         = "..."
@@ -128,8 +128,8 @@ output "playbook_stdout" {
   value = join("\n", jsondecode(ansible_navigator_run.artifact_query_stdout.artifact_queries.stdout.result))
 }
 
-# 9. specify ssh private keys
-resource "tls_private_key" "this" {
+# 9. ssh private keys
+resource "tls_private_key" "client" {
   algorithm = "ED25519"
 }
 
@@ -140,8 +140,29 @@ resource "ansible_navigator_run" "private_keys" {
     private_keys = [
       {
         name = "example"
-        data = tls_private_key.this.private_key_openssh
+        data = tls_private_key.client.private_key_openssh
       }
+    ]
+  }
+}
+
+# 10. ssh known hosts
+resource "tls_private_key" "server" {
+  algorithm = "ED25519"
+}
+
+resource "ansible_navigator_run" "known_hosts" {
+  playbook = "..."
+  inventory = yamlencode({
+    all = {
+      vars = {
+        ansible_ssh_common_args = "-o StrictHostKeyChecking=yes -o UserKnownHostsFile={{ ansible_ssh_known_hosts_file }}"
+      }
+    }
+  })
+  ansible_options = {
+    known_hosts = [
+      "10.0.0.1 ${tls_private_key.server.public_key_openssh}"
     ]
   }
 }
@@ -202,6 +223,7 @@ pipelining=True
 Optional:
 
 - `force_handlers` (Boolean) Run handlers even if a task fails.
+- `known_hosts` (List of String) SSH known host entries. Effectively a list of host public keys. Can help protect against man-in-the-middle attacks by verifying the identity of hosts. Ansible variable `ansible_ssh_known_hosts_file` set to path of `known_hosts` file.
 - `limit` (List of String) Further limit selected hosts to an additional pattern.
 - `private_keys` (Attributes List) SSH private keys used for authentication in addition to the [automatically mounted](https://ansible.readthedocs.io/projects/navigator/faq/#how-do-i-use-my-ssh-keys-with-an-execution-environment) default named keys and SSH agent socket path. (see [below for nested schema](#nestedatt--ansible_options--private_keys))
 - `skip_tags` (List of String) Only run plays and tasks whose tags do not match these values.

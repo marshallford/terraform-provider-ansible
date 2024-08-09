@@ -1,6 +1,7 @@
 package provider_test
 
 import (
+	"fmt"
 	"path/filepath"
 	"regexp"
 	"testing"
@@ -12,6 +13,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-testing/plancheck"
 	"github.com/hashicorp/terraform-plugin-testing/statecheck"
 	"github.com/hashicorp/terraform-plugin-testing/tfjsonpath"
+	"github.com/marshallford/terraform-provider-ansible/pkg/ansible"
 )
 
 const (
@@ -235,10 +237,12 @@ func TestAccNavigatorRunResource_private_keys(t *testing.T) { //nolint:parallelt
 				variables = test.variables(t)
 			}
 
-			publicKey, privateKey := testSSHKeygen(t)
-			port := testSSHServer(t, publicKey)
+			clientPublicKey, clientPrivateKey := testSSHKeygen(t)
+			serverPublicKey, serverPrivateKey := testSSHKeygen(t)
+			port := testSSHServer(t, clientPublicKey, serverPrivateKey)
 
-			variables["private_key_data"] = config.StringVariable(privateKey)
+			variables["client_private_key_data"] = config.StringVariable(clientPrivateKey)
+			variables["server_public_key_data"] = config.StringVariable(serverPublicKey)
 			variables["ssh_port"] = config.IntegerVariable(port)
 
 			resource.Test(t, resource.TestCase{
@@ -251,6 +255,7 @@ func TestAccNavigatorRunResource_private_keys(t *testing.T) { //nolint:parallelt
 						Check: resource.ComposeAggregateTestCheckFunc(
 							resource.TestCheckResourceAttrSet(navigatorRunResource, "id"),
 							resource.TestCheckResourceAttrSet(navigatorRunResource, "command"),
+							resource.TestMatchResourceAttr(navigatorRunResource, "command", regexp.MustCompile(fmt.Sprintf("--private-key(?s)(.*)--extra-vars %s", ansible.SSHKnownHostsFileVar))),
 						),
 					},
 				},
