@@ -178,6 +178,7 @@ func (d *NavigatorRunDataSource) Schema(ctx context.Context, req datasource.Sche
 				MarkdownDescription: "Ansible [playbook](https://docs.ansible.com/ansible/latest/playbook_guide/playbooks_intro.html) contents.",
 				Required:            true,
 				Validators: []validator.String{
+					stringvalidator.LengthAtLeast(1),
 					stringIsYAML(),
 				},
 			},
@@ -243,12 +244,18 @@ func (d *NavigatorRunDataSource) Schema(ctx context.Context, req datasource.Sche
 						MarkdownDescription: fmt.Sprintf("Name of the execution environment container [image](https://ansible.readthedocs.io/projects/navigator/settings/#execution-environment-image). Defaults to `%s`.", defaultNavigatorRunImage),
 						Optional:            true,
 						Computed:            true,
+						Validators: []validator.String{
+							stringvalidator.LengthAtLeast(1),
+						},
 					},
 					"pull_arguments": schema.ListAttribute{
 						Description:         "Additional parameters that should be added to the pull command when pulling an execution environment container image from a container registry.",
 						MarkdownDescription: "Additional [parameters](https://ansible.readthedocs.io/projects/navigator/settings/#pull-arguments) that should be added to the pull command when pulling an execution environment container image from a container registry.",
 						Optional:            true,
 						ElementType:         types.StringType,
+						Validators: []validator.List{
+							listvalidator.ValueStringsAre(stringvalidator.LengthAtLeast(1)),
+						},
 					},
 					"pull_policy": schema.StringAttribute{
 						Description:         fmt.Sprintf("Container image pull policy. Defaults to '%s'.", defaultNavigatorRunPullPolicy),
@@ -264,6 +271,9 @@ func (d *NavigatorRunDataSource) Schema(ctx context.Context, req datasource.Sche
 						MarkdownDescription: "[Extra parameters](https://ansible.readthedocs.io/projects/navigator/settings/#container-options) passed to the container engine command.",
 						Optional:            true,
 						ElementType:         types.StringType,
+						Validators: []validator.List{
+							listvalidator.ValueStringsAre(stringvalidator.LengthAtLeast(1)),
+						},
 					},
 				},
 			},
@@ -288,20 +298,32 @@ func (d *NavigatorRunDataSource) Schema(ctx context.Context, req datasource.Sche
 						Description: "Only run plays and tasks whose tags do not match these values.",
 						Optional:    true,
 						ElementType: types.StringType,
+						Validators: []validator.List{
+							listvalidator.ValueStringsAre(stringvalidator.LengthAtLeast(1)),
+						},
 					},
 					"start_at_task": schema.StringAttribute{
 						Description: "Start the playbook at the task matching this name.",
 						Optional:    true,
+						Validators: []validator.String{
+							stringvalidator.LengthAtLeast(1),
+						},
 					},
 					"limit": schema.ListAttribute{
 						Description: "Further limit selected hosts to an additional pattern.",
 						Optional:    true,
 						ElementType: types.StringType,
+						Validators: []validator.List{
+							listvalidator.ValueStringsAre(stringvalidator.LengthAtLeast(1)),
+						},
 					},
 					"tags": schema.ListAttribute{
 						Description: "Only run plays and tasks tagged with these values.",
 						Optional:    true,
 						ElementType: types.StringType,
+						Validators: []validator.List{
+							listvalidator.ValueStringsAre(stringvalidator.LengthAtLeast(1)),
+						},
 					},
 					"private_keys": schema.ListNestedAttribute{
 						Description:         "SSH private keys used for authentication in addition to the automatically mounted default named keys and SSH agent socket path.",
@@ -314,8 +336,8 @@ func (d *NavigatorRunDataSource) Schema(ctx context.Context, req datasource.Sche
 									Required:    true,
 									Validators: []validator.String{
 										stringvalidator.RegexMatches(
-											regexp.MustCompile(`^[a-zA-Z0-9]*$`),
-											"Must only contain only alphanumeric characters",
+											regexp.MustCompile(`^[a-zA-Z0-9]+(-[a-zA-Z0-9]+)*$`),
+											"Must only contain dashes and alphanumeric characters",
 										),
 									},
 								},

@@ -1,23 +1,15 @@
 # 1. inline playbook and inventory
 resource "ansible_navigator_run" "inline" {
   playbook = <<-EOT
-  - hosts: some_group
-    become: false
+  - hosts: webservers
     tasks:
-    - ansible.builtin.debug:
-        msg: "{{ some_var }}"
+    - ansible.builtin.package:
+        name: nginx
   EOT
   inventory = yamlencode({
-    all = {
-      children = {
-        some_group = {
-          hosts = {
-            local_container = {
-              ansible_connection = "local"
-              some_var           = "hello world!"
-            }
-          }
-        }
+    webservers = {
+      hosts = {
+        a = { ansible_host = "webserver-a.example.com" }
       }
     }
   })

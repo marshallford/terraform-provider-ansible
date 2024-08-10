@@ -182,6 +182,16 @@ func (v stringIsIANATimezoneValidator) ValidateString(ctx context.Context, req v
 		return
 	}
 
+	if req.ConfigValue.ValueString() == "" {
+		resp.Diagnostics.AddAttributeError(
+			req.Path,
+			"Not a valid IANA time zone",
+			"IANA time zone must not be empty",
+		)
+
+		return
+	}
+
 	if req.ConfigValue.ValueString() == "local" {
 		return
 	}

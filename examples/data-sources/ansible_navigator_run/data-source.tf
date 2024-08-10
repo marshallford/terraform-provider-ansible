@@ -8,15 +8,11 @@ data "ansible_navigator_run" "inline" {
         msg: "{{ some_var }}"
   EOT
   inventory = yamlencode({
-    all = {
-      children = {
-        some_group = {
-          hosts = {
-            local_container = {
-              ansible_connection = "local"
-              some_var           = "hello world!"
-            }
-          }
+    some_group = {
+      hosts = {
+        local_container = {
+          ansible_connection = "local"
+          some_var           = "hello world!"
         }
       }
     }
@@ -28,7 +24,6 @@ data "ansible_navigator_run" "artifact_query_file" {
   playbook  = <<-EOT
   - name: Get file
     hosts: all
-    become: false
     tasks:
     - name: resolv.conf
       ansible.builtin.slurp:

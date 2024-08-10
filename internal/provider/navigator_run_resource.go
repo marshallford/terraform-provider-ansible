@@ -10,7 +10,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework-validators/listvalidator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/mapvalidator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
-	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
@@ -55,181 +54,6 @@ type NavigatorRunResourceModel struct {
 	ID                     types.String   `tfsdk:"id"`
 	Command                types.String   `tfsdk:"command"`
 	Timeouts               timeouts.Value `tfsdk:"timeouts"`
-}
-
-type ExecutionEnvironmentModel struct {
-	ContainerEngine          types.String `tfsdk:"container_engine"`
-	Enabled                  types.Bool   `tfsdk:"enabled"`
-	EnvironmentVariablesPass types.List   `tfsdk:"environment_variables_pass"`
-	EnvironmentVariablesSet  types.Map    `tfsdk:"environment_variables_set"`
-	Image                    types.String `tfsdk:"image"`
-	PullArguments            types.List   `tfsdk:"pull_arguments"`
-	PullPolicy               types.String `tfsdk:"pull_policy"`
-	ContainerOptions         types.List   `tfsdk:"container_options"`
-}
-
-type AnsibleOptionsModel struct {
-	ForceHandlers types.Bool   `tfsdk:"force_handlers"`
-	SkipTags      types.List   `tfsdk:"skip_tags"`
-	StartAtTask   types.String `tfsdk:"start_at_task"`
-	Limit         types.List   `tfsdk:"limit"`
-	Tags          types.List   `tfsdk:"tags"`
-	PrivateKeys   types.List   `tfsdk:"private_keys"`
-	KnownHosts    types.List   `tfsdk:"known_hosts"`
-}
-
-type PrivateKeyModel struct {
-	Name types.String `tfsdk:"name"`
-	Data types.String `tfsdk:"data"`
-}
-
-type ArtifactQueryModel struct {
-	JSONPath types.String `tfsdk:"jsonpath"`
-	Result   types.String `tfsdk:"result"`
-}
-
-func (ExecutionEnvironmentModel) AttrTypes() map[string]attr.Type {
-	return map[string]attr.Type{
-		"container_engine":           types.StringType,
-		"enabled":                    types.BoolType,
-		"environment_variables_pass": types.ListType{ElemType: types.StringType},
-		"environment_variables_set":  types.MapType{ElemType: types.StringType},
-		"image":                      types.StringType,
-		"pull_arguments":             types.ListType{ElemType: types.StringType},
-		"pull_policy":                types.StringType,
-		"container_options":          types.ListType{ElemType: types.StringType},
-	}
-}
-
-func (m ExecutionEnvironmentModel) Defaults() basetypes.ObjectValue {
-	return types.ObjectValueMust(
-		ExecutionEnvironmentModel{}.AttrTypes(),
-		map[string]attr.Value{
-			"container_engine":           types.StringValue(defaultNavigatorRunContainerEngine),
-			"enabled":                    types.BoolValue(defaultNavigatorRunEEEnabled),
-			"environment_variables_pass": types.ListNull(types.StringType),
-			"environment_variables_set":  types.MapNull(types.StringType),
-			"image":                      types.StringValue(defaultNavigatorRunImage),
-			"pull_arguments":             types.ListNull(types.StringType),
-			"pull_policy":                types.StringValue(defaultNavigatorRunPullPolicy),
-			"container_options":          types.ListNull(types.StringType),
-		},
-	)
-}
-
-func (m ExecutionEnvironmentModel) Value(ctx context.Context, settings *ansible.NavigatorSettings) diag.Diagnostics {
-	var diags diag.Diagnostics
-
-	settings.ContainerEngine = m.ContainerEngine.ValueString()
-
-	settings.EEEnabled = m.Enabled.ValueBool()
-
-	var envVarsPass []string
-	if !m.EnvironmentVariablesPass.IsNull() {
-		diags.Append(m.EnvironmentVariablesPass.ElementsAs(ctx, &envVarsPass, false)...)
-	}
-
-	settings.EnvironmentVariablesPass = envVarsPass
-
-	envVarsSet := map[string]string{}
-	if !m.EnvironmentVariablesSet.IsNull() {
-		diags.Append(m.EnvironmentVariablesSet.ElementsAs(ctx, &envVarsSet, false)...)
-	}
-
-	settings.EnvironmentVariablesSet = envVarsSet
-
-	settings.Image = m.Image.ValueString()
-
-	var pullArguments []string
-	if !m.PullArguments.IsNull() {
-		diags.Append(m.PullArguments.ElementsAs(ctx, &pullArguments, false)...)
-	}
-	settings.PullArguments = pullArguments
-
-	settings.PullPolicy = m.PullPolicy.ValueString()
-
-	var containerOptions []string
-	if !m.ContainerOptions.IsNull() {
-		diags.Append(m.ContainerOptions.ElementsAs(ctx, &containerOptions, false)...)
-	}
-	settings.ContainerOptions = containerOptions
-
-	return diags
-}
-
-func (m AnsibleOptionsModel) Value(ctx context.Context, options *ansible.Options) diag.Diagnostics {
-	var diags diag.Diagnostics
-
-	options.ForceHandlers = m.ForceHandlers.ValueBool()
-
-	var skipTags []string
-	if !m.SkipTags.IsNull() {
-		diags.Append(m.SkipTags.ElementsAs(ctx, &skipTags, false)...)
-	}
-	options.SkipTags = skipTags
-
-	options.StartAtTask = m.StartAtTask.ValueString()
-
-	var limit []string
-	if !m.Limit.IsNull() {
-		diags.Append(m.Limit.ElementsAs(ctx, &limit, false)...)
-	}
-	options.Limit = limit
-
-	var tags []string
-	if !m.Tags.IsNull() {
-		diags.Append(m.Tags.ElementsAs(ctx, &tags, false)...)
-	}
-	options.Tags = tags
-
-	var privateKeysModel []PrivateKeyModel
-	if !m.PrivateKeys.IsNull() {
-		diags.Append(m.PrivateKeys.ElementsAs(ctx, &privateKeysModel, false)...)
-	}
-
-	privateKeys := make([]string, 0, len(privateKeysModel))
-	for _, privateKeyModel := range privateKeysModel {
-		privateKeys = append(privateKeys, privateKeyModel.Name.ValueString())
-	}
-	options.PrivateKeys = privateKeys
-
-	options.KnownHosts = len(m.KnownHosts.Elements()) > 0
-
-	return diags
-}
-
-func (m PrivateKeyModel) Value(ctx context.Context, key *ansible.PrivateKey) diag.Diagnostics {
-	var diags diag.Diagnostics
-
-	key.Name = m.Name.ValueString()
-	key.Data = m.Data.ValueString()
-
-	return diags
-}
-
-func (ArtifactQueryModel) AttrTypes() map[string]attr.Type {
-	return map[string]attr.Type{
-		"jsonpath": types.StringType,
-		"result":   types.StringType,
-	}
-}
-
-func (m ArtifactQueryModel) Value(ctx context.Context, query *ansible.ArtifactQuery) diag.Diagnostics {
-	var diags diag.Diagnostics
-
-	query.JSONPath = m.JSONPath.ValueString()
-	query.Result = m.Result.ValueString()
-
-	return diags
-}
-
-func (m *ArtifactQueryModel) Set(ctx context.Context, query ansible.ArtifactQuery) diag.Diagnostics {
-	var diags diag.Diagnostics
-
-	m.JSONPath = types.StringValue(query.JSONPath)
-	m.Result = types.StringValue(query.Result)
-
-	return diags
 }
 
 func (m NavigatorRunResourceModel) Value(ctx context.Context, run *navigatorRun, opts *providerOptions, runs uint32) diag.Diagnostics {
@@ -311,7 +135,7 @@ func (r *NavigatorRunResource) Metadata(ctx context.Context, req resource.Metada
 	resp.TypeName = fmt.Sprintf("%s_navigator_run", req.ProviderTypeName)
 }
 
-//nolint:dupl
+//nolint:dupl,maintidx
 func (r *NavigatorRunResource) Schema(ctx context.Context, req resource.SchemaRequest, resp *resource.SchemaResponse) {
 	resp.Schema = schema.Schema{
 		Description:         fmt.Sprintf("Run an Ansible playbook. Requires '%s' and a container engine to run within an execution environment (EE).", ansible.NavigatorProgram),
@@ -323,6 +147,7 @@ func (r *NavigatorRunResource) Schema(ctx context.Context, req resource.SchemaRe
 				MarkdownDescription: "Ansible [playbook](https://docs.ansible.com/ansible/latest/playbook_guide/playbooks_intro.html) contents.",
 				Required:            true,
 				Validators: []validator.String{
+					stringvalidator.LengthAtLeast(1),
 					stringIsYAML(),
 				},
 			},
@@ -393,12 +218,18 @@ func (r *NavigatorRunResource) Schema(ctx context.Context, req resource.SchemaRe
 						Optional:            true,
 						Computed:            true,
 						Default:             stringdefault.StaticString(defaultNavigatorRunImage),
+						Validators: []validator.String{
+							stringvalidator.LengthAtLeast(1),
+						},
 					},
 					"pull_arguments": schema.ListAttribute{
 						Description:         "Additional parameters that should be added to the pull command when pulling an execution environment container image from a container registry.",
 						MarkdownDescription: "Additional [parameters](https://ansible.readthedocs.io/projects/navigator/settings/#pull-arguments) that should be added to the pull command when pulling an execution environment container image from a container registry.",
 						Optional:            true,
 						ElementType:         types.StringType,
+						Validators: []validator.List{
+							listvalidator.ValueStringsAre(stringvalidator.LengthAtLeast(1)),
+						},
 					},
 					"pull_policy": schema.StringAttribute{
 						Description:         fmt.Sprintf("Container image pull policy. Defaults to '%s'.", defaultNavigatorRunPullPolicy),
@@ -415,6 +246,9 @@ func (r *NavigatorRunResource) Schema(ctx context.Context, req resource.SchemaRe
 						MarkdownDescription: "[Extra parameters](https://ansible.readthedocs.io/projects/navigator/settings/#container-options) passed to the container engine command.",
 						Optional:            true,
 						ElementType:         types.StringType,
+						Validators: []validator.List{
+							listvalidator.ValueStringsAre(stringvalidator.LengthAtLeast(1)),
+						},
 					},
 				},
 			},
@@ -439,20 +273,32 @@ func (r *NavigatorRunResource) Schema(ctx context.Context, req resource.SchemaRe
 						Description: "Only run plays and tasks whose tags do not match these values.",
 						Optional:    true,
 						ElementType: types.StringType,
+						Validators: []validator.List{
+							listvalidator.ValueStringsAre(stringvalidator.LengthAtLeast(1)),
+						},
 					},
 					"start_at_task": schema.StringAttribute{
 						Description: "Start the playbook at the task matching this name.",
 						Optional:    true,
+						Validators: []validator.String{
+							stringvalidator.LengthAtLeast(1),
+						},
 					},
 					"limit": schema.ListAttribute{
 						Description: "Further limit selected hosts to an additional pattern.",
 						Optional:    true,
 						ElementType: types.StringType,
+						Validators: []validator.List{
+							listvalidator.ValueStringsAre(stringvalidator.LengthAtLeast(1)),
+						},
 					},
 					"tags": schema.ListAttribute{
 						Description: "Only run plays and tasks tagged with these values.",
 						Optional:    true,
 						ElementType: types.StringType,
+						Validators: []validator.List{
+							listvalidator.ValueStringsAre(stringvalidator.LengthAtLeast(1)),
+						},
 					},
 					"private_keys": schema.ListNestedAttribute{
 						Description:         "SSH private keys used for authentication in addition to the automatically mounted default named keys and SSH agent socket path.",
@@ -465,8 +311,8 @@ func (r *NavigatorRunResource) Schema(ctx context.Context, req resource.SchemaRe
 									Required:    true,
 									Validators: []validator.String{
 										stringvalidator.RegexMatches(
-											regexp.MustCompile(`^[a-zA-Z0-9]*$`),
-											"Must only contain only alphanumeric characters",
+											regexp.MustCompile(`^[a-zA-Z0-9]+(-[a-zA-Z0-9]+)*$`),
+											"Must only contain dashes and alphanumeric characters",
 										),
 									},
 								},

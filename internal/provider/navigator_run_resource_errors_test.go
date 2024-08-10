@@ -59,7 +59,11 @@ func TestAccNavigatorRunResource_errors(t *testing.T) {
 			expected: regexp.MustCompile("Ansible navigator run timed out"),
 		},
 		{
-			name:     "timezone",
+			name:     "timezone_empty",
+			expected: regexp.MustCompile("must not be empty"),
+		},
+		{
+			name:     "timezone_invalid",
 			expected: regexp.MustCompile("Not a valid IANA time zone"),
 		},
 		{
