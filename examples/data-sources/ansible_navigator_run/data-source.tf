@@ -22,21 +22,20 @@ data "ansible_navigator_run" "inline" {
 # 2. artifact queries -- get file contents
 data "ansible_navigator_run" "artifact_query_file" {
   playbook  = <<-EOT
-  - name: Get file
-    hosts: all
+  - name: Example
     tasks:
-    - name: resolv.conf
+    - name: Get file
       ansible.builtin.slurp:
         src: /etc/resolv.conf
   EOT
-  inventory = "..."
+  inventory = yamlencode({})
   artifact_queries = {
     "resolv_conf" = {
-      jsonpath = "$.plays[?(@.__play_name=='Get file')].tasks[?(@.__task=='resolv.conf')].res.content"
+      jq_filter = ".plays[] | select(.name==\"Example\") | .tasks[] | select(.task==\"Get file\") | .res.content"
     }
   }
 }
 
 output "resolv_conf" {
-  value = base64decode(data.ansible_navigator_run.artifact_query_file.artifact_queries.resolv_conf.result)
+  value = base64decode(jsondecode(data.ansible_navigator_run.artifact_query_file.artifact_queries.resolv_conf.results[0]))
 }

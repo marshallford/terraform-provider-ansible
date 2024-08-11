@@ -182,7 +182,7 @@ func testSSHServer(t *testing.T, clientPublicKey string, serverPrivateKey string
 }
 
 // https://github.com/hashicorp/terraform-provider-random/blob/main/internal/provider/resource_integer_test.go
-func testExtractResourceAttr(resourceName string, attributeName string, attributeValue *string) resource.TestCheckFunc { //nolint:unparam
+func testExtractResourceAttr(resourceName string, attributeName string, attributeValue *string) resource.TestCheckFunc {
 	return func(s *terraform.State) error {
 		resourceState, ok := s.RootModule().Resources[resourceName]
 

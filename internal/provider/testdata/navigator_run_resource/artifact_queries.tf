@@ -5,27 +5,27 @@ resource "ansible_navigator_run" "test" {
     hosts: localhost
     become: false
     tasks:
-    - name: write file
+    - name: Write file
       ansible.builtin.copy:
         dest: /tmp/test
         content: ${var.file_contents}
-    - name: get file
+    - name: Get file
       ansible.builtin.slurp:
         src: /tmp/test
   EOT
   inventory                = "# localhost"
   artifact_queries = {
-    stdout = {
-      jsonpath = "$.stdout"
+    "stdout" = {
+      jq_filter = ".stdout"
     }
-    file_contents = {
-      jsonpath = "$.plays[?(@.__play_name=='Test')].tasks[?(@.__task=='get file')].res.content"
+    "file_contents" = {
+      jq_filter = ".plays[] | select(.name==\"Test\") | .tasks[] | select(.task==\"Get file\") | .res.content"
     }
   }
 }
 
 output "file_contents" {
-  value = base64decode(ansible_navigator_run.test.artifact_queries.file_contents.result)
+  value = base64decode(jsondecode(ansible_navigator_run.test.artifact_queries.file_contents.results[0]))
 }
 
 variable "ansible_navigator_binary" {

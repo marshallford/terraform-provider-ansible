@@ -55,7 +55,7 @@ func TestAccNavigatorRunResource_artifact_queries(t *testing.T) {
 					"file_contents": config.StringVariable(fileContents),
 				}),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					resource.TestMatchResourceAttr(navigatorRunResource, "artifact_queries.stdout.result", regexp.MustCompile("ok=3")),
+					resource.TestMatchResourceAttr(navigatorRunResource, "artifact_queries.stdout.results.0", regexp.MustCompile("ok=3")),
 					testExtractResourceAttr(navigatorRunResource, "command", &resourceCommand),
 				),
 				ConfigStateChecks: []statecheck.StateCheck{
@@ -70,12 +70,12 @@ func TestAccNavigatorRunResource_artifact_queries(t *testing.T) {
 				ConfigPlanChecks: resource.ConfigPlanChecks{
 					PreApply: []plancheck.PlanCheck{
 						plancheck.ExpectNonEmptyPlan(),
-						plancheck.ExpectUnknownValue(navigatorRunResource, tfjsonpath.New("artifact_queries").AtMapKey("file_contents").AtMapKey("result")),
+						plancheck.ExpectUnknownValue(navigatorRunResource, tfjsonpath.New("artifact_queries").AtMapKey("file_contents").AtMapKey("results")),
 						plancheck.ExpectUnknownValue(navigatorRunResource, tfjsonpath.New("command")),
 					},
 				},
 				Check: resource.ComposeAggregateTestCheckFunc(
-					resource.TestMatchResourceAttr(navigatorRunResource, "artifact_queries.stdout.result", regexp.MustCompile("ok=3")),
+					resource.TestMatchResourceAttr(navigatorRunResource, "artifact_queries.stdout.results.0", regexp.MustCompile("ok=3")),
 					testExtractResourceAttr(navigatorRunResource, "command", &resourceCommandUpdate),
 					testCheckAttributeValuesDiffer(&resourceCommand, &resourceCommandUpdate),
 				),
@@ -276,10 +276,10 @@ func TestAccNavigatorRunResource_pull_args(t *testing.T) {
 			{
 				Config: testTerraformFile(t, filepath.Join("navigator_run_resource", "pull_args")),
 				ConfigVariables: testConfigVariables(t, config.Variables{
-					"pull_arguments": config.ListVariable(config.StringVariable(arg)),
+					"pull_args": config.ListVariable(config.StringVariable(arg)),
 				}),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					resource.TestMatchResourceAttr(navigatorRunResource, "artifact_queries.pull_args.result", regexp.MustCompile(arg)),
+					resource.TestMatchResourceAttr(navigatorRunResource, "artifact_queries.pull_args.results.0", regexp.MustCompile(arg)),
 				),
 			},
 		},
@@ -333,6 +333,7 @@ func TestAccNavigatorRunResource_skip_run(t *testing.T) {
 	t.Parallel()
 
 	var resourceCommand, resourceCommandUpdate string
+	var queryResult, queryResultUpdate string
 
 	resource.Test(t, resource.TestCase{
 		PreCheck:                 func() { testPreCheck(t) },
@@ -344,7 +345,9 @@ func TestAccNavigatorRunResource_skip_run(t *testing.T) {
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttrSet(navigatorRunResource, "id"),
 					resource.TestCheckResourceAttrSet(navigatorRunResource, "command"),
+					resource.TestCheckResourceAttrSet(navigatorRunResource, "artifact_queries.test.results.0"),
 					testExtractResourceAttr(navigatorRunResource, "command", &resourceCommand),
+					testExtractResourceAttr(navigatorRunResource, "artifact_queries.test.results.0", &queryResult),
 				),
 			},
 			{
@@ -360,8 +363,11 @@ func TestAccNavigatorRunResource_skip_run(t *testing.T) {
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttrSet(navigatorRunResource, "id"),
 					resource.TestCheckResourceAttrSet(navigatorRunResource, "command"),
+					resource.TestCheckResourceAttrSet(navigatorRunResource, "artifact_queries.test.results.0"),
 					testExtractResourceAttr(navigatorRunResource, "command", &resourceCommandUpdate),
 					testCheckAttributeValuesEqual(&resourceCommand, &resourceCommandUpdate),
+					testExtractResourceAttr(navigatorRunResource, "artifact_queries.test.results.0", &queryResultUpdate),
+					testCheckAttributeValuesEqual(&queryResult, &queryResultUpdate),
 				),
 			},
 		},

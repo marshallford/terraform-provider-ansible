@@ -37,8 +37,8 @@ type PrivateKeyModel struct {
 }
 
 type ArtifactQueryModel struct {
-	JSONPath types.String `tfsdk:"jsonpath"`
-	Result   types.String `tfsdk:"result"`
+	JQFilter types.String `tfsdk:"jq_filter"`
+	Results  types.List   `tfsdk:"results"`
 }
 
 func (ExecutionEnvironmentModel) AttrTypes() map[string]attr.Type {
@@ -162,16 +162,16 @@ func (m PrivateKeyModel) Value(ctx context.Context, key *ansible.PrivateKey) dia
 
 func (ArtifactQueryModel) AttrTypes() map[string]attr.Type {
 	return map[string]attr.Type{
-		"jsonpath": types.StringType,
-		"result":   types.StringType,
+		"jq_filter": types.StringType,
+		"results":   types.ListType{ElemType: types.StringType},
 	}
 }
 
 func (m ArtifactQueryModel) Value(ctx context.Context, query *ansible.ArtifactQuery) diag.Diagnostics {
 	var diags diag.Diagnostics
 
-	query.JSONPath = m.JSONPath.ValueString()
-	query.Result = m.Result.ValueString()
+	query.JQFilter = m.JQFilter.ValueString()
+	query.Results = []string{} // m.Results always unknown when this function is called
 
 	return diags
 }
@@ -179,8 +179,11 @@ func (m ArtifactQueryModel) Value(ctx context.Context, query *ansible.ArtifactQu
 func (m *ArtifactQueryModel) Set(ctx context.Context, query ansible.ArtifactQuery) diag.Diagnostics {
 	var diags diag.Diagnostics
 
-	m.JSONPath = types.StringValue(query.JSONPath)
-	m.Result = types.StringValue(query.Result)
+	m.JQFilter = types.StringValue(query.JQFilter)
+
+	resultsValue, newDiags := types.ListValueFrom(ctx, types.StringType, query.Results)
+	diags.Append(newDiags...)
+	m.Results = resultsValue
 
 	return diags
 }

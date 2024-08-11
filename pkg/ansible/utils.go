@@ -1,13 +1,12 @@
 package ansible
 
 import (
-	"bytes"
 	"encoding/json"
-	"fmt"
+	"errors"
 	"os"
 	"os/exec"
 
-	"k8s.io/client-go/util/jsonpath"
+	jq "github.com/itchyny/gojq"
 )
 
 func programExistsOnPath(program string) error {
@@ -22,33 +21,42 @@ func writeFile(path string, contents string) error {
 	return os.WriteFile(path, []byte(contents), 0o600) //nolint:gomnd,mnd
 }
 
-func jsonPathParse(expression string) (*jsonpath.JSONPath, error) {
-	jsonPath := jsonpath.New(expression)
-	jsonPath.AllowMissingKeys(true)
+func jqJSON(data []byte, filter string) ([]string, error) {
+	var blob any
+	if err := json.Unmarshal(data, &blob); err != nil {
+		return nil, err
+	}
 
-	err := jsonPath.Parse(fmt.Sprintf("{%s}", expression))
+	query, err := jq.Parse(filter)
 	if err != nil {
 		return nil, err
 	}
 
-	return jsonPath, nil
-}
+	var results []string
 
-func jsonPath(data []byte, expression string) (string, error) {
-	var blob interface{}
-	if err := json.Unmarshal(data, &blob); err != nil {
-		return "", err
+	iter := query.Run(blob)
+	for {
+		value, ok := iter.Next()
+		if !ok {
+			break
+		}
+
+		if err, ok := value.(error); ok {
+			var haltErr *jq.HaltError
+			if errors.As(err, &haltErr) && haltErr.Value() == nil {
+				break
+			}
+
+			return nil, err
+		}
+
+		result, err := jq.Marshal(value)
+		if err != nil {
+			return nil, err
+		}
+
+		results = append(results, string(result))
 	}
 
-	jsonPath, err := jsonPathParse(expression)
-	if err != nil {
-		return "", err
-	}
-
-	output := new(bytes.Buffer)
-	if err := jsonPath.Execute(output, blob); err != nil {
-		return "", err
-	}
-
-	return output.String(), nil
+	return results, nil
 }
