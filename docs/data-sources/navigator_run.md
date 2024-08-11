@@ -40,6 +40,7 @@ data "ansible_navigator_run" "inline" {
 data "ansible_navigator_run" "artifact_query_file" {
   playbook  = <<-EOT
   - name: Example
+    hosts: all
     tasks:
     - name: Get file
       ansible.builtin.slurp:
