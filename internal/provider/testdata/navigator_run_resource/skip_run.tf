@@ -5,7 +5,12 @@ resource "ansible_navigator_run" "test" {
     become: false
   EOT
   inventory                = "# localhost"
-  run_on_destroy           = true
+  artifact_queries = {
+    "test" = {
+      jq_filter = "now"
+    }
+  }
+  run_on_destroy = true
   timeouts = {
     create = "60m"
     update = "60m"

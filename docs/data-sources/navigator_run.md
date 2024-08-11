@@ -39,23 +39,23 @@ data "ansible_navigator_run" "inline" {
 # 2. artifact queries -- get file contents
 data "ansible_navigator_run" "artifact_query_file" {
   playbook  = <<-EOT
-  - name: Get file
+  - name: Example
     hosts: all
     tasks:
-    - name: resolv.conf
+    - name: Get file
       ansible.builtin.slurp:
         src: /etc/resolv.conf
   EOT
-  inventory = "..."
+  inventory = yamlencode({})
   artifact_queries = {
     "resolv_conf" = {
-      jsonpath = "$.plays[?(@.__play_name=='Get file')].tasks[?(@.__task=='resolv.conf')].res.content"
+      jq_filter = ".plays[] | select(.name==\"Example\") | .tasks[] | select(.task==\"Get file\") | .res.content"
     }
   }
 }
 
 output "resolv_conf" {
-  value = base64decode(data.ansible_navigator_run.artifact_query_file.artifact_queries.resolv_conf.result)
+  value = base64decode(jsondecode(data.ansible_navigator_run.artifact_query_file.artifact_queries.resolv_conf.results[0]))
 }
 ```
 
@@ -71,7 +71,7 @@ output "resolv_conf" {
 
 - `ansible_navigator_binary` (String) Path to the `ansible-navigator` binary. By default `$PATH` is searched.
 - `ansible_options` (Attributes) Ansible [playbook](https://docs.ansible.com/ansible/latest/cli/ansible-playbook.html) run related configuration. (see [below for nested schema](#nestedatt--ansible_options))
-- `artifact_queries` (Attributes Map) Query the playbook artifact with [JSONPath](https://goessner.net/articles/JsonPath/). The [playbook artifact](https://access.redhat.com/documentation/en-us/red_hat_ansible_automation_platform/2.0-ea/html/ansible_navigator_creator_guide/assembly-troubleshooting-navigator_ansible-navigator#proc-review-artifact_troubleshooting-navigator) contains detailed information about every play and task, as well as the stdout from the playbook run. (see [below for nested schema](#nestedatt--artifact_queries))
+- `artifact_queries` (Attributes Map) Query the Ansible playbook artifact with [`jq`](https://jqlang.github.io/jq/) syntax. The [playbook artifact](https://access.redhat.com/documentation/en-us/red_hat_ansible_automation_platform/2.0-ea/html/ansible_navigator_creator_guide/assembly-troubleshooting-navigator_ansible-navigator#proc-review-artifact_troubleshooting-navigator) contains detailed information about every play and task, as well as the stdout from the playbook run. (see [below for nested schema](#nestedatt--artifact_queries))
 - `execution_environment` (Attributes) [Execution environment](https://ansible.readthedocs.io/en/latest/getting_started_ee/index.html) (EE) related configuration. (see [below for nested schema](#nestedatt--execution_environment))
 - `timeouts` (Attributes) (see [below for nested schema](#nestedatt--timeouts))
 - `timezone` (String) IANA time zone, use `local` for the system time zone. Defaults to `UTC`.
@@ -110,11 +110,11 @@ Required:
 
 Required:
 
-- `jsonpath` (String) JSONPath expression.
+- `jq_filter` (String) `jq` filter. Example: `.status, .stdout`.
 
 Read-Only:
 
-- `result` (String) Result of the query. Result may be empty if a field or map key cannot be located.
+- `results` (List of String) Results of the `jq` filter in JSON format.
 
 
 <a id="nestedatt--execution_environment"></a>

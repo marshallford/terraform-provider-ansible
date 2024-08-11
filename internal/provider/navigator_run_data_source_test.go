@@ -35,7 +35,7 @@ func TestAccNavigatorRunDataSource_artifact_queries(t *testing.T) {
 					"file_contents": config.StringVariable(fileContents),
 				}),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					resource.TestMatchResourceAttr(navigatorRunDataSource, "artifact_queries.stdout.result", regexp.MustCompile("ok=3")),
+					resource.TestMatchResourceAttr(navigatorRunDataSource, "artifact_queries.stdout.results.0", regexp.MustCompile("ok=3")),
 					testExtractResourceAttr(navigatorRunDataSource, "command", &dataSourceCommand),
 				),
 				ConfigStateChecks: []statecheck.StateCheck{
@@ -53,7 +53,7 @@ func TestAccNavigatorRunDataSource_artifact_queries(t *testing.T) {
 					},
 				},
 				Check: resource.ComposeAggregateTestCheckFunc(
-					resource.TestMatchResourceAttr(navigatorRunDataSource, "artifact_queries.stdout.result", regexp.MustCompile("ok=3")),
+					resource.TestMatchResourceAttr(navigatorRunDataSource, "artifact_queries.stdout.results.0", regexp.MustCompile("ok=3")),
 					testExtractResourceAttr(navigatorRunDataSource, "command", &dataSourceCommandUpdate),
 					testCheckAttributeValuesDiffer(&dataSourceCommand, &dataSourceCommandUpdate),
 				),

@@ -7,7 +7,7 @@ resource "ansible_navigator_run" "test" {
   inventory                = "# localhost"
   artifact_queries = {
     "test" = {
-      jsonpath = "!"
+      jq_filter = "!"
     }
   }
 }

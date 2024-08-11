@@ -23,8 +23,8 @@ resource "ansible_navigator_run" "existing" {
 
 # 3. configure ansible with ansible.cfg placed in working directory (see example below)
 resource "ansible_navigator_run" "working_directory" {
-  playbook          = "..."
-  inventory         = "..."
+  playbook          = "# example"
+  inventory         = yamlencode({})
   working_directory = "some-directory-with-ansible-cfg-file"
 }
 
@@ -39,7 +39,7 @@ resource "ansible_navigator_run" "environment_variables" {
       - "{{ lookup('ansible.builtin.env', 'SOME_VAR') }}"
       - "{{ lookup('ansible.builtin.env', 'EDITOR') }}"
   EOT
-  inventory = "..."
+  inventory = yamlencode({})
   execution_environment = {
     environment_variables_set = {
       "SOME_VAR" = "some-value"
@@ -52,8 +52,8 @@ resource "ansible_navigator_run" "environment_variables" {
 
 # 5. ansible playbook options
 resource "ansible_navigator_run" "ansible_options" {
-  playbook  = "..."
-  inventory = "..."
+  playbook  = "# example"
+  inventory = yamlencode({})
   ansible_options = {
     force_handlers = true               # --force-handlers
     skip_tags      = ["tag1", "tag2"]   # --skip-tags tag1,tag2
@@ -74,14 +74,14 @@ resource "ansible_navigator_run" "destroy" {
         msg: "resource is being destroyed!"
       when: destroy
   EOT
-  inventory      = "..."
+  inventory      = yamlencode({})
   run_on_destroy = true
 }
 
 # 7. triggers and replacement triggers
 resource "ansible_navigator_run" "triggers" {
-  playbook  = "..."
-  inventory = "..."
+  playbook  = "# example"
+  inventory = yamlencode({})
   triggers = {
     somekey = some_resource.example.id # re-run playbook when id changes
   }
@@ -92,17 +92,17 @@ resource "ansible_navigator_run" "triggers" {
 
 # 8. artifact queries -- get playbook stdout
 resource "ansible_navigator_run" "artifact_query_stdout" {
-  playbook  = "..."
-  inventory = "..."
+  playbook  = "# example"
+  inventory = yamlencode({})
   artifact_queries = {
     "stdout" = {
-      jsonpath = "$.stdout"
+      jq_filter = ".stdout"
     }
   }
 }
 
 output "playbook_stdout" {
-  value = join("\n", jsondecode(ansible_navigator_run.artifact_query_stdout.artifact_queries.stdout.result))
+  value = join("\n", jsondecode(ansible_navigator_run.artifact_query_stdout.artifact_queries.stdout.results[0]))
 }
 
 # 9. ssh private keys
@@ -111,8 +111,8 @@ resource "tls_private_key" "client" {
 }
 
 resource "ansible_navigator_run" "private_keys" {
-  playbook  = "..."
-  inventory = "..."
+  playbook  = "# example"
+  inventory = yamlencode({})
   ansible_options = {
     private_keys = [
       {
@@ -129,7 +129,7 @@ resource "tls_private_key" "server" {
 }
 
 resource "ansible_navigator_run" "known_hosts" {
-  playbook = "..."
+  playbook = "# example"
   inventory = yamlencode({
     all = {
       vars = {

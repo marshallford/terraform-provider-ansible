@@ -153,7 +153,7 @@ func (v stringIsYAMLValidator) ValidateString(ctx context.Context, req validator
 		return
 	}
 
-	var output interface{}
+	var output any
 	err := yaml.Unmarshal([]byte(req.ConfigValue.ValueString()), &output)
 	if addPathError(&resp.Diagnostics, req.Path, "Not valid YAML", err) {
 		return
@@ -204,25 +204,25 @@ func stringIsIANATimezone() stringIsIANATimezoneValidator {
 	return stringIsIANATimezoneValidator{}
 }
 
-type stringIsIsJSONPathExpressionValidator struct{}
+type stringIsIsJQFilterValidator struct{}
 
-func (v stringIsIsJSONPathExpressionValidator) Description(ctx context.Context) string {
-	return "string must be a JSONPath expression"
+func (v stringIsIsJQFilterValidator) Description(ctx context.Context) string {
+	return "string must be a JQ filter"
 }
 
-func (v stringIsIsJSONPathExpressionValidator) MarkdownDescription(ctx context.Context) string {
+func (v stringIsIsJQFilterValidator) MarkdownDescription(ctx context.Context) string {
 	return v.Description(ctx)
 }
 
-func (v stringIsIsJSONPathExpressionValidator) ValidateString(ctx context.Context, req validator.StringRequest, resp *validator.StringResponse) {
+func (v stringIsIsJQFilterValidator) ValidateString(ctx context.Context, req validator.StringRequest, resp *validator.StringResponse) {
 	if req.ConfigValue.IsUnknown() || req.ConfigValue.IsNull() {
 		return
 	}
 
-	err := ansible.ValidateJSONPathExpression(req.ConfigValue.ValueString())
-	addPathError(&resp.Diagnostics, req.Path, "Not a valid JSONPath expression", err)
+	err := ansible.ValidateJQFilter(req.ConfigValue.ValueString())
+	addPathError(&resp.Diagnostics, req.Path, "Not a valid JQ filter", err)
 }
 
-func stringIsIsJSONPathExpression() stringIsIsJSONPathExpressionValidator {
-	return stringIsIsJSONPathExpressionValidator{}
+func stringIsIsJQFilter() stringIsIsJQFilterValidator {
+	return stringIsIsJQFilterValidator{}
 }

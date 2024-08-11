@@ -19,7 +19,7 @@ func TestAccNavigatorRunResource_errors(t *testing.T) {
 	}{
 		{
 			name:     "artifact_query",
-			expected: regexp.MustCompile("Not a valid JSONPath expression"),
+			expected: regexp.MustCompile("Not a valid JQ filter"),
 		},
 		{
 			name:     "env_var_name_empty",

@@ -6,11 +6,11 @@ resource "ansible_navigator_run" "test" {
   EOT
   inventory                = "# localhost"
   execution_environment = {
-    pull_arguments = var.pull_arguments
+    pull_arguments = var.pull_args
   }
   artifact_queries = {
-    pull_args = {
-      jsonpath = "$.settings_entries.ansible-navigator.execution-environment.pull.arguments"
+    "pull_args" = {
+      jq_filter = ".settings_entries.\"ansible-navigator\".\"execution-environment\".pull.arguments"
     }
   }
 }
@@ -20,7 +20,7 @@ variable "ansible_navigator_binary" {
   nullable = false
 }
 
-variable "pull_arguments" {
+variable "pull_args" {
   type     = list(string)
   nullable = false
 }

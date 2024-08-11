@@ -373,21 +373,24 @@ func (d *NavigatorRunDataSource) Schema(ctx context.Context, req datasource.Sche
 				},
 			},
 			"artifact_queries": schema.MapNestedAttribute{
-				Description:         "Query the playbook artifact with JSONPath. The playbook artifact contains detailed information about every play and task, as well as the stdout from the playbook run.",
-				MarkdownDescription: "Query the playbook artifact with [JSONPath](https://goessner.net/articles/JsonPath/). The [playbook artifact](https://access.redhat.com/documentation/en-us/red_hat_ansible_automation_platform/2.0-ea/html/ansible_navigator_creator_guide/assembly-troubleshooting-navigator_ansible-navigator#proc-review-artifact_troubleshooting-navigator) contains detailed information about every play and task, as well as the stdout from the playbook run.",
+				Description:         "Query the Ansible playbook artifact with 'jq' syntax. The playbook artifact contains detailed information about every play and task, as well as the stdout from the playbook run.",
+				MarkdownDescription: "Query the Ansible playbook artifact with [`jq`](https://jqlang.github.io/jq/) syntax. The [playbook artifact](https://access.redhat.com/documentation/en-us/red_hat_ansible_automation_platform/2.0-ea/html/ansible_navigator_creator_guide/assembly-troubleshooting-navigator_ansible-navigator#proc-review-artifact_troubleshooting-navigator) contains detailed information about every play and task, as well as the stdout from the playbook run.",
 				Optional:            true,
 				NestedObject: schema.NestedAttributeObject{
 					Attributes: map[string]schema.Attribute{
-						"jsonpath": schema.StringAttribute{
-							Description: "JSONPath expression.",
-							Required:    true,
+						"jq_filter": schema.StringAttribute{
+							Description:         "'jq' filter. Example: '.status, .stdout'.",
+							MarkdownDescription: "`jq` filter. Example: `.status, .stdout`.",
+							Required:            true,
 							Validators: []validator.String{
-								stringIsIsJSONPathExpression(),
+								stringIsIsJQFilter(),
 							},
 						},
-						"result": schema.StringAttribute{
-							Description: "Result of the query. Result may be empty if a field or map key cannot be located.",
-							Computed:    true,
+						"results": schema.ListAttribute{ // TODO switch to a dynamic attribute when supported as an element in a collection
+							Description:         "Results of the 'jq' filter in JSON format.",
+							MarkdownDescription: "Results of the `jq` filter in JSON format.",
+							Computed:            true,
+							ElementType:         types.StringType,
 						},
 					},
 				},

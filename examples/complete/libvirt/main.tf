@@ -129,11 +129,11 @@ resource "ansible_navigator_run" "this" {
   }
   artifact_queries = {
     "stdout" = {
-      jsonpath = "$.stdout"
+      jq_filter = ".stdout"
     }
   }
 }
 
 output "playbook_stdout" {
-  value = join("\n", jsondecode(ansible_navigator_run.this.artifact_queries.stdout.result))
+  value = join("\n", jsondecode(ansible_navigator_run.this.artifact_queries.stdout.result[0]))
 }

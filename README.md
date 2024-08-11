@@ -9,9 +9,11 @@ Run Ansible playbooks using Terraform.
 ```terraform
 resource "ansible_navigator_run" "webservers_example" {
   playbook = <<-EOT
-  - hosts: webservers
+  - name: Example
+    hosts: webservers
     tasks:
-    - ansible.builtin.package:
+    - name: Install nginx
+      ansible.builtin.package:
         name: nginx
   EOT
   inventory = yamlencode({
@@ -22,6 +24,24 @@ resource "ansible_navigator_run" "webservers_example" {
     }
   })
 }
+
+data "ansible_navigator_run" "uptime_example" {
+  playbook  = <<-EOT
+  - name: Example
+    hosts: all
+  EOT
+  inventory = yamlencode({})
+  artifact_queries = {
+    "uptimes" = {
+      jq_filter = "[.plays[] | select(.name==\"Example\") | .tasks[] | select(.task==\"Gathering Facts\") | {host: .host, uptime_seconds: .res.ansible_facts.ansible_uptime_seconds }]"
+    }
+  }
+}
+
+output "uptimes" {
+  value = jsondecode(data.ansible_navigator_run.uptime_example.artifact_queries.uptimes.results[0])
+}
+
 ```
 
 ## Features
@@ -29,7 +49,7 @@ resource "ansible_navigator_run" "webservers_example" {
 1. Run Ansible playbooks against Terraform managed infrastructure (without the `local-exec` provisioner). Eliminates the need for additional scripting or pipeline steps.
 2. Construct Ansible inventories using other data sources and resources. Set Ansible host and group variables to values and secrets from other providers.
 3. Utilize Ansible [execution environments](https://ansible.readthedocs.io/en/latest/getting_started_ee/index.html) (containers images) to customize and run the Ansible software stack. Isolate Ansible and its related dependencies (Python/System packages, collections, etc) to simplify pipeline and workstation setup.
-4. Write JSONPath queries against [playbook artifacts](https://access.redhat.com/documentation/en-us/red_hat_ansible_automation_platform/2.0-ea/html/ansible_navigator_creator_guide/assembly-troubleshooting-navigator_ansible-navigator#proc-review-artifact_troubleshooting-navigator). Extract values from the playbook run for use elsewhere in the Terraform configuration. Examples include: Ansible facts, remote file contents, task results -- the possibilities are endless!
+4. Write [`jq`](https://jqlang.github.io/jq/) queries against [playbook artifacts](https://access.redhat.com/documentation/en-us/red_hat_ansible_automation_platform/2.0-ea/html/ansible_navigator_creator_guide/assembly-troubleshooting-navigator_ansible-navigator#proc-review-artifact_troubleshooting-navigator). Extract values from the playbook run for use elsewhere in the Terraform configuration. Examples include: Ansible facts, remote file contents, task results -- the possibilities are endless!
 5. Control playbook re-run behavior using several "lifecycle" options, including an attribute for running the playbook on resource destruction. Implement conditional plays/tasks with the environment variable `ANSIBLE_TF_OPERATION`.
 6. Connect to hosts securely by specifying SSH private keys and known host entries. No need manage `~/.ssh` files or setup `ssh-agent` in the environment which Terraform runs.
 

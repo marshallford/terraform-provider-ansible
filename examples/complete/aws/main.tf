@@ -168,12 +168,12 @@ resource "ansible_navigator_run" "this" {
   }
   artifact_queries = {
     "stdout" = {
-      jsonpath = "$.stdout"
+      jq_filter = ".stdout"
     }
   }
   depends_on = [aws_iam_user_policy.ssh_ssm]
 }
 
 output "playbook_stdout" {
-  value = join("\n", jsondecode(ansible_navigator_run.this.artifact_queries.stdout.result))
+  value = join("\n", jsondecode(ansible_navigator_run.this.artifact_queries.stdout.results[0]))
 }

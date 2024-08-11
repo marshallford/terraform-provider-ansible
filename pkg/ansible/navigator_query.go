@@ -4,11 +4,13 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+
+	jq "github.com/itchyny/gojq"
 )
 
 type ArtifactQuery struct {
-	JSONPath string
-	Result   string
+	JQFilter string
+	Results  []string
 }
 
 func QueryPlaybookArtifact(dir string, queries map[string]ArtifactQuery) error {
@@ -20,20 +22,20 @@ func QueryPlaybookArtifact(dir string, queries map[string]ArtifactQuery) error {
 	}
 
 	for name, query := range queries {
-		result, err := jsonPath(contents, query.JSONPath)
+		results, err := jqJSON(contents, query.JQFilter)
 		if err != nil {
-			return fmt.Errorf("failed to query playbook artifact with JSONPath, %w", err)
+			return fmt.Errorf("failed to query playbook artifact, %w", err)
 		}
 
-		query.Result = result
+		query.Results = results
 		queries[name] = query
 	}
 
 	return nil
 }
 
-func ValidateJSONPathExpression(expression string) error {
-	_, err := jsonPathParse(expression)
+func ValidateJQFilter(filter string) error {
+	_, err := jq.Parse(filter)
 
 	return err
 }
