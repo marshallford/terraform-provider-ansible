@@ -19,7 +19,11 @@ resource "ansible_navigator_run" "test" {
       jq_filter = ".stdout"
     }
     "file_contents" = {
-      jq_filter = ".plays[] | select(.name==\"Test\") | .tasks[] | select(.task==\"Get file\") | .res.content"
+      jq_filter = <<-EOT
+      .plays[] | select(.name=="Test") |
+      .tasks[] | select(.task=="Get file") |
+      .res.content
+      EOT
     }
   }
 }

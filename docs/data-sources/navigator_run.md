@@ -49,7 +49,11 @@ data "ansible_navigator_run" "artifact_query_file" {
   inventory = yamlencode({})
   artifact_queries = {
     "resolv_conf" = {
-      jq_filter = ".plays[] | select(.name==\"Example\") | .tasks[] | select(.task==\"Get file\") | .res.content"
+      jq_filter = <<-EOT
+      .plays[] | select(.name=="Example") |
+      .tasks[] | select(.task=="Get file") |
+      .res.content
+      EOT
     }
   }
 }

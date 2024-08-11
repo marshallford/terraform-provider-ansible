@@ -10,7 +10,9 @@ resource "ansible_navigator_run" "test" {
   }
   artifact_queries = {
     "pull_args" = {
-      jq_filter = ".settings_entries.\"ansible-navigator\".\"execution-environment\".pull.arguments"
+      jq_filter = <<-EOT
+      .settings_entries."ansible-navigator"."execution-environment".pull.arguments
+      EOT
     }
   }
 }
