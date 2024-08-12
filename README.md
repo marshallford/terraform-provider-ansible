@@ -33,7 +33,10 @@ data "ansible_navigator_run" "uptime_example" {
   inventory = yamlencode({})
   artifact_queries = {
     "uptimes" = {
-      jq_filter = "[.plays[] | select(.name==\"Example\") | .tasks[] | select(.task==\"Gathering Facts\") | {host: .host, uptime_seconds: .res.ansible_facts.ansible_uptime_seconds }]"
+      jq_filter = <<-EOT
+      [.plays[] | select(.name=="Example") | .tasks[] | select(.task=="Gathering Facts") |
+      {host: .host, uptime_seconds: .res.ansible_facts.ansible_uptime_seconds }]
+      EOT
     }
   }
 }
@@ -41,7 +44,6 @@ data "ansible_navigator_run" "uptime_example" {
 output "uptimes" {
   value = jsondecode(data.ansible_navigator_run.uptime_example.artifact_queries.uptimes.results[0])
 }
-
 ```
 
 ## Features
