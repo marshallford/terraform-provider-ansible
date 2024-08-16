@@ -103,7 +103,8 @@ func TestAccNavigatorRunResource_basic(t *testing.T) {
 					resource.TestCheckResourceAttrSet(navigatorRunResource, "working_directory"),
 					// resource.TestCheckResourceAttrSet(navigatorRunResource, "execution_environment"), TODO check elements
 					resource.TestCheckResourceAttrSet(navigatorRunResource, "ansible_navigator_binary"),
-					resource.TestCheckNoResourceAttr(navigatorRunResource, "ansible_options"),
+					// resource.TestCheckNoResourceAttr(navigatorRunResource, "ansible_options"), TODO check elements
+					resource.TestCheckResourceAttr(navigatorRunResource, "ansible_options.known_hosts.#", "0"),
 					resource.TestCheckResourceAttrSet(navigatorRunResource, "timezone"),
 					resource.TestCheckResourceAttrSet(navigatorRunResource, "run_on_destroy"),
 					resource.TestCheckNoResourceAttr(navigatorRunResource, "triggers"),
@@ -192,6 +193,31 @@ func TestAccNavigatorRunResource_env_vars(t *testing.T) {
 						plancheck.ExpectNonEmptyPlan(),
 					},
 				},
+			},
+		},
+	})
+}
+
+func TestAccNavigatorRunResource_known_hosts(t *testing.T) {
+	t.Parallel()
+
+	serverPublicKey, serverPrivateKey := testSSHKeygen(t)
+	port := testSSHServer(t, "", serverPrivateKey)
+
+	resource.Test(t, resource.TestCase{
+		PreCheck:                 func() { testPreCheck(t) },
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		Steps: []resource.TestStep{
+			{
+				Config: testTerraformFile(t, filepath.Join("navigator_run_resource", "known_hosts")),
+				ConfigVariables: testConfigVariables(t, config.Variables{
+					"ssh_port": config.IntegerVariable(port),
+				}),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttrSet(navigatorRunResource, "id"),
+					resource.TestCheckResourceAttrSet(navigatorRunResource, "command"),
+					resource.TestMatchResourceAttr(navigatorRunResource, "ansible_options.known_hosts.0", regexp.MustCompile(regexp.QuoteMeta(serverPublicKey))),
+				),
 			},
 		},
 	})

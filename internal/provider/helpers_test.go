@@ -145,18 +145,20 @@ func testSSHServer(t *testing.T, clientPublicKey string, serverPrivateKey string
 		},
 	}
 
-	err = sshServer.SetOption(
-		ssh.PublicKeyAuth(func(ctx ssh.Context, key ssh.PublicKey) bool {
-			allowed, _, _, _, err := ssh.ParseAuthorizedKey([]byte(clientPublicKey))
-			if err != nil {
-				t.Fatal(err)
-			}
+	if clientPublicKey != "" {
+		err = sshServer.SetOption(
+			ssh.PublicKeyAuth(func(ctx ssh.Context, key ssh.PublicKey) bool {
+				allowed, _, _, _, err := ssh.ParseAuthorizedKey([]byte(clientPublicKey))
+				if err != nil {
+					t.Fatal(err)
+				}
 
-			return ssh.KeysEqual(key, allowed)
-		}),
-	)
-	if err != nil {
-		t.Fatal(err)
+				return ssh.KeysEqual(key, allowed)
+			}),
+		)
+		if err != nil {
+			t.Fatal(err)
+		}
 	}
 
 	err = sshServer.SetOption(ssh.HostKeyPEM([]byte(serverPrivateKey)))

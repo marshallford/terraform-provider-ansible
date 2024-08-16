@@ -1,7 +1,9 @@
 package ansible
 
 import (
+	"bufio"
 	"fmt"
+	"os"
 	"path/filepath"
 	"strings"
 )
@@ -61,7 +63,9 @@ func knownHostsPath(dir string, eeEnabled bool) string {
 }
 
 func CreateKnownHosts(dir string, knownHosts []KnownHost, settings *NavigatorSettings) error {
-	err := writeFile(filepath.Join(dir, knownHostsDir, knownHostsFile), strings.Join(knownHosts, "\n"))
+	path := filepath.Join(dir, knownHostsDir, knownHostsFile)
+
+	err := writeFile(path, strings.Join(knownHosts, "\n"))
 	if err != nil {
 		return fmt.Errorf("failed to create known hosts file for run, %w", err)
 	}
@@ -78,4 +82,27 @@ func CreateKnownHosts(dir string, knownHosts []KnownHost, settings *NavigatorSet
 	settings.VolumeMounts[filepath.Join(dir, knownHostsDir)] = eeKnownHostsDir
 
 	return nil
+}
+
+func GetKnownHosts(dir string) ([]KnownHost, error) {
+	path := filepath.Join(dir, knownHostsDir, knownHostsFile)
+
+	file, err := os.Open(path)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read %s, %w", knownHostsFile, err)
+	}
+
+	defer file.Close()
+
+	knownHosts := make([]KnownHost, 0)
+	scanner := bufio.NewScanner(file)
+	for scanner.Scan() {
+		knownHosts = append(knownHosts, scanner.Text())
+	}
+
+	if scanner.Err() != nil {
+		return nil, fmt.Errorf("failed to read %s, %w", knownHostsFile, scanner.Err())
+	}
+
+	return knownHosts, nil
 }

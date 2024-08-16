@@ -81,7 +81,8 @@ func TestAccNavigatorRunDataSource_basic(t *testing.T) {
 					resource.TestCheckResourceAttrSet(navigatorRunDataSource, "working_directory"),
 					// resource.TestCheckResourceAttrSet(navigatorRunDataSource, "execution_environment"), TODO check elements
 					resource.TestCheckResourceAttrSet(navigatorRunDataSource, "ansible_navigator_binary"),
-					resource.TestCheckNoResourceAttr(navigatorRunDataSource, "ansible_options"),
+					// resource.TestCheckNoResourceAttr(navigatorRunDataSource, "ansible_options"), TODO check elements
+					resource.TestCheckResourceAttr(navigatorRunDataSource, "ansible_options.known_hosts.#", "0"),
 					resource.TestCheckResourceAttrSet(navigatorRunDataSource, "timezone"),
 					resource.TestCheckNoResourceAttr(navigatorRunDataSource, "triggers"),
 					resource.TestCheckNoResourceAttr(navigatorRunDataSource, "replacement_triggers"),
@@ -127,6 +128,31 @@ func TestAccNavigatorRunDataSource_env_vars(t *testing.T) {
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttrSet(navigatorRunDataSource, "id"),
 					resource.TestCheckResourceAttrSet(navigatorRunDataSource, "command"),
+				),
+			},
+		},
+	})
+}
+
+func TestAccNavigatorRunDataSource_known_hosts(t *testing.T) {
+	t.Parallel()
+
+	serverPublicKey, serverPrivateKey := testSSHKeygen(t)
+	port := testSSHServer(t, "", serverPrivateKey)
+
+	resource.Test(t, resource.TestCase{
+		PreCheck:                 func() { testPreCheck(t) },
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		Steps: []resource.TestStep{
+			{
+				Config: testTerraformFile(t, filepath.Join("navigator_run_data_source", "known_hosts")),
+				ConfigVariables: testConfigVariables(t, config.Variables{
+					"ssh_port": config.IntegerVariable(port),
+				}),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttrSet(navigatorRunDataSource, "id"),
+					resource.TestCheckResourceAttrSet(navigatorRunDataSource, "command"),
+					resource.TestMatchResourceAttr(navigatorRunDataSource, "ansible_options.known_hosts.0", regexp.MustCompile(regexp.QuoteMeta(serverPublicKey))),
 				),
 			},
 		},
