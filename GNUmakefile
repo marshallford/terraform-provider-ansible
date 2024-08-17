@@ -26,10 +26,7 @@ VENV := .venv
 VENV_STAMP := $(VENV)/stamp
 ACTIVATE := . $(VENV)/bin/activate
 
-lint: lint/docs lint/terraform lint/editorconfig lint/shellcheck lint/yamllint lint/go lint/ansible
-
-lint/docs: docs
-	TFENV_TERRAFORM_VERSION=$(TERRAFORM_VERSION) go run github.com/hashicorp/terraform-plugin-docs/cmd/tfplugindocs validate
+lint: lint/terraform lint/editorconfig lint/shellcheck lint/yamllint lint/go lint/ansible
 
 lint/terraform:
 	terraform fmt -recursive -check
@@ -52,7 +49,10 @@ lint/ansible: bin/ansible-navigator
 install:
 	go install
 
-test: test/pkg test/acc
+test: test/docs test/pkg test/acc
+
+test/docs:
+	TFENV_TERRAFORM_VERSION=$(TERRAFORM_VERSION) go run github.com/hashicorp/terraform-plugin-docs/cmd/tfplugindocs validate
 
 test/pkg:
 	go test ./pkg/... -v $(TESTARGS) -timeout 60m
@@ -73,4 +73,4 @@ $(VENV_STAMP): requirements.txt
 	$(ACTIVATE); pip install -qr requirements.txt
 	touch $(VENV_STAMP)
 
-.PHONY: lint lint/docs lint/terraform lint/editorconfig lint/shellcheck lint/yamllint lint/go lint/ansible install test test/pkg test/acc docs deps bin/ansible-navigator
+.PHONY: lint lint/terraform lint/editorconfig lint/shellcheck lint/yamllint lint/go lint/ansible install test test/docs test/pkg test/acc docs deps bin/ansible-navigator
