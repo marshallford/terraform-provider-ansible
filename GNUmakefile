@@ -8,7 +8,6 @@ endif
 DOCKER := docker
 DOCKER_RUN := $(DOCKER) run $(DOCKER_FLAGS)
 
-GOPATH ?= $(shell go env GOPATH)
 TERRAFORM_VERSION ?= 1.9.4
 
 EDITORCONFIG_CHECKER_VERSION ?= 3.0.3
@@ -30,7 +29,7 @@ ACTIVATE := . $(VENV)/bin/activate
 lint: lint/docs lint/terraform lint/editorconfig lint/shellcheck lint/yamllint lint/go lint/ansible
 
 lint/docs: docs
-	TFENV_TERRAFORM_VERSION=$(TERRAFORM_VERSION) $(GOPATH)/bin/tfplugindocs validate
+	TFENV_TERRAFORM_VERSION=$(TERRAFORM_VERSION) go run github.com/hashicorp/terraform-plugin-docs/cmd/tfplugindocs validate
 
 lint/terraform:
 	terraform fmt -recursive -check
