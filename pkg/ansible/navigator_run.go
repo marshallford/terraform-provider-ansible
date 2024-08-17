@@ -15,7 +15,6 @@ const (
 	inventoryFilename        = "inventory"
 	playbookArtifactFilename = "playbook-artifact.json"
 	navigatorLogFilename     = "ansible-navigator.log"
-	navigatorRunLogFilename  = "output.log"
 	SSHKnownHostsFileVar     = "ansible_ssh_known_hosts_file"
 )
 
