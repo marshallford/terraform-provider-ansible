@@ -4,7 +4,7 @@
 [![Go Report Card](https://goreportcard.com/badge/github.com/marshallford/terraform-provider-ansible)](https://goreportcard.com/report/github.com/marshallford/terraform-provider-ansible)
 [![Acceptance Coverage](https://marshallford.github.io/terraform-provider-ansible/badge.svg)](https://marshallford.github.io/terraform-provider-ansible/cover.html)
 
-Run Ansible playbooks using Terraform.
+Run [Ansible](https://github.com/ansible/ansible) playbooks using Terraform.
 
 ```terraform
 resource "ansible_navigator_run" "webservers_example" {

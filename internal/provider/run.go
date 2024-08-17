@@ -173,13 +173,15 @@ func run(ctx context.Context, diags *diag.Diagnostics, timeout time.Duration, op
 		}
 	}
 
-	err = ansible.QueryPlaybookArtifact(run.dir, run.artifactQueries)
-	addPathError(diags, path.Root("artifact_queries"), "Playbook artifact queries failed", err)
+	if !diags.HasError() {
+		err = ansible.QueryPlaybookArtifact(run.dir, run.artifactQueries)
+		addPathError(diags, path.Root("artifact_queries"), "Playbook artifact queries failed", err)
 
-	if run.options.KnownHosts {
-		knownHosts, err := ansible.GetKnownHosts(run.dir)
-		addPathError(diags, path.Root("ansible_options").AtMapKey("known_hosts"), "Failed to get known hosts", err)
-		run.knownHosts = knownHosts
+		if run.options.KnownHosts {
+			knownHosts, err := ansible.GetKnownHosts(run.dir)
+			addPathError(diags, path.Root("ansible_options").AtMapKey("known_hosts"), "Failed to get known hosts", err)
+			run.knownHosts = knownHosts
+		}
 	}
 
 	if !run.persistDir {

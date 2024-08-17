@@ -36,8 +36,8 @@ func (p *AnsibleProvider) Metadata(ctx context.Context, req provider.MetadataReq
 
 func (p *AnsibleProvider) Schema(ctx context.Context, req provider.SchemaRequest, resp *provider.SchemaResponse) {
 	resp.Schema = schema.Schema{
-		Description:         "Interact with Ansible.",
-		MarkdownDescription: "Interact with [Ansible](https://github.com/ansible/ansible).",
+		Description:         "Run Ansible playbooks using Terraform.",
+		MarkdownDescription: "Run [Ansible](https://github.com/ansible/ansible) playbooks using Terraform.",
 		Attributes: map[string]schema.Attribute{
 			"base_run_directory": schema.StringAttribute{
 				Description:         "Base directory in which to create run directories. On Unix systems this defaults to '$TMPDIR' if non-empty, else '/tmp'.",
