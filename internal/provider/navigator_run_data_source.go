@@ -60,10 +60,11 @@ func (m NavigatorRunDataSourceModel) Value(ctx context.Context, run *navigatorRu
 	diags.Append(m.ExecutionEnvironment.As(ctx, &eeModel, basetypes.ObjectAsOptions{})...)
 
 	run.navigatorSettings.Timezone = m.Timezone.ValueString()
+
 	diags.Append(eeModel.Value(ctx, &run.navigatorSettings)...)
 
 	var optsModel AnsibleOptionsModel
-	diags.Append(m.AnsibleOptions.As(ctx, &optsModel, basetypes.ObjectAsOptions{UnhandledNullAsEmpty: true})...)
+	diags.Append(m.AnsibleOptions.As(ctx, &optsModel, basetypes.ObjectAsOptions{})...)
 
 	diags.Append(optsModel.Value(ctx, &run.options)...)
 
@@ -81,7 +82,7 @@ func (m NavigatorRunDataSourceModel) Value(ctx context.Context, run *navigatorRu
 	}
 
 	var knownHosts []string
-	if !optsModel.KnownHosts.IsNull() {
+	if !optsModel.KnownHosts.IsUnknown() {
 		diags.Append(optsModel.KnownHosts.ElementsAs(ctx, &knownHosts, false)...)
 	}
 
@@ -101,10 +102,19 @@ func (m NavigatorRunDataSourceModel) Value(ctx context.Context, run *navigatorRu
 	return diags
 }
 
+//nolint:dupl
 func (m *NavigatorRunDataSourceModel) Set(ctx context.Context, run navigatorRun) diag.Diagnostics {
 	var diags diag.Diagnostics
 
 	m.Command = types.StringValue(run.command)
+
+	var optsModel AnsibleOptionsModel
+	diags.Append(m.AnsibleOptions.As(ctx, &optsModel, basetypes.ObjectAsOptions{})...)
+	diags.Append(optsModel.Set(ctx, &run)...)
+
+	optsResults, newDiags := types.ObjectValueFrom(ctx, AnsibleOptionsModel{}.AttrTypes(), optsModel)
+	diags.Append(newDiags...)
+	m.AnsibleOptions = optsResults
 
 	var queriesModel map[string]ArtifactQueryModel
 	diags.Append(m.ArtifactQueries.ElementsAs(ctx, &queriesModel, false)...)
@@ -155,6 +165,21 @@ func (m *NavigatorRunDataSourceModel) SetDefaults(ctx context.Context) diag.Diag
 	diags.Append(newDiags...)
 	m.ExecutionEnvironment = eeValue
 
+	if m.AnsibleOptions.IsNull() {
+		m.AnsibleOptions = AnsibleOptionsModel{}.Defaults()
+	}
+
+	var optsModel AnsibleOptionsModel
+	diags.Append(m.AnsibleOptions.As(ctx, &optsModel, basetypes.ObjectAsOptions{})...)
+
+	if optsModel.KnownHosts.IsNull() {
+		optsModel.KnownHosts = types.ListUnknown(types.StringType)
+	}
+
+	optsResults, newDiags := types.ObjectValueFrom(ctx, AnsibleOptionsModel{}.AttrTypes(), optsModel)
+	diags.Append(newDiags...)
+	m.AnsibleOptions = optsResults
+
 	if m.Timezone.IsNull() {
 		m.Timezone = types.StringValue(defaultNavigatorRunTimezone)
 	}
@@ -166,7 +191,6 @@ func (d *NavigatorRunDataSource) Metadata(ctx context.Context, req datasource.Me
 	resp.TypeName = fmt.Sprintf("%s_navigator_run", req.ProviderTypeName)
 }
 
-//nolint:dupl
 func (d *NavigatorRunDataSource) Schema(ctx context.Context, req datasource.SchemaRequest, resp *datasource.SchemaResponse) {
 	resp.Schema = schema.Schema{
 		Description:         fmt.Sprintf("Run an Ansible playbook. Recommended to only run playbooks without observable side-effects. Requires '%s' and a container engine to run within an execution environment (EE).", ansible.NavigatorProgram),
@@ -289,6 +313,7 @@ func (d *NavigatorRunDataSource) Schema(ctx context.Context, req datasource.Sche
 				Description:         "Ansible playbook run related configuration.",
 				MarkdownDescription: "Ansible [playbook](https://docs.ansible.com/ansible/latest/cli/ansible-playbook.html) run related configuration.",
 				Optional:            true,
+				Computed:            true,
 				Attributes: map[string]schema.Attribute{
 					"force_handlers": schema.BoolAttribute{
 						Description: "Run handlers even if a task fails.",
@@ -356,6 +381,7 @@ func (d *NavigatorRunDataSource) Schema(ctx context.Context, req datasource.Sche
 						Description:         fmt.Sprintf("SSH known host entries. Effectively a list of host public keys. Can help protect against man-in-the-middle attacks by verifying the identity of hosts. Ansible variable '%s' set to path of 'known_hosts' file.", ansible.SSHKnownHostsFileVar),
 						MarkdownDescription: fmt.Sprintf("SSH known host entries. Effectively a list of host public keys. Can help protect against man-in-the-middle attacks by verifying the identity of hosts. Ansible variable `%s` set to path of `known_hosts` file.", ansible.SSHKnownHostsFileVar),
 						Optional:            true,
+						Computed:            true,
 						ElementType:         types.StringType,
 						Validators: []validator.List{
 							listvalidator.ValueStringsAre(stringIsSSHKnownHost()),

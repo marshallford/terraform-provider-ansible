@@ -13,8 +13,3 @@ resource "ansible_navigator_run" "test" {
     tags           = ["tag3", "tag4"]
   }
 }
-
-variable "ansible_navigator_binary" {
-  type     = string
-  nullable = false
-}

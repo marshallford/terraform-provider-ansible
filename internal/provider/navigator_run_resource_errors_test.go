@@ -9,6 +9,22 @@ import (
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 )
 
+func TestAccNavigatorRunResource_errors_command_output(t *testing.T) {
+	t.Setenv("ANSIBLE_NAVIGATOR_CONTAINER_ENGINE", "test")
+
+	resource.Test(t, resource.TestCase{
+		PreCheck:                 func() { testPreCheck(t) },
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		Steps: []resource.TestStep{
+			{
+				Config:          testTerraformFile(t, filepath.Join("navigator_run_resource", "errors", "command_output")),
+				ConfigVariables: testDefaultConfigVariables(t),
+				ExpectError:     regexp.MustCompile("Ansible navigator run failed"),
+			},
+		},
+	})
+}
+
 func TestAccNavigatorRunResource_errors(t *testing.T) {
 	t.Parallel()
 

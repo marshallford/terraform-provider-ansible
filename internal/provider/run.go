@@ -124,7 +124,7 @@ func run(ctx context.Context, diags *diag.Diagnostics, timeout time.Duration, op
 		addError(diags, "Private keys not created", err)
 	}
 
-	if len(run.knownHosts) > 0 {
+	if run.options.KnownHosts {
 		err = ansible.CreateKnownHosts(run.dir, run.knownHosts, &run.navigatorSettings)
 		addError(diags, "Known hosts not created", err)
 	}
@@ -167,14 +167,22 @@ func run(ctx context.Context, diags *diag.Diagnostics, timeout time.Duration, op
 		status, _ := ansible.GetStatusFromPlaybookArtifact(run.dir)
 		switch status {
 		case "timeout":
-			addError(diags, "Ansible navigator run timed out", fmt.Errorf("%w\n\noutput:\n%s", err, output))
+			addError(diags, "Ansible navigator run timed out", fmt.Errorf("%w\n\nOutput:\n%s", err, output))
 		default:
-			addError(diags, "Ansible navigator run failed", fmt.Errorf("%w\n\noutput:\n%s", err, output))
+			addError(diags, "Ansible navigator run failed", fmt.Errorf("%w\n\nOutput:\n%s", err, output))
 		}
 	}
 
-	err = ansible.QueryPlaybookArtifact(run.dir, run.artifactQueries)
-	addPathError(diags, path.Root("artifact_queries"), "Playbook artifact queries failed ", err)
+	if !diags.HasError() {
+		err = ansible.QueryPlaybookArtifact(run.dir, run.artifactQueries)
+		addPathError(diags, path.Root("artifact_queries"), "Playbook artifact queries failed", err)
+
+		if run.options.KnownHosts {
+			knownHosts, err := ansible.GetKnownHosts(run.dir)
+			addPathError(diags, path.Root("ansible_options").AtMapKey("known_hosts"), "Failed to get known hosts", err)
+			run.knownHosts = knownHosts
+		}
+	}
 
 	if !run.persistDir {
 		err = ansible.RemoveRunDir(run.dir)

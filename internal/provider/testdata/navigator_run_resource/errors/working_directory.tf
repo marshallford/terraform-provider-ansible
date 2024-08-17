@@ -8,11 +8,6 @@ resource "ansible_navigator_run" "test" {
   working_directory        = var.working_directory
 }
 
-variable "ansible_navigator_binary" {
-  type     = string
-  nullable = false
-}
-
 variable "working_directory" {
   type     = string
   nullable = false

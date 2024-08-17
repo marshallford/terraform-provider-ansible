@@ -23,8 +23,3 @@ resource "ansible_navigator_run" "test" {
   })
   run_on_destroy = true
 }
-
-variable "ansible_navigator_binary" {
-  type     = string
-  nullable = false
-}

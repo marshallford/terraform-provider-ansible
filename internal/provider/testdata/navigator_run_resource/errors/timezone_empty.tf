@@ -7,8 +7,3 @@ resource "ansible_navigator_run" "test" {
   inventory                = "# localhost"
   timezone                 = ""
 }
-
-variable "ansible_navigator_binary" {
-  type     = string
-  nullable = false
-}

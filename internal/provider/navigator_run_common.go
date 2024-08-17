@@ -54,7 +54,7 @@ func (ExecutionEnvironmentModel) AttrTypes() map[string]attr.Type {
 	}
 }
 
-func (m ExecutionEnvironmentModel) Defaults() basetypes.ObjectValue {
+func (ExecutionEnvironmentModel) Defaults() basetypes.ObjectValue {
 	return types.ObjectValueMust(
 		ExecutionEnvironmentModel{}.AttrTypes(),
 		map[string]attr.Value{
@@ -110,6 +110,40 @@ func (m ExecutionEnvironmentModel) Value(ctx context.Context, settings *ansible.
 	return diags
 }
 
+func (PrivateKeyModel) AttrTypes() map[string]attr.Type {
+	return map[string]attr.Type{
+		"name": types.StringType,
+		"data": types.StringType,
+	}
+}
+
+func (AnsibleOptionsModel) AttrTypes() map[string]attr.Type {
+	return map[string]attr.Type{
+		"force_handlers": types.BoolType,
+		"skip_tags":      types.ListType{ElemType: types.StringType},
+		"start_at_task":  types.StringType,
+		"limit":          types.ListType{ElemType: types.StringType},
+		"tags":           types.ListType{ElemType: types.StringType},
+		"private_keys":   types.ListType{ElemType: types.ObjectType{AttrTypes: PrivateKeyModel{}.AttrTypes()}},
+		"known_hosts":    types.ListType{ElemType: types.StringType},
+	}
+}
+
+func (AnsibleOptionsModel) Defaults() basetypes.ObjectValue {
+	return types.ObjectValueMust(
+		AnsibleOptionsModel{}.AttrTypes(),
+		map[string]attr.Value{
+			"force_handlers": types.BoolNull(),
+			"skip_tags":      types.ListNull(types.StringType),
+			"start_at_task":  types.StringNull(),
+			"limit":          types.ListNull(types.StringType),
+			"tags":           types.ListNull(types.StringType),
+			"private_keys":   types.ListNull(types.ObjectType{AttrTypes: PrivateKeyModel{}.AttrTypes()}),
+			"known_hosts":    types.ListUnknown(types.StringType),
+		},
+	)
+}
+
 func (m AnsibleOptionsModel) Value(ctx context.Context, options *ansible.Options) diag.Diagnostics {
 	var diags diag.Diagnostics
 
@@ -146,7 +180,19 @@ func (m AnsibleOptionsModel) Value(ctx context.Context, options *ansible.Options
 	}
 	options.PrivateKeys = privateKeys
 
-	options.KnownHosts = len(m.KnownHosts.Elements()) > 0
+	options.KnownHosts = m.KnownHosts.IsUnknown() || len(m.KnownHosts.Elements()) > 0
+
+	return diags
+}
+
+func (m *AnsibleOptionsModel) Set(ctx context.Context, run *navigatorRun) diag.Diagnostics {
+	var diags diag.Diagnostics
+
+	if m.KnownHosts.IsUnknown() {
+		knownHostsValue, newDiags := types.ListValueFrom(ctx, types.StringType, run.knownHosts)
+		diags.Append(newDiags...)
+		m.KnownHosts = knownHostsValue
+	}
 
 	return diags
 }
