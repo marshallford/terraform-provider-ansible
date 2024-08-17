@@ -11,8 +11,3 @@ resource "ansible_navigator_run" "test" {
     }
   }
 }
-
-variable "ansible_navigator_binary" {
-  type     = string
-  nullable = false
-}

@@ -17,8 +17,3 @@ resource "ansible_navigator_run" "test" {
     delete = "90m"
   }
 }
-
-variable "ansible_navigator_binary" {
-  type     = string
-  nullable = false
-}

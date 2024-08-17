@@ -9,8 +9,3 @@ data "ansible_navigator_run" "test" {
   EOT
   inventory                = "# localhost"
 }
-
-variable "ansible_navigator_binary" {
-  type     = string
-  nullable = false
-}

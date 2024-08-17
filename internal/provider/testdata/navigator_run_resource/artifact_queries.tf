@@ -32,11 +32,6 @@ output "file_contents" {
   value = base64decode(jsondecode(ansible_navigator_run.test.artifact_queries.file_contents.results[0]))
 }
 
-variable "ansible_navigator_binary" {
-  type     = string
-  nullable = false
-}
-
 variable "file_contents" {
   type     = string
   nullable = false

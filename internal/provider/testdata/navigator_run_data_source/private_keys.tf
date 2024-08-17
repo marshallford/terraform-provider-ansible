@@ -40,11 +40,6 @@ data "ansible_navigator_run" "test" {
   }
 }
 
-variable "ansible_navigator_binary" {
-  type     = string
-  nullable = false
-}
-
 variable "ee_enabled" {
   type     = bool
   nullable = false

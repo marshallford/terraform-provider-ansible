@@ -29,11 +29,6 @@ data "ansible_navigator_run" "test" {
   ansible_options = {}
 }
 
-variable "ansible_navigator_binary" {
-  type     = string
-  nullable = false
-}
-
 variable "ssh_port" {
   type     = number
   nullable = false

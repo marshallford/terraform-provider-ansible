@@ -12,8 +12,3 @@ resource "ansible_navigator_run" "test" {
     create = "3s"
   }
 }
-
-variable "ansible_navigator_binary" {
-  type     = string
-  nullable = false
-}

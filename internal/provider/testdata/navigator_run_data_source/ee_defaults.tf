@@ -7,8 +7,3 @@ data "ansible_navigator_run" "test" {
   inventory                = "# localhost"
   execution_environment    = {}
 }
-
-variable "ansible_navigator_binary" {
-  type     = string
-  nullable = false
-}
