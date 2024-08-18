@@ -193,8 +193,8 @@ func (d *NavigatorRunDataSource) Metadata(ctx context.Context, req datasource.Me
 
 func (d *NavigatorRunDataSource) Schema(ctx context.Context, req datasource.SchemaRequest, resp *datasource.SchemaResponse) {
 	resp.Schema = schema.Schema{
-		Description:         fmt.Sprintf("Run an Ansible playbook. Recommended to only run playbooks without observable side-effects. Requires '%s' and a container engine to run within an execution environment (EE).", ansible.NavigatorProgram),
-		MarkdownDescription: fmt.Sprintf("Run an Ansible playbook. Recommended to only run playbooks without observable side-effects. Requires `%s` and a container engine to run within an execution environment (EE).", ansible.NavigatorProgram),
+		Description:         fmt.Sprintf("Run an Ansible playbook as a means to gather information. It is recommended to only run playbooks without observable side-effects. Requires '%s' and a container engine to run within an execution environment (EE).", ansible.NavigatorProgram),
+		MarkdownDescription: fmt.Sprintf("Run an Ansible playbook as a means to gather information. It is recommended to only run playbooks without observable side-effects. Requires `%s` and a container engine to run within an execution environment (EE).", ansible.NavigatorProgram),
 		Attributes: map[string]schema.Attribute{
 			// required
 			"playbook": schema.StringAttribute{
@@ -378,8 +378,8 @@ func (d *NavigatorRunDataSource) Schema(ctx context.Context, req datasource.Sche
 						},
 					},
 					"known_hosts": schema.ListAttribute{
-						Description:         fmt.Sprintf("SSH known host entries. Effectively a list of host public keys. Can help protect against man-in-the-middle attacks by verifying the identity of hosts. Ansible variable '%s' set to path of 'known_hosts' file.", ansible.SSHKnownHostsFileVar),
-						MarkdownDescription: fmt.Sprintf("SSH known host entries. Effectively a list of host public keys. Can help protect against man-in-the-middle attacks by verifying the identity of hosts. Ansible variable `%s` set to path of `known_hosts` file.", ansible.SSHKnownHostsFileVar),
+						Description:         fmt.Sprintf("SSH known host entries. Can help protect against man-in-the-middle attacks by verifying the identity of hosts. Ansible variable '%s' set to path of 'known_hosts' file. If unspecified will be set to contents of 'known_hosts' file after run.", ansible.SSHKnownHostsFileVar),
+						MarkdownDescription: fmt.Sprintf("SSH known host entries. Can help protect against man-in-the-middle attacks by verifying the identity of hosts. Ansible variable `%s` set to path of `known_hosts` file. If unspecified will be set to contents of `known_hosts` file after run.", ansible.SSHKnownHostsFileVar),
 						Optional:            true,
 						Computed:            true,
 						ElementType:         types.StringType,
