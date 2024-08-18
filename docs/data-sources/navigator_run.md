@@ -3,16 +3,16 @@
 page_title: "ansible_navigator_run Data Source - terraform-provider-ansible"
 subcategory: ""
 description: |-
-  Run an Ansible playbook. Recommended to only run playbooks without observable side-effects. Requires ansible-navigator and a container engine to run within an execution environment (EE).
+  Run an Ansible playbook as a means to gather information. It is recommended to only run playbooks without observable side-effects. Requires ansible-navigator and a container engine to run within an execution environment (EE).
 ---
 
 # ansible_navigator_run (Data Source)
 
-Run an Ansible playbook. Recommended to only run playbooks without observable side-effects. Requires `ansible-navigator` and a container engine to run within an execution environment (EE).
+Run an Ansible playbook as a means to gather information. It is recommended to only run playbooks without observable side-effects. Requires `ansible-navigator` and a container engine to run within an execution environment (EE).
 
 ## Example Usage
-Additional examples available in `ansible_navigator_run` **resource** docs given the overlap in features/attributes.
-That said, keep in mind the differences between a *data source* and *resource* when deciding which to use.
+Additional examples available in the `ansible_navigator_run` **resource** docs given the overlap in available features.
+That said, keep in mind the differences between *data sources* and *resources* when deciding which to use.
 
 ```terraform
 # 1. inline playbook and inventory
@@ -92,7 +92,7 @@ output "resolv_conf" {
 Optional:
 
 - `force_handlers` (Boolean) Run handlers even if a task fails.
-- `known_hosts` (List of String) SSH known host entries. Effectively a list of host public keys. Can help protect against man-in-the-middle attacks by verifying the identity of hosts. Ansible variable `ansible_ssh_known_hosts_file` set to path of `known_hosts` file.
+- `known_hosts` (List of String) SSH known host entries. Can help protect against man-in-the-middle attacks by verifying the identity of hosts. Ansible variable `ansible_ssh_known_hosts_file` set to path of `known_hosts` file. If unspecified will be set to contents of `known_hosts` file after run.
 - `limit` (List of String) Further limit selected hosts to an additional pattern.
 - `private_keys` (Attributes List) SSH private keys used for authentication in addition to the [automatically mounted](https://ansible.readthedocs.io/projects/navigator/faq/#how-do-i-use-my-ssh-keys-with-an-execution-environment) default named keys and SSH agent socket path. (see [below for nested schema](#nestedatt--ansible_options--private_keys))
 - `skip_tags` (List of String) Only run plays and tasks whose tags do not match these values.
