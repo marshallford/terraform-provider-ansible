@@ -10,10 +10,4 @@ resource "ansible_navigator_run" "test" {
       jq_filter = "now"
     }
   }
-  run_on_destroy = true
-  timeouts = {
-    create = "60m"
-    update = "60m"
-    delete = "60m"
-  }
 }
