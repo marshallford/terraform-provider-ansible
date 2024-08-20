@@ -11,7 +11,7 @@ resource "ansible_navigator_run" "test" {
     }
   }
   working_directory = ".."
-  run_on_destroy = true
+  run_on_destroy    = true
   timeouts = {
     create = "90m"
     update = "90m"
