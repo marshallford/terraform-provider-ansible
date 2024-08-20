@@ -440,11 +440,10 @@ func (r *NavigatorRunResource) Schema(ctx context.Context, req resource.SchemaRe
 }
 
 func (NavigatorRunResource) ShouldRun(plan *NavigatorRunResourceModel, state *NavigatorRunResourceModel) bool {
-	// skip ansible_navigator_binary, run_on_destroy, timeouts
+	// skip working_directory, ansible_navigator_binary, run_on_destroy, timeouts
 	attributeChanges := []bool{
 		plan.Playbook.Equal(state.Playbook),
 		plan.Inventory.Equal(state.Inventory),
-		plan.WorkingDirectory.Equal(state.WorkingDirectory),
 		plan.ExecutionEnvironment.Equal(state.ExecutionEnvironment),
 		plan.AnsibleOptions.Equal(state.AnsibleOptions), // TODO check nested attrs
 		plan.Timezone.Equal(state.Timezone),

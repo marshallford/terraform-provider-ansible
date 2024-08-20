@@ -7,7 +7,6 @@ import (
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-testing/config"
-	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 	"github.com/hashicorp/terraform-plugin-testing/knownvalue"
 	"github.com/hashicorp/terraform-plugin-testing/plancheck"
@@ -312,27 +311,6 @@ func TestAccNavigatorRunResource_pull_args(t *testing.T) {
 	})
 }
 
-func TestAccNavigatorRunResource_relative_binary(t *testing.T) {
-	t.Parallel()
-
-	resource.Test(t, resource.TestCase{
-		PreCheck:                 func() { testPreCheck(t) },
-		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
-		Steps: []resource.TestStep{
-			{
-				Config: testTerraformFile(t, filepath.Join("navigator_run_resource", "relative_binary")),
-				ConfigVariables: testConfigVariables(t, config.Variables{
-					"working_directory": config.StringVariable(t.TempDir()),
-				}),
-				Check: resource.ComposeAggregateTestCheckFunc(
-					resource.TestCheckResourceAttrSet(navigatorRunResource, "id"),
-					resource.TestCheckResourceAttrSet(navigatorRunResource, "command"),
-				),
-			},
-		},
-	})
-}
-
 func TestAccNavigatorRunResource_role(t *testing.T) {
 	t.Parallel()
 
@@ -377,10 +355,8 @@ func TestAccNavigatorRunResource_skip_run(t *testing.T) {
 				),
 			},
 			{
-				Config: testTerraformFile(t, filepath.Join("navigator_run_resource", "skip_run_update")),
-				ConfigVariables: testConfigVariables(t, config.Variables{
-					"ansible_navigator_binary": config.StringVariable(acctest.RandString(8)),
-				}),
+				Config:          testTerraformFile(t, filepath.Join("navigator_run_resource", "skip_run_update")),
+				ConfigVariables: testDefaultConfigVariables(t),
 				ConfigPlanChecks: resource.ConfigPlanChecks{
 					PreApply: []plancheck.PlanCheck{
 						plancheck.ExpectNonEmptyPlan(),

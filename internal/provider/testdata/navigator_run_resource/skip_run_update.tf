@@ -1,5 +1,5 @@
 resource "ansible_navigator_run" "test" {
-  ansible_navigator_binary = var.ansible_navigator_binary
+  ansible_navigator_binary = "${path.module}/${var.ansible_navigator_binary}"
   playbook                 = <<-EOT
   - hosts: localhost
     become: false
@@ -10,7 +10,8 @@ resource "ansible_navigator_run" "test" {
       jq_filter = "now"
     }
   }
-  run_on_destroy = false
+  working_directory = ".."
+  run_on_destroy    = true
   timeouts = {
     create = "90m"
     update = "90m"
