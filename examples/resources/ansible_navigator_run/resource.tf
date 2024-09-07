@@ -78,15 +78,14 @@ resource "ansible_navigator_run" "destroy" {
   run_on_destroy = true
 }
 
-# 7. triggers and replacement triggers
+# 7. triggers
 resource "ansible_navigator_run" "triggers" {
   playbook  = "# example"
   inventory = yamlencode({})
   triggers = {
-    somekey = some_resource.example.id # re-run playbook when id changes
-  }
-  replacement_triggers = {
-    somekey = some_resource.example.id # recreate resource when id changes
+    run         = some_resource.example.status # run playbook when status changes
+    replace     = some_resource.example.id     # recreate resource when id changes
+    known_hosts = some_resource.example.name   # reset known_hosts when name changes
   }
 }
 

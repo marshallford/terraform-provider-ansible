@@ -93,15 +93,14 @@ resource "ansible_navigator_run" "destroy" {
   run_on_destroy = true
 }
 
-# 7. triggers and replacement triggers
+# 7. triggers
 resource "ansible_navigator_run" "triggers" {
   playbook  = "# example"
   inventory = yamlencode({})
   triggers = {
-    somekey = some_resource.example.id # re-run playbook when id changes
-  }
-  replacement_triggers = {
-    somekey = some_resource.example.id # recreate resource when id changes
+    run         = some_resource.example.status # run playbook when status changes
+    replace     = some_resource.example.id     # recreate resource when id changes
+    known_hosts = some_resource.example.name   # reset known_hosts when name changes
   }
 }
 
@@ -197,11 +196,10 @@ pipelining=True
 - `ansible_options` (Attributes) Ansible [playbook](https://docs.ansible.com/ansible/latest/cli/ansible-playbook.html) run related configuration. (see [below for nested schema](#nestedatt--ansible_options))
 - `artifact_queries` (Attributes Map) Query the Ansible playbook artifact with [`jq`](https://jqlang.github.io/jq/) syntax. The [playbook artifact](https://access.redhat.com/documentation/en-us/red_hat_ansible_automation_platform/2.0-ea/html/ansible_navigator_creator_guide/assembly-troubleshooting-navigator_ansible-navigator#proc-review-artifact_troubleshooting-navigator) contains detailed information about every play and task, as well as the stdout from the playbook run. (see [below for nested schema](#nestedatt--artifact_queries))
 - `execution_environment` (Attributes) [Execution environment](https://ansible.readthedocs.io/en/latest/getting_started_ee/index.html) (EE) related configuration. (see [below for nested schema](#nestedatt--execution_environment))
-- `replacement_triggers` (Map of String) Arbitrary map of values that, when changed, will recreate the resource. Similar to `triggers`, but will cause `id` to change. Useful when combined with `run_on_destroy`.
 - `run_on_destroy` (Boolean) Run playbook on destroy. The environment variable `ANSIBLE_TF_OPERATION` is set to `delete` during the run to allow for conditional plays, tasks, etc. Defaults to `false`.
 - `timeouts` (Attributes) (see [below for nested schema](#nestedatt--timeouts))
 - `timezone` (String) IANA time zone, use `local` for the system time zone. Defaults to `UTC`.
-- `triggers` (Map of String) Arbitrary map of values that, when changed, will run the playbook again. Serves as alternative way to trigger a run without changing the inventory or playbook.
+- `triggers` (Attributes) Trigger various behaviors via arbitrary values. (see [below for nested schema](#nestedatt--triggers))
 - `working_directory` (String) Directory which `ansible-navigator` is run from. Recommended to be the root Ansible [content directory](https://docs.ansible.com/ansible/latest/tips_tricks/sample_setup.html#sample-directory-layout) (sometimes called the project directory), which is likely to contain `ansible.cfg`, `roles/`, etc. Defaults to `.`.
 
 ### Read-Only
@@ -254,7 +252,7 @@ Optional:
 - `enabled` (Boolean) Enable or disable the use of an execution environment. Disabling requires `ansible-playbook` and is only recommended when without a container engine. Defaults to `true`.
 - `environment_variables_pass` (List of String) Existing environment variables to be [passed](https://ansible.readthedocs.io/projects/navigator/settings/#pass-environment-variable) through to and set within the execution environment.
 - `environment_variables_set` (Map of String) Environment variables to be [set](https://ansible.readthedocs.io/projects/navigator/settings/#set-environment-variable) within the execution environment. By default `ANSIBLE_TF_OPERATION` is set to the current CRUD operation (`create`, `update`, `delete`).
-- `image` (String) Name of the execution environment container [image](https://ansible.readthedocs.io/projects/navigator/settings/#execution-environment-image). Defaults to `ghcr.io/ansible/community-ansible-dev-tools:v24.7.2`.
+- `image` (String) Name of the execution environment container [image](https://ansible.readthedocs.io/projects/navigator/settings/#execution-environment-image). Defaults to `ghcr.io/ansible/community-ansible-dev-tools:v24.8.0`.
 - `pull_arguments` (List of String) Additional [parameters](https://ansible.readthedocs.io/projects/navigator/settings/#pull-arguments) that should be added to the pull command when pulling an execution environment container image from a container registry.
 - `pull_policy` (String) Container image [pull policy](https://ansible.readthedocs.io/projects/navigator/settings/#pull-policy). Defaults to `tag`.
 
@@ -267,3 +265,13 @@ Optional:
 - `create` (String) A string that can be [parsed as a duration](https://pkg.go.dev/time#ParseDuration) consisting of numbers and unit suffixes, such as "30s" or "2h45m". Valid time units are "s" (seconds), "m" (minutes), "h" (hours).
 - `delete` (String) A string that can be [parsed as a duration](https://pkg.go.dev/time#ParseDuration) consisting of numbers and unit suffixes, such as "30s" or "2h45m". Valid time units are "s" (seconds), "m" (minutes), "h" (hours). Setting a timeout for a Delete operation is only applicable if changes are saved into state before the destroy operation occurs.
 - `update` (String) A string that can be [parsed as a duration](https://pkg.go.dev/time#ParseDuration) consisting of numbers and unit suffixes, such as "30s" or "2h45m". Valid time units are "s" (seconds), "m" (minutes), "h" (hours).
+
+
+<a id="nestedatt--triggers"></a>
+### Nested Schema for `triggers`
+
+Optional:
+
+- `known_hosts` (Dynamic) A value that, when changed, will reset the computed list of SSH known host entries. Useful when inventory hosts are recreated with the same hostnames/IP addresses, but different SSH keypairs.
+- `replace` (Dynamic) A value that, when changed, will recreate the resource. Serves as an alternative to the native [`replace_triggered_by`](https://developer.hashicorp.com/terraform/language/meta-arguments/lifecycle#replace_triggered_by) lifecycle argument. Will cause `id` to change. May be useful when combined with `run_on_destroy`.
+- `run` (Dynamic) A value that, when changed, will run the playbook again. Provides a way to initiate a run without changing other attributes such as the inventory or playbook.

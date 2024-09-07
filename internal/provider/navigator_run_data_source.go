@@ -191,6 +191,7 @@ func (d *NavigatorRunDataSource) Metadata(ctx context.Context, req datasource.Me
 	resp.TypeName = fmt.Sprintf("%s_navigator_run", req.ProviderTypeName)
 }
 
+//nolint:dupl
 func (d *NavigatorRunDataSource) Schema(ctx context.Context, req datasource.SchemaRequest, resp *datasource.SchemaResponse) {
 	resp.Schema = schema.Schema{
 		Description:         fmt.Sprintf("Run an Ansible playbook as a means to gather information. It is recommended to only run playbooks without observable side-effects. Requires '%s' and a container engine to run within an execution environment (EE).", ansible.NavigatorProgram),

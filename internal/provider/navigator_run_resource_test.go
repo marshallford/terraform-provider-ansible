@@ -106,8 +106,7 @@ func TestAccNavigatorRunResource_basic(t *testing.T) {
 					resource.TestCheckResourceAttr(navigatorRunResource, "ansible_options.known_hosts.#", "0"),
 					resource.TestCheckResourceAttrSet(navigatorRunResource, "timezone"),
 					resource.TestCheckResourceAttrSet(navigatorRunResource, "run_on_destroy"),
-					resource.TestCheckNoResourceAttr(navigatorRunResource, "triggers"),
-					resource.TestCheckNoResourceAttr(navigatorRunResource, "replacement_triggers"),
+					// resource.TestCheckNoResourceAttr(navigatorRunResource, "triggers"), TODO check elements
 					resource.TestCheckNoResourceAttr(navigatorRunResource, "artifact_queries"),
 					resource.TestCheckResourceAttrSet(navigatorRunResource, "id"),
 					resource.TestCheckResourceAttrSet(navigatorRunResource, "command"),
@@ -370,6 +369,119 @@ func TestAccNavigatorRunResource_skip_run(t *testing.T) {
 					testCheckAttributeValuesEqual(&resourceCommand, &resourceCommandUpdate),
 					testExtractResourceAttr(navigatorRunResource, "artifact_queries.test.results.0", &queryResultUpdate),
 					testCheckAttributeValuesEqual(&queryResult, &queryResultUpdate),
+				),
+			},
+		},
+	})
+}
+
+func TestAccNavigatorRunResource_trigger_known_hosts(t *testing.T) {
+	t.Parallel()
+
+	var resourceKnownHost, resourceKnownHostUpdate string
+
+	_, serverPrivateKeyA := testSSHKeygen(t)
+	_, serverPrivateKeyB := testSSHKeygen(t)
+	portA := testSSHServer(t, "", serverPrivateKeyA)
+	portB := testSSHServer(t, "", serverPrivateKeyB)
+
+	resource.Test(t, resource.TestCase{
+		PreCheck:                 func() { testPreCheck(t) },
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		Steps: []resource.TestStep{
+			{
+				Config: testTerraformFile(t, filepath.Join("navigator_run_resource", "trigger_known_hosts")),
+				ConfigVariables: testConfigVariables(t, config.Variables{
+					"ssh_port": config.IntegerVariable(portA),
+					"trigger":  config.StringVariable("a"),
+				}),
+				ConfigPlanChecks: resource.ConfigPlanChecks{
+					PreApply: []plancheck.PlanCheck{
+						plancheck.ExpectNonEmptyPlan(),
+						plancheck.ExpectUnknownOutputValue("known_host"),
+					},
+				},
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttrSet(navigatorRunResource, "ansible_options.known_hosts.0"),
+					testExtractResourceAttr(navigatorRunResource, "ansible_options.known_hosts.0", &resourceKnownHost),
+				),
+			},
+			{
+				Config: testTerraformFile(t, filepath.Join("navigator_run_resource", "trigger_known_hosts")),
+				ConfigVariables: testConfigVariables(t, config.Variables{
+					"ssh_port": config.IntegerVariable(portB),
+					"trigger":  config.StringVariable("a"),
+				}),
+				ConfigPlanChecks: resource.ConfigPlanChecks{
+					PreApply: []plancheck.PlanCheck{
+						plancheck.ExpectNonEmptyPlan(),
+						plancheck.ExpectKnownOutputValue("known_host", knownvalue.NotNull()),
+					},
+				},
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttrSet(navigatorRunResource, "ansible_options.known_hosts.0"),
+					resource.TestMatchResourceAttr(navigatorRunResource, "ansible_options.known_hosts.0", regexp.MustCompile(resourceKnownHost)),
+				),
+			},
+			{
+				Config: testTerraformFile(t, filepath.Join("navigator_run_resource", "trigger_known_hosts")),
+				ConfigVariables: testConfigVariables(t, config.Variables{
+					"ssh_port": config.IntegerVariable(portB),
+					"trigger":  config.StringVariable("b"),
+				}),
+				ConfigPlanChecks: resource.ConfigPlanChecks{
+					PreApply: []plancheck.PlanCheck{
+						plancheck.ExpectNonEmptyPlan(),
+						plancheck.ExpectUnknownOutputValue("known_host"),
+					},
+				},
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttrSet(navigatorRunResource, "ansible_options.known_hosts.0"),
+					testExtractResourceAttr(navigatorRunResource, "ansible_options.known_hosts.0", &resourceKnownHostUpdate),
+					testCheckAttributeValuesDiffer(&resourceKnownHost, &resourceKnownHostUpdate),
+				),
+			},
+		},
+	})
+}
+
+func TestAccNavigatorRunResource_trigger_run(t *testing.T) {
+	t.Parallel()
+
+	var resourceCommand, resourceCommandUpdate string
+	var queryResult, queryResultUpdate string
+
+	resource.Test(t, resource.TestCase{
+		PreCheck:                 func() { testPreCheck(t) },
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		Steps: []resource.TestStep{
+			{
+				Config: testTerraformFile(t, filepath.Join("navigator_run_resource", "trigger_run")),
+				ConfigVariables: testConfigVariables(t, config.Variables{
+					"trigger": config.StringVariable("a"),
+				}),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttrSet(navigatorRunResource, "artifact_queries.test.results.0"),
+					testExtractResourceAttr(navigatorRunResource, "command", &resourceCommand),
+					testExtractResourceAttr(navigatorRunResource, "artifact_queries.test.results.0", &queryResult),
+				),
+			},
+			{
+				Config: testTerraformFile(t, filepath.Join("navigator_run_resource", "trigger_run")),
+				ConfigVariables: testConfigVariables(t, config.Variables{
+					"trigger": config.StringVariable("b"),
+				}),
+				ConfigPlanChecks: resource.ConfigPlanChecks{
+					PreApply: []plancheck.PlanCheck{
+						plancheck.ExpectNonEmptyPlan(),
+					},
+				},
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttrSet(navigatorRunResource, "artifact_queries.test.results.0"),
+					testExtractResourceAttr(navigatorRunResource, "command", &resourceCommandUpdate),
+					testCheckAttributeValuesDiffer(&resourceCommand, &resourceCommandUpdate),
+					testExtractResourceAttr(navigatorRunResource, "artifact_queries.test.results.0", &queryResultUpdate),
+					testCheckAttributeValuesDiffer(&queryResult, &queryResultUpdate),
 				),
 			},
 		},
