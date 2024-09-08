@@ -8,7 +8,7 @@ endif
 DOCKER := docker
 DOCKER_RUN := $(DOCKER) run $(DOCKER_FLAGS)
 
-TERRAFORM_VERSION ?= 1.9.4
+TERRAFORM_VERSION ?= 1.9.5
 
 EDITORCONFIG_CHECKER_VERSION ?= 3.0.3
 EDITORCONFIG_CHECKER := $(DOCKER_RUN) -v=$(CURDIR):/check docker.io/mstruebing/editorconfig-checker:v$(EDITORCONFIG_CHECKER_VERSION)
@@ -19,7 +19,7 @@ SHELLCHECK := $(DOCKER_RUN) -v=$(CURDIR):/mnt docker.io/koalaman/shellcheck:v$(S
 YAMLLINT_VERSION ?= 0.31.3
 YAMLLINT := $(DOCKER_RUN) -v=$(CURDIR):/code docker.io/pipelinecomponents/yamllint:$(YAMLLINT_VERSION) yamllint
 
-GOLANGCI_LINT_VERSION ?= 1.60.1
+GOLANGCI_LINT_VERSION ?= 1.60.3
 GOLANGCI_LINT := $(DOCKER_RUN) -v=$(CURDIR):/code -w /code docker.io/golangci/golangci-lint:v$(GOLANGCI_LINT_VERSION) golangci-lint run
 
 VENV := .venv
@@ -49,16 +49,19 @@ lint/ansible: bin/ansible-navigator
 install:
 	go install
 
+cover:
+	go tool cover -html=cover.out
+
 test: test/docs test/pkg test/acc
 
 test/docs:
 	TFENV_TERRAFORM_VERSION=$(TERRAFORM_VERSION) go run github.com/hashicorp/terraform-plugin-docs/cmd/tfplugindocs validate
 
 test/pkg:
-	go test ./pkg/... -v $(TESTARGS) -timeout 60m
+	go test ./pkg/... -v -coverprofile=cover.out $(TESTARGS) -timeout 60m
 
 test/acc:
-	TF_ACC=1 TFENV_TERRAFORM_VERSION=$(TERRAFORM_VERSION) go test ./internal/provider/... -v $(TESTARGS) -timeout 60m
+	TF_ACC=1 TFENV_TERRAFORM_VERSION=$(TERRAFORM_VERSION) go test ./internal/provider/... -v -coverprofile=cover.out $(TESTARGS) -timeout 60m
 
 docs:
 	TFENV_TERRAFORM_VERSION=$(TERRAFORM_VERSION) go generate ./...
@@ -73,4 +76,4 @@ $(VENV_STAMP): requirements.txt
 	$(ACTIVATE); pip install -qr requirements.txt
 	touch $(VENV_STAMP)
 
-.PHONY: lint lint/terraform lint/editorconfig lint/shellcheck lint/yamllint lint/go lint/ansible install test test/docs test/pkg test/acc docs deps bin/ansible-navigator
+.PHONY: lint lint/terraform lint/editorconfig lint/shellcheck lint/yamllint lint/go lint/ansible install cover test test/docs test/pkg test/acc docs deps bin/ansible-navigator

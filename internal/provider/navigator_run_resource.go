@@ -10,12 +10,13 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework-validators/listvalidator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/mapvalidator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
+	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/booldefault"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/dynamicplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/listplanmodifier"
-	"github.com/hashicorp/terraform-plugin-framework/resource/schema/mapplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/objectdefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringdefault"
@@ -49,8 +50,7 @@ type NavigatorRunResourceModel struct {
 	AnsibleOptions         types.Object   `tfsdk:"ansible_options"`
 	Timezone               types.String   `tfsdk:"timezone"`
 	RunOnDestroy           types.Bool     `tfsdk:"run_on_destroy"`
-	Triggers               types.Map      `tfsdk:"triggers"`
-	ReplacementTriggers    types.Map      `tfsdk:"replacement_triggers"`
+	Triggers               types.Object   `tfsdk:"triggers"`
 	ArtifactQueries        types.Map      `tfsdk:"artifact_queries"`
 	ID                     types.String   `tfsdk:"id"`
 	Command                types.String   `tfsdk:"command"`
@@ -146,7 +146,7 @@ func (r *NavigatorRunResource) Metadata(ctx context.Context, req resource.Metada
 	resp.TypeName = fmt.Sprintf("%s_navigator_run", req.ProviderTypeName)
 }
 
-//nolint:maintidx
+//nolint:dupl,maintidx
 func (r *NavigatorRunResource) Schema(ctx context.Context, req resource.SchemaRequest, resp *resource.SchemaResponse) {
 	resp.Schema = schema.Schema{
 		Description:         fmt.Sprintf("Run an Ansible playbook. Requires '%s' and a container engine to run within an execution environment (EE).", ansible.NavigatorProgram),
@@ -346,9 +346,6 @@ func (r *NavigatorRunResource) Schema(ctx context.Context, req resource.SchemaRe
 						Optional:            true,
 						Computed:            true,
 						ElementType:         types.StringType,
-						PlanModifiers: []planmodifier.List{
-							listplanmodifier.UseStateForUnknown(),
-						},
 						Validators: []validator.List{
 							listvalidator.ValueStringsAre(stringIsSSHKnownHost()),
 						},
@@ -372,18 +369,26 @@ func (r *NavigatorRunResource) Schema(ctx context.Context, req resource.SchemaRe
 				Computed:            true,
 				Default:             booldefault.StaticBool(defaultNavigatorRunOnDestroy),
 			},
-			"triggers": schema.MapAttribute{
-				Description: "Arbitrary map of values that, when changed, will run the playbook again. Serves as alternative way to trigger a run without changing the inventory or playbook.",
+			"triggers": schema.SingleNestedAttribute{
+				Description: "Trigger various behaviors via arbitrary values.",
 				Optional:    true,
-				ElementType: types.StringType,
-			},
-			"replacement_triggers": schema.MapAttribute{
-				Description:         "Arbitrary map of values that, when changed, will recreate the resource. Similar to 'triggers', but will cause 'id' to change. Useful when combined with 'run_on_destroy'.",
-				MarkdownDescription: "Arbitrary map of values that, when changed, will recreate the resource. Similar to `triggers`, but will cause `id` to change. Useful when combined with `run_on_destroy`.",
-				Optional:            true,
-				ElementType:         types.StringType,
-				PlanModifiers: []planmodifier.Map{
-					mapplanmodifier.RequiresReplace(),
+				Attributes: map[string]schema.Attribute{
+					"run": schema.DynamicAttribute{
+						Description: "A value that, when changed, will run the playbook again. Provides a way to initiate a run without changing other attributes such as the inventory or playbook.",
+						Optional:    true,
+					},
+					"replace": schema.DynamicAttribute{
+						Description:         "A value that, when changed, will recreate the resource. Serves as an alternative to the native 'replace_triggered_by' lifecycle argument. Will cause 'id' to change. May be useful when combined with 'run_on_destroy'.",
+						MarkdownDescription: "A value that, when changed, will recreate the resource. Serves as an alternative to the native [`replace_triggered_by`](https://developer.hashicorp.com/terraform/language/meta-arguments/lifecycle#replace_triggered_by) lifecycle argument. Will cause `id` to change. May be useful when combined with `run_on_destroy`.",
+						Optional:            true,
+						PlanModifiers: []planmodifier.Dynamic{
+							dynamicplanmodifier.RequiresReplace(),
+						},
+					},
+					"known_hosts": schema.DynamicAttribute{
+						Description: "A value that, when changed, will reset the computed list of SSH known host entries. Useful when inventory hosts are recreated with the same hostnames/IP addresses, but different SSH keypairs.",
+						Optional:    true,
+					},
 				},
 			},
 			"artifact_queries": schema.MapNestedAttribute{
@@ -439,15 +444,24 @@ func (r *NavigatorRunResource) Schema(ctx context.Context, req resource.SchemaRe
 	}
 }
 
-func (NavigatorRunResource) ShouldRun(plan *NavigatorRunResourceModel, state *NavigatorRunResourceModel) bool {
+// TODO find better solution
+func (NavigatorRunResource) TriggersAttr(data *NavigatorRunResourceModel, attribute string) attr.Value { //nolint:ireturn
+	if data.Triggers.IsNull() {
+		return types.DynamicNull()
+	}
+
+	return data.Triggers.Attributes()[attribute]
+}
+
+func (r *NavigatorRunResource) ShouldRun(plan *NavigatorRunResourceModel, state *NavigatorRunResourceModel) bool {
 	// skip working_directory, ansible_navigator_binary, run_on_destroy, timeouts
 	attributeChanges := []bool{
 		plan.Playbook.Equal(state.Playbook),
 		plan.Inventory.Equal(state.Inventory),
 		plan.ExecutionEnvironment.Equal(state.ExecutionEnvironment),
-		plan.AnsibleOptions.Equal(state.AnsibleOptions), // TODO check nested attrs
+		plan.AnsibleOptions.Equal(state.AnsibleOptions),
 		plan.Timezone.Equal(state.Timezone),
-		plan.Triggers.Equal(state.Triggers),
+		r.TriggersAttr(plan, "run").Equal(r.TriggersAttr(state, "run")),
 		plan.ArtifactQueries.Equal(state.ArtifactQueries),
 	}
 
@@ -469,6 +483,7 @@ func (r *NavigatorRunResource) Configure(ctx context.Context, req resource.Confi
 	r.opts = opts
 }
 
+//nolint:cyclop
 func (r *NavigatorRunResource) ModifyPlan(ctx context.Context, req resource.ModifyPlanRequest, resp *resource.ModifyPlanResponse) {
 	var data, state *NavigatorRunResourceModel
 
@@ -491,11 +506,29 @@ func (r *NavigatorRunResource) ModifyPlan(ctx context.Context, req resource.Modi
 		return
 	}
 
-	if !r.ShouldRun(data, state) {
-		tflog.Debug(ctx, "skipping run")
+	defer func() {
+		if !resp.Diagnostics.HasError() {
+			resp.Diagnostics.Append(resp.Plan.Set(ctx, &data)...)
+		}
+	}()
 
+	var optsPlanModel, optsStateModel AnsibleOptionsModel
+	resp.Diagnostics.Append(data.AnsibleOptions.As(ctx, &optsPlanModel, basetypes.ObjectAsOptions{})...)
+	resp.Diagnostics.Append(state.AnsibleOptions.As(ctx, &optsStateModel, basetypes.ObjectAsOptions{})...)
+
+	if optsPlanModel.KnownHosts.IsUnknown() && r.TriggersAttr(data, "known_hosts").Equal(r.TriggersAttr(state, "known_hosts")) {
+		optsPlanModel.KnownHosts = optsStateModel.KnownHosts
+	}
+
+	optsPlanValue, newDiags := types.ObjectValueFrom(ctx, AnsibleOptionsModel{}.AttrTypes(), optsPlanModel)
+	resp.Diagnostics.Append(newDiags...)
+	data.AnsibleOptions = optsPlanValue
+
+	if !r.ShouldRun(data, state) {
 		return
 	}
+
+	data.Command = types.StringUnknown()
 
 	var artifactQueriesPlanModel map[string]ArtifactQueryModel
 	resp.Diagnostics.Append(data.ArtifactQueries.ElementsAs(ctx, &artifactQueriesPlanModel, false)...)
@@ -507,15 +540,7 @@ func (r *NavigatorRunResource) ModifyPlan(ctx context.Context, req resource.Modi
 
 	artifactQueriesPlanValue, newDiags := types.MapValueFrom(ctx, types.ObjectType{AttrTypes: ArtifactQueryModel{}.AttrTypes()}, artifactQueriesPlanModel)
 	resp.Diagnostics.Append(newDiags...)
-
-	if resp.Diagnostics.HasError() {
-		return
-	}
-
 	data.ArtifactQueries = artifactQueriesPlanValue
-	data.Command = types.StringUnknown()
-
-	resp.Diagnostics.Append(resp.Plan.Set(ctx, &data)...)
 }
 
 func (r *NavigatorRunResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {

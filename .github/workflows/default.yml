@@ -30,7 +30,7 @@ jobs:
     - name: Setup external dependencies
       run: make deps
     - name: Acceptance Coverage
-      run: TESTARGS=-coverprofile=cover.out make test/acc
+      run: make test/acc
     - name: Coverage badge and html
       run: ./.github/scripts/cov-badge-and-html.sh
     - name: Upload Artifact

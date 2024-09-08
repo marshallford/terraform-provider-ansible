@@ -84,8 +84,6 @@ func TestAccNavigatorRunDataSource_basic(t *testing.T) {
 					// resource.TestCheckNoResourceAttr(navigatorRunDataSource, "ansible_options"), TODO check elements
 					resource.TestCheckResourceAttr(navigatorRunDataSource, "ansible_options.known_hosts.#", "0"),
 					resource.TestCheckResourceAttrSet(navigatorRunDataSource, "timezone"),
-					resource.TestCheckNoResourceAttr(navigatorRunDataSource, "triggers"),
-					resource.TestCheckNoResourceAttr(navigatorRunDataSource, "replacement_triggers"),
 					resource.TestCheckNoResourceAttr(navigatorRunDataSource, "artifact_queries"),
 					resource.TestCheckResourceAttrSet(navigatorRunDataSource, "id"),
 					resource.TestCheckResourceAttrSet(navigatorRunDataSource, "command"),
