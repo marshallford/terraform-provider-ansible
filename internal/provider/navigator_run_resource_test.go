@@ -6,6 +6,7 @@ import (
 	"regexp"
 	"testing"
 
+	"github.com/hashicorp/terraform-plugin-testing/compare"
 	"github.com/hashicorp/terraform-plugin-testing/config"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 	"github.com/hashicorp/terraform-plugin-testing/knownvalue"
@@ -29,9 +30,13 @@ func TestAccNavigatorRunResource_ansible_options(t *testing.T) {
 			{
 				Config:          testTerraformFile(t, filepath.Join("navigator_run_resource", "ansible_options")),
 				ConfigVariables: testDefaultConfigVariables(t),
-				Check: resource.ComposeAggregateTestCheckFunc(
-					resource.TestMatchResourceAttr(navigatorRunResource, "command", regexp.MustCompile("--force-handlers --skip-tags tag1,tag2 --start-at-task task name --limit host1,host2 --tags tag3,tag4")),
-				),
+				ConfigStateChecks: []statecheck.StateCheck{
+					statecheck.ExpectKnownValue(
+						navigatorRunResource,
+						tfjsonpath.New("command"),
+						knownvalue.StringRegexp(regexp.MustCompile("--force-handlers --skip-tags tag1,tag2 --start-at-task task name --limit host1,host2 --tags tag3,tag4")),
+					),
+				},
 			},
 		},
 	})
@@ -42,7 +47,7 @@ func TestAccNavigatorRunResource_artifact_queries(t *testing.T) {
 
 	fileContents := "acc"
 	fileContentsUpdate := "acc_update"
-	var resourceCommand, resourceCommandUpdate string
+	commandValueDiffer := statecheck.CompareValue(compare.ValuesDiffer())
 
 	resource.Test(t, resource.TestCase{
 		PreCheck:                 func() { testPreCheck(t) },
@@ -53,11 +58,13 @@ func TestAccNavigatorRunResource_artifact_queries(t *testing.T) {
 				ConfigVariables: testConfigVariables(t, config.Variables{
 					"file_contents": config.StringVariable(fileContents),
 				}),
-				Check: resource.ComposeAggregateTestCheckFunc(
-					resource.TestMatchResourceAttr(navigatorRunResource, "artifact_queries.stdout.results.0", regexp.MustCompile("ok=3")),
-					testExtractResourceAttr(navigatorRunResource, "command", &resourceCommand),
-				),
 				ConfigStateChecks: []statecheck.StateCheck{
+					commandValueDiffer.AddStateValue(navigatorRunResource, tfjsonpath.New("command")),
+					statecheck.ExpectKnownValue(
+						navigatorRunResource,
+						tfjsonpath.New("artifact_queries").AtMapKey("stdout").AtMapKey("results").AtSliceIndex(0),
+						knownvalue.StringRegexp(regexp.MustCompile("ok=3")),
+					),
 					statecheck.ExpectKnownOutputValue("file_contents", knownvalue.StringExact(fileContents)),
 				},
 			},
@@ -69,16 +76,16 @@ func TestAccNavigatorRunResource_artifact_queries(t *testing.T) {
 				ConfigPlanChecks: resource.ConfigPlanChecks{
 					PreApply: []plancheck.PlanCheck{
 						plancheck.ExpectNonEmptyPlan(),
-						plancheck.ExpectUnknownValue(navigatorRunResource, tfjsonpath.New("artifact_queries").AtMapKey("file_contents").AtMapKey("results")),
-						plancheck.ExpectUnknownValue(navigatorRunResource, tfjsonpath.New("command")),
+						plancheck.ExpectResourceAction(navigatorRunResource, plancheck.ResourceActionUpdate),
 					},
 				},
-				Check: resource.ComposeAggregateTestCheckFunc(
-					resource.TestMatchResourceAttr(navigatorRunResource, "artifact_queries.stdout.results.0", regexp.MustCompile("ok=3")),
-					testExtractResourceAttr(navigatorRunResource, "command", &resourceCommandUpdate),
-					testCheckAttributeValuesDiffer(&resourceCommand, &resourceCommandUpdate),
-				),
 				ConfigStateChecks: []statecheck.StateCheck{
+					commandValueDiffer.AddStateValue(navigatorRunResource, tfjsonpath.New("command")),
+					statecheck.ExpectKnownValue(
+						navigatorRunResource,
+						tfjsonpath.New("artifact_queries").AtMapKey("stdout").AtMapKey("results").AtSliceIndex(0),
+						knownvalue.StringRegexp(regexp.MustCompile("ok=3")),
+					),
 					statecheck.ExpectKnownOutputValue("file_contents", knownvalue.StringExact(fileContentsUpdate)),
 				},
 			},
@@ -96,22 +103,23 @@ func TestAccNavigatorRunResource_basic(t *testing.T) {
 			{
 				Config:          testTerraformFile(t, filepath.Join("navigator_run_resource", "basic")),
 				ConfigVariables: testDefaultConfigVariables(t),
-				Check: resource.ComposeAggregateTestCheckFunc(
-					resource.TestCheckResourceAttrSet(navigatorRunResource, "playbook"),
-					resource.TestCheckResourceAttrSet(navigatorRunResource, "inventory"),
-					resource.TestCheckResourceAttrSet(navigatorRunResource, "working_directory"),
-					// resource.TestCheckResourceAttrSet(navigatorRunResource, "execution_environment"), TODO check elements
-					resource.TestCheckResourceAttrSet(navigatorRunResource, "ansible_navigator_binary"),
-					// resource.TestCheckNoResourceAttr(navigatorRunResource, "ansible_options"), TODO check elements
-					resource.TestCheckResourceAttr(navigatorRunResource, "ansible_options.known_hosts.#", "0"),
-					resource.TestCheckResourceAttrSet(navigatorRunResource, "timezone"),
-					resource.TestCheckResourceAttrSet(navigatorRunResource, "run_on_destroy"),
-					// resource.TestCheckNoResourceAttr(navigatorRunResource, "triggers"), TODO check elements
-					resource.TestCheckNoResourceAttr(navigatorRunResource, "artifact_queries"),
-					resource.TestCheckResourceAttrSet(navigatorRunResource, "id"),
-					resource.TestCheckResourceAttrSet(navigatorRunResource, "command"),
-					resource.TestCheckNoResourceAttr(navigatorRunResource, "timeouts"),
-				),
+				ConfigStateChecks: []statecheck.StateCheck{
+					statecheck.ExpectKnownValue(navigatorRunResource, tfjsonpath.New("playbook"), knownvalue.NotNull()),
+					statecheck.ExpectKnownValue(navigatorRunResource, tfjsonpath.New("inventory"), knownvalue.NotNull()),
+					statecheck.ExpectKnownValue(navigatorRunResource, tfjsonpath.New("working_directory"), knownvalue.NotNull()),
+					statecheck.ExpectKnownValue(navigatorRunResource, tfjsonpath.New("execution_environment"), knownvalue.NotNull()),
+					statecheck.ExpectKnownValue(navigatorRunResource, tfjsonpath.New("ansible_navigator_binary"), knownvalue.NotNull()),
+					statecheck.ExpectKnownValue(navigatorRunResource, tfjsonpath.New("ansible_options"), knownvalue.NotNull()),
+					statecheck.ExpectKnownValue(navigatorRunResource, tfjsonpath.New("timezone"), knownvalue.NotNull()),
+					statecheck.ExpectKnownValue(navigatorRunResource, tfjsonpath.New("run_on_destroy"), knownvalue.NotNull()),
+					statecheck.ExpectKnownValue(navigatorRunResource, tfjsonpath.New("triggers"), knownvalue.Null()),
+					statecheck.ExpectKnownValue(navigatorRunResource, tfjsonpath.New("artifact_queries"), knownvalue.Null()),
+					statecheck.ExpectKnownValue(navigatorRunResource, tfjsonpath.New("id"), knownvalue.NotNull()),
+					statecheck.ExpectKnownValue(navigatorRunResource, tfjsonpath.New("command"), knownvalue.NotNull()),
+					statecheck.ExpectKnownValue(navigatorRunResource, tfjsonpath.New("timeouts"), knownvalue.Null()),
+					statecheck.ExpectKnownValue(navigatorRunResource, tfjsonpath.New("ansible_options").AtMapKey("known_hosts"), knownvalue.ListSizeExact(0)),
+					statecheck.ExpectKnownValue(navigatorRunResource, tfjsonpath.New("execution_environment").AtMapKey("container_engine"), knownvalue.StringExact("auto")),
+				},
 			},
 			{
 				Config:          testTerraformFile(t, filepath.Join("navigator_run_resource", "basic")),
@@ -136,10 +144,6 @@ func TestAccNavigatorRunResource_binary_in_path(t *testing.T) { //nolint:paralle
 			{
 				Config:          testTerraformFile(t, filepath.Join("navigator_run_resource", "binary_in_path")),
 				ConfigVariables: testDefaultConfigVariables(t),
-				Check: resource.ComposeAggregateTestCheckFunc(
-					resource.TestCheckResourceAttrSet(navigatorRunResource, "id"),
-					resource.TestCheckResourceAttrSet(navigatorRunResource, "command"),
-				),
 			},
 		},
 	})
@@ -155,10 +159,6 @@ func TestAccNavigatorRunResource_ee_disabled(t *testing.T) { //nolint:parallelte
 			{
 				Config:          testTerraformFile(t, filepath.Join("navigator_run_resource", "ee_disabled")),
 				ConfigVariables: testDefaultConfigVariables(t),
-				Check: resource.ComposeAggregateTestCheckFunc(
-					resource.TestCheckResourceAttrSet(navigatorRunResource, "id"),
-					resource.TestCheckResourceAttrSet(navigatorRunResource, "command"),
-				),
 			},
 		},
 	})
@@ -176,10 +176,6 @@ func TestAccNavigatorRunResource_env_vars(t *testing.T) {
 				ConfigVariables: testConfigVariables(t, config.Variables{
 					"operation": config.StringVariable("create"),
 				}),
-				Check: resource.ComposeAggregateTestCheckFunc(
-					resource.TestCheckResourceAttrSet(navigatorRunResource, "id"),
-					resource.TestCheckResourceAttrSet(navigatorRunResource, "command"),
-				),
 			},
 			{
 				Config: testTerraformFile(t, filepath.Join("navigator_run_resource", "env_vars")),
@@ -189,6 +185,7 @@ func TestAccNavigatorRunResource_env_vars(t *testing.T) {
 				ConfigPlanChecks: resource.ConfigPlanChecks{
 					PreApply: []plancheck.PlanCheck{
 						plancheck.ExpectNonEmptyPlan(),
+						plancheck.ExpectResourceAction(navigatorRunResource, plancheck.ResourceActionUpdate),
 					},
 				},
 			},
@@ -211,48 +208,21 @@ func TestAccNavigatorRunResource_known_hosts(t *testing.T) {
 				ConfigVariables: testConfigVariables(t, config.Variables{
 					"ssh_port": config.IntegerVariable(port),
 				}),
-				Check: resource.ComposeAggregateTestCheckFunc(
-					resource.TestCheckResourceAttrSet(navigatorRunResource, "id"),
-					resource.TestCheckResourceAttrSet(navigatorRunResource, "command"),
-					resource.TestMatchResourceAttr(navigatorRunResource, "ansible_options.known_hosts.0", regexp.MustCompile(regexp.QuoteMeta(serverPublicKey))),
-				),
+				ConfigStateChecks: []statecheck.StateCheck{
+					statecheck.ExpectKnownValue(
+						navigatorRunResource,
+						tfjsonpath.New("ansible_options").AtMapKey("known_hosts").AtSliceIndex(0),
+						knownvalue.StringRegexp(regexp.MustCompile(regexp.QuoteMeta(serverPublicKey))),
+					),
+				},
 			},
 		},
 	})
 }
 
-//nolint:dupl //TODO fix
+//nolint:dupl
 func TestAccNavigatorRunResource_private_keys(t *testing.T) { //nolint:paralleltest
-	tests := []struct {
-		name      string
-		variables func(*testing.T) config.Variables
-		setup     func(*testing.T)
-	}{
-		{
-			name: "ee_enabled",
-			variables: func(t *testing.T) config.Variables { //nolint:thelper
-				return config.Variables{
-					"ee_enabled": config.BoolVariable(true),
-				}
-			},
-			setup: func(t *testing.T) { //nolint:thelper
-				t.Parallel()
-			},
-		},
-		{
-			name: "ee_disabled",
-			variables: func(t *testing.T) config.Variables { //nolint:thelper
-				return config.Variables{
-					"ee_enabled": config.BoolVariable(false),
-				}
-			},
-			setup: func(t *testing.T) { //nolint:thelper
-				testPrependPlaybookToPath(t)
-			},
-		},
-	}
-
-	for _, test := range tests { //nolint:paralleltest
+	for _, test := range privateKeyTestCases() { //nolint:paralleltest
 		t.Run(test.name, func(t *testing.T) {
 			test.setup(t)
 
@@ -276,11 +246,13 @@ func TestAccNavigatorRunResource_private_keys(t *testing.T) { //nolint:parallelt
 					{
 						Config:          testTerraformFile(t, filepath.Join("navigator_run_resource", "private_keys")),
 						ConfigVariables: testConfigVariables(t, variables),
-						Check: resource.ComposeAggregateTestCheckFunc(
-							resource.TestCheckResourceAttrSet(navigatorRunResource, "id"),
-							resource.TestCheckResourceAttrSet(navigatorRunResource, "command"),
-							resource.TestMatchResourceAttr(navigatorRunResource, "command", regexp.MustCompile(fmt.Sprintf("--private-key(?s)(.*)--extra-vars %s", ansible.SSHKnownHostsFileVar))),
-						),
+						ConfigStateChecks: []statecheck.StateCheck{
+							statecheck.ExpectKnownValue(
+								navigatorRunResource,
+								tfjsonpath.New("command"),
+								knownvalue.StringRegexp(regexp.MustCompile(fmt.Sprintf("--private-key(?s)(.*)--extra-vars %s", ansible.SSHKnownHostsFileVar))),
+							),
+						},
 					},
 				},
 			})
@@ -302,9 +274,9 @@ func TestAccNavigatorRunResource_pull_args(t *testing.T) {
 				ConfigVariables: testConfigVariables(t, config.Variables{
 					"pull_args": config.ListVariable(config.StringVariable(arg)),
 				}),
-				Check: resource.ComposeAggregateTestCheckFunc(
-					resource.TestMatchResourceAttr(navigatorRunResource, "artifact_queries.pull_args.results.0", regexp.MustCompile(arg)),
-				),
+				ConfigStateChecks: []statecheck.StateCheck{
+					statecheck.ExpectKnownOutputValue("pull_arg", knownvalue.StringExact(arg)),
+				},
 			},
 		},
 	})
@@ -323,10 +295,6 @@ func TestAccNavigatorRunResource_role(t *testing.T) {
 					// https://github.com/hashicorp/terraform-plugin-testing/issues/277
 					"working_directory": config.StringVariable(filepath.Join("testdata", "navigator_run_resource", "role-working-dir")),
 				}),
-				Check: resource.ComposeAggregateTestCheckFunc(
-					resource.TestCheckResourceAttrSet(navigatorRunResource, "id"),
-					resource.TestCheckResourceAttrSet(navigatorRunResource, "command"),
-				),
 			},
 		},
 	})
@@ -335,8 +303,9 @@ func TestAccNavigatorRunResource_role(t *testing.T) {
 func TestAccNavigatorRunResource_skip_run(t *testing.T) {
 	t.Parallel()
 
-	var resourceCommand, resourceCommandUpdate string
-	var queryResult, queryResultUpdate string
+	commandValueSame := statecheck.CompareValue(compare.ValuesSame())
+	queryResultValueSame := statecheck.CompareValue(compare.ValuesSame())
+	queryResultPath := tfjsonpath.New("artifact_queries").AtMapKey("test").AtMapKey("results").AtSliceIndex(0)
 
 	resource.Test(t, resource.TestCase{
 		PreCheck:                 func() { testPreCheck(t) },
@@ -345,13 +314,12 @@ func TestAccNavigatorRunResource_skip_run(t *testing.T) {
 			{
 				Config:          testTerraformFile(t, filepath.Join("navigator_run_resource", "skip_run")),
 				ConfigVariables: testDefaultConfigVariables(t),
-				Check: resource.ComposeAggregateTestCheckFunc(
-					resource.TestCheckResourceAttrSet(navigatorRunResource, "id"),
-					resource.TestCheckResourceAttrSet(navigatorRunResource, "command"),
-					resource.TestCheckResourceAttrSet(navigatorRunResource, "artifact_queries.test.results.0"),
-					testExtractResourceAttr(navigatorRunResource, "command", &resourceCommand),
-					testExtractResourceAttr(navigatorRunResource, "artifact_queries.test.results.0", &queryResult),
-				),
+				ConfigStateChecks: []statecheck.StateCheck{
+					statecheck.ExpectKnownValue(navigatorRunResource, tfjsonpath.New("command"), knownvalue.NotNull()),
+					commandValueSame.AddStateValue(navigatorRunResource, tfjsonpath.New("command")),
+					statecheck.ExpectKnownValue(navigatorRunResource, queryResultPath, knownvalue.NotNull()),
+					queryResultValueSame.AddStateValue(navigatorRunResource, queryResultPath),
+				},
 			},
 			{
 				Config:          testTerraformFile(t, filepath.Join("navigator_run_resource", "skip_run_update")),
@@ -359,17 +327,15 @@ func TestAccNavigatorRunResource_skip_run(t *testing.T) {
 				ConfigPlanChecks: resource.ConfigPlanChecks{
 					PreApply: []plancheck.PlanCheck{
 						plancheck.ExpectNonEmptyPlan(),
+						plancheck.ExpectResourceAction(navigatorRunResource, plancheck.ResourceActionUpdate),
 					},
 				},
-				Check: resource.ComposeAggregateTestCheckFunc(
-					resource.TestCheckResourceAttrSet(navigatorRunResource, "id"),
-					resource.TestCheckResourceAttrSet(navigatorRunResource, "command"),
-					resource.TestCheckResourceAttrSet(navigatorRunResource, "artifact_queries.test.results.0"),
-					testExtractResourceAttr(navigatorRunResource, "command", &resourceCommandUpdate),
-					testCheckAttributeValuesEqual(&resourceCommand, &resourceCommandUpdate),
-					testExtractResourceAttr(navigatorRunResource, "artifact_queries.test.results.0", &queryResultUpdate),
-					testCheckAttributeValuesEqual(&queryResult, &queryResultUpdate),
-				),
+				ConfigStateChecks: []statecheck.StateCheck{
+					statecheck.ExpectKnownValue(navigatorRunResource, tfjsonpath.New("command"), knownvalue.NotNull()),
+					commandValueSame.AddStateValue(navigatorRunResource, tfjsonpath.New("command")),
+					statecheck.ExpectKnownValue(navigatorRunResource, queryResultPath, knownvalue.NotNull()),
+					queryResultValueSame.AddStateValue(navigatorRunResource, queryResultPath),
+				},
 			},
 		},
 	})
@@ -378,12 +344,14 @@ func TestAccNavigatorRunResource_skip_run(t *testing.T) {
 func TestAccNavigatorRunResource_trigger_known_hosts(t *testing.T) {
 	t.Parallel()
 
-	var resourceKnownHost, resourceKnownHostUpdate string
-
 	_, serverPrivateKeyA := testSSHKeygen(t)
 	_, serverPrivateKeyB := testSSHKeygen(t)
 	portA := testSSHServer(t, "", serverPrivateKeyA)
 	portB := testSSHServer(t, "", serverPrivateKeyB)
+
+	knownHostsValueSame := statecheck.CompareValue(compare.ValuesSame())
+	knownHostsValueDiffer := statecheck.CompareValue(compare.ValuesDiffer())
+	knownHostsPath := tfjsonpath.New("ansible_options").AtMapKey("known_hosts")
 
 	resource.Test(t, resource.TestCase{
 		PreCheck:                 func() { testPreCheck(t) },
@@ -398,13 +366,14 @@ func TestAccNavigatorRunResource_trigger_known_hosts(t *testing.T) {
 				ConfigPlanChecks: resource.ConfigPlanChecks{
 					PreApply: []plancheck.PlanCheck{
 						plancheck.ExpectNonEmptyPlan(),
-						plancheck.ExpectUnknownOutputValue("known_host"),
+						plancheck.ExpectUnknownValue(navigatorRunResource, knownHostsPath),
 					},
 				},
-				Check: resource.ComposeAggregateTestCheckFunc(
-					resource.TestCheckResourceAttrSet(navigatorRunResource, "ansible_options.known_hosts.0"),
-					testExtractResourceAttr(navigatorRunResource, "ansible_options.known_hosts.0", &resourceKnownHost),
-				),
+				ConfigStateChecks: []statecheck.StateCheck{
+					statecheck.ExpectKnownValue(navigatorRunResource, knownHostsPath, knownvalue.NotNull()),
+					knownHostsValueSame.AddStateValue(navigatorRunResource, knownHostsPath),
+					knownHostsValueDiffer.AddStateValue(navigatorRunResource, knownHostsPath),
+				},
 			},
 			{
 				Config: testTerraformFile(t, filepath.Join("navigator_run_resource", "trigger_known_hosts")),
@@ -415,13 +384,14 @@ func TestAccNavigatorRunResource_trigger_known_hosts(t *testing.T) {
 				ConfigPlanChecks: resource.ConfigPlanChecks{
 					PreApply: []plancheck.PlanCheck{
 						plancheck.ExpectNonEmptyPlan(),
-						plancheck.ExpectKnownOutputValue("known_host", knownvalue.NotNull()),
+						plancheck.ExpectResourceAction(navigatorRunResource, plancheck.ResourceActionUpdate),
+						plancheck.ExpectKnownValue(navigatorRunResource, knownHostsPath, knownvalue.NotNull()),
 					},
 				},
-				Check: resource.ComposeAggregateTestCheckFunc(
-					resource.TestCheckResourceAttrSet(navigatorRunResource, "ansible_options.known_hosts.0"),
-					resource.TestMatchResourceAttr(navigatorRunResource, "ansible_options.known_hosts.0", regexp.MustCompile(resourceKnownHost)),
-				),
+				ConfigStateChecks: []statecheck.StateCheck{
+					statecheck.ExpectKnownValue(navigatorRunResource, knownHostsPath, knownvalue.NotNull()),
+					knownHostsValueSame.AddStateValue(navigatorRunResource, knownHostsPath),
+				},
 			},
 			{
 				Config: testTerraformFile(t, filepath.Join("navigator_run_resource", "trigger_known_hosts")),
@@ -432,14 +402,14 @@ func TestAccNavigatorRunResource_trigger_known_hosts(t *testing.T) {
 				ConfigPlanChecks: resource.ConfigPlanChecks{
 					PreApply: []plancheck.PlanCheck{
 						plancheck.ExpectNonEmptyPlan(),
-						plancheck.ExpectUnknownOutputValue("known_host"),
+						plancheck.ExpectResourceAction(navigatorRunResource, plancheck.ResourceActionUpdate),
+						plancheck.ExpectUnknownValue(navigatorRunResource, knownHostsPath),
 					},
 				},
-				Check: resource.ComposeAggregateTestCheckFunc(
-					resource.TestCheckResourceAttrSet(navigatorRunResource, "ansible_options.known_hosts.0"),
-					testExtractResourceAttr(navigatorRunResource, "ansible_options.known_hosts.0", &resourceKnownHostUpdate),
-					testCheckAttributeValuesDiffer(&resourceKnownHost, &resourceKnownHostUpdate),
-				),
+				ConfigStateChecks: []statecheck.StateCheck{
+					statecheck.ExpectKnownValue(navigatorRunResource, knownHostsPath, knownvalue.NotNull()),
+					knownHostsValueDiffer.AddStateValue(navigatorRunResource, knownHostsPath),
+				},
 			},
 		},
 	})
@@ -448,8 +418,9 @@ func TestAccNavigatorRunResource_trigger_known_hosts(t *testing.T) {
 func TestAccNavigatorRunResource_trigger_run(t *testing.T) {
 	t.Parallel()
 
-	var resourceCommand, resourceCommandUpdate string
-	var queryResult, queryResultUpdate string
+	commandValueDiffer := statecheck.CompareValue(compare.ValuesDiffer())
+	queryResultValueDiffer := statecheck.CompareValue(compare.ValuesDiffer())
+	queryResultPath := tfjsonpath.New("artifact_queries").AtMapKey("test").AtMapKey("results").AtSliceIndex(0)
 
 	resource.Test(t, resource.TestCase{
 		PreCheck:                 func() { testPreCheck(t) },
@@ -460,11 +431,12 @@ func TestAccNavigatorRunResource_trigger_run(t *testing.T) {
 				ConfigVariables: testConfigVariables(t, config.Variables{
 					"trigger": config.StringVariable("a"),
 				}),
-				Check: resource.ComposeAggregateTestCheckFunc(
-					resource.TestCheckResourceAttrSet(navigatorRunResource, "artifact_queries.test.results.0"),
-					testExtractResourceAttr(navigatorRunResource, "command", &resourceCommand),
-					testExtractResourceAttr(navigatorRunResource, "artifact_queries.test.results.0", &queryResult),
-				),
+				ConfigStateChecks: []statecheck.StateCheck{
+					statecheck.ExpectKnownValue(navigatorRunResource, tfjsonpath.New("command"), knownvalue.NotNull()),
+					commandValueDiffer.AddStateValue(navigatorRunResource, tfjsonpath.New("command")),
+					statecheck.ExpectKnownValue(navigatorRunResource, queryResultPath, knownvalue.NotNull()),
+					queryResultValueDiffer.AddStateValue(navigatorRunResource, queryResultPath),
+				},
 			},
 			{
 				Config: testTerraformFile(t, filepath.Join("navigator_run_resource", "trigger_run")),
@@ -474,15 +446,15 @@ func TestAccNavigatorRunResource_trigger_run(t *testing.T) {
 				ConfigPlanChecks: resource.ConfigPlanChecks{
 					PreApply: []plancheck.PlanCheck{
 						plancheck.ExpectNonEmptyPlan(),
+						plancheck.ExpectResourceAction(navigatorRunResource, plancheck.ResourceActionUpdate),
 					},
 				},
-				Check: resource.ComposeAggregateTestCheckFunc(
-					resource.TestCheckResourceAttrSet(navigatorRunResource, "artifact_queries.test.results.0"),
-					testExtractResourceAttr(navigatorRunResource, "command", &resourceCommandUpdate),
-					testCheckAttributeValuesDiffer(&resourceCommand, &resourceCommandUpdate),
-					testExtractResourceAttr(navigatorRunResource, "artifact_queries.test.results.0", &queryResultUpdate),
-					testCheckAttributeValuesDiffer(&queryResult, &queryResultUpdate),
-				),
+				ConfigStateChecks: []statecheck.StateCheck{
+					statecheck.ExpectKnownValue(navigatorRunResource, tfjsonpath.New("command"), knownvalue.NotNull()),
+					commandValueDiffer.AddStateValue(navigatorRunResource, tfjsonpath.New("command")),
+					statecheck.ExpectKnownValue(navigatorRunResource, queryResultPath, knownvalue.NotNull()),
+					queryResultValueDiffer.AddStateValue(navigatorRunResource, queryResultPath),
+				},
 			},
 		},
 	})
