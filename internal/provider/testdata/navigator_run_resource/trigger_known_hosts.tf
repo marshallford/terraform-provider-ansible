@@ -40,7 +40,3 @@ variable "trigger" {
   type     = string
   nullable = false
 }
-
-output "known_host" {
-  value = ansible_navigator_run.test.ansible_options.known_hosts[0]
-}

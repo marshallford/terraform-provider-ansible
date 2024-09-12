@@ -16,10 +16,14 @@ import (
 
 	"github.com/gliderlabs/ssh"
 	"github.com/hashicorp/terraform-plugin-testing/config"
-	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
-	"github.com/hashicorp/terraform-plugin-testing/terraform"
 	gossh "golang.org/x/crypto/ssh"
 )
+
+type TestCase struct {
+	name      string
+	variables func(*testing.T) config.Variables
+	setup     func(*testing.T)
+}
 
 const (
 	// TODO improve
@@ -181,56 +185,4 @@ func testSSHServer(t *testing.T, clientPublicKey string, serverPrivateKey string
 	}
 
 	return addr.Port
-}
-
-// https://github.com/hashicorp/terraform-provider-random/blob/main/internal/provider/resource_integer_test.go
-func testExtractResourceAttr(resourceName string, attributeName string, attributeValue *string) resource.TestCheckFunc {
-	return func(s *terraform.State) error {
-		resourceState, ok := s.RootModule().Resources[resourceName]
-
-		if !ok {
-			return fmt.Errorf("%w, resource name %s not found in state", ErrTestCheckFunc, resourceName)
-		}
-
-		attrValue, ok := resourceState.Primary.Attributes[attributeName]
-
-		if !ok {
-			return fmt.Errorf("%w, attribute %s not found in resource %s state", ErrTestCheckFunc, attributeName, resourceName)
-		}
-
-		*attributeValue = attrValue
-
-		return nil
-	}
-}
-
-// https://github.com/hashicorp/terraform-provider-random/blob/main/internal/provider/resource_integer_test.go
-func testCheckAttributeValuesDiffer(i *string, j *string) resource.TestCheckFunc {
-	return func(s *terraform.State) error {
-		if testStringValue(i) == testStringValue(j) {
-			return fmt.Errorf("%w, attribute values are the same, got %s", ErrTestCheckFunc, testStringValue(i))
-		}
-
-		return nil
-	}
-}
-
-// https://github.com/hashicorp/terraform-provider-random/blob/main/internal/provider/resource_integer_test.go
-func testCheckAttributeValuesEqual(i *string, j *string) resource.TestCheckFunc {
-	return func(s *terraform.State) error {
-		if testStringValue(i) != testStringValue(j) {
-			return fmt.Errorf("%w, attribute values are different, got %s and %s", ErrTestCheckFunc, testStringValue(i), testStringValue(j))
-		}
-
-		return nil
-	}
-}
-
-// https://github.com/hashicorp/terraform-provider-random/blob/main/internal/provider/resource_integer_test.go
-func testStringValue(sPtr *string) string {
-	if sPtr == nil {
-		return ""
-	}
-
-	return *sPtr
 }
