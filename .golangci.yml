@@ -16,6 +16,7 @@ linters:
   - godox
   - lll
   - perfsprint
+  - recvcheck # TODO look into further
   - revive
   - wrapcheck
   - wsl
