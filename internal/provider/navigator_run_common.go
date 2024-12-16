@@ -22,13 +22,14 @@ type ExecutionEnvironmentModel struct {
 }
 
 type AnsibleOptionsModel struct {
-	ForceHandlers types.Bool   `tfsdk:"force_handlers"`
-	SkipTags      types.List   `tfsdk:"skip_tags"`
-	StartAtTask   types.String `tfsdk:"start_at_task"`
-	Limit         types.List   `tfsdk:"limit"`
-	Tags          types.List   `tfsdk:"tags"`
-	PrivateKeys   types.List   `tfsdk:"private_keys"`
-	KnownHosts    types.List   `tfsdk:"known_hosts"`
+	ForceHandlers   types.Bool   `tfsdk:"force_handlers"`
+	SkipTags        types.List   `tfsdk:"skip_tags"`
+	StartAtTask     types.String `tfsdk:"start_at_task"`
+	Limit           types.List   `tfsdk:"limit"`
+	Tags            types.List   `tfsdk:"tags"`
+	PrivateKeys     types.List   `tfsdk:"private_keys"`
+	KnownHosts      types.List   `tfsdk:"known_hosts"`
+	HostKeyChecking types.Bool   `tfsdk:"host_key_checking"`
 }
 
 type PrivateKeyModel struct {
@@ -119,13 +120,14 @@ func (PrivateKeyModel) AttrTypes() map[string]attr.Type {
 
 func (AnsibleOptionsModel) AttrTypes() map[string]attr.Type {
 	return map[string]attr.Type{
-		"force_handlers": types.BoolType,
-		"skip_tags":      types.ListType{ElemType: types.StringType},
-		"start_at_task":  types.StringType,
-		"limit":          types.ListType{ElemType: types.StringType},
-		"tags":           types.ListType{ElemType: types.StringType},
-		"private_keys":   types.ListType{ElemType: types.ObjectType{AttrTypes: PrivateKeyModel{}.AttrTypes()}},
-		"known_hosts":    types.ListType{ElemType: types.StringType},
+		"force_handlers":    types.BoolType,
+		"skip_tags":         types.ListType{ElemType: types.StringType},
+		"start_at_task":     types.StringType,
+		"limit":             types.ListType{ElemType: types.StringType},
+		"tags":              types.ListType{ElemType: types.StringType},
+		"private_keys":      types.ListType{ElemType: types.ObjectType{AttrTypes: PrivateKeyModel{}.AttrTypes()}},
+		"known_hosts":       types.ListType{ElemType: types.StringType},
+		"host_key_checking": types.BoolType,
 	}
 }
 
@@ -133,13 +135,14 @@ func (AnsibleOptionsModel) Defaults() basetypes.ObjectValue {
 	return types.ObjectValueMust(
 		AnsibleOptionsModel{}.AttrTypes(),
 		map[string]attr.Value{
-			"force_handlers": types.BoolNull(),
-			"skip_tags":      types.ListNull(types.StringType),
-			"start_at_task":  types.StringNull(),
-			"limit":          types.ListNull(types.StringType),
-			"tags":           types.ListNull(types.StringType),
-			"private_keys":   types.ListNull(types.ObjectType{AttrTypes: PrivateKeyModel{}.AttrTypes()}),
-			"known_hosts":    types.ListUnknown(types.StringType),
+			"force_handlers":    types.BoolNull(),
+			"skip_tags":         types.ListNull(types.StringType),
+			"start_at_task":     types.StringNull(),
+			"limit":             types.ListNull(types.StringType),
+			"tags":              types.ListNull(types.StringType),
+			"private_keys":      types.ListNull(types.ObjectType{AttrTypes: PrivateKeyModel{}.AttrTypes()}),
+			"known_hosts":       types.ListUnknown(types.StringType),
+			"host_key_checking": types.BoolNull(),
 		},
 	)
 }
@@ -181,6 +184,11 @@ func (m AnsibleOptionsModel) Value(ctx context.Context, options *ansible.Options
 	options.PrivateKeys = privateKeys
 
 	options.KnownHosts = m.KnownHosts.IsUnknown() || len(m.KnownHosts.Elements()) > 0
+
+	options.HostKeyChecking = m.HostKeyChecking.ValueBool()
+	if m.HostKeyChecking.IsNull() {
+		options.HostKeyChecking = ansible.RunnerDefaultHostKeyChecking
+	}
 
 	return diags
 }

@@ -37,6 +37,7 @@ data "ansible_navigator_run" "test" {
     known_hosts = [
       "[127.0.0.1]:${var.ssh_port} ${var.server_public_key_data}",
     ]
+    host_key_checking = true
   }
 }
 

@@ -7,8 +7,6 @@ resource "ansible_navigator_run" "test" {
     tasks:
     - ansible.builtin.raw: test
       register: connect
-    - ansible.builtin.assert:
-        that: connect.stdout == 'hello world!'
   EOT
   inventory = yamlencode({
     all = {
@@ -22,38 +20,13 @@ resource "ansible_navigator_run" "test" {
     }
   })
   execution_environment = {
-    enabled = var.ee_enabled
     container_options = [
       "--net=host",
     ]
   }
   ansible_options = {
-    private_keys = [
-      {
-        name = "test"
-        data = var.client_private_key_data
-      },
-    ]
-    known_hosts = [
-      "[127.0.0.1]:${var.ssh_port} ${var.server_public_key_data}",
-    ]
     host_key_checking = true
   }
-}
-
-variable "ee_enabled" {
-  type     = bool
-  nullable = false
-}
-
-variable "client_private_key_data" {
-  type     = string
-  nullable = false
-}
-
-variable "server_public_key_data" {
-  type     = string
-  nullable = false
 }
 
 variable "ssh_port" {

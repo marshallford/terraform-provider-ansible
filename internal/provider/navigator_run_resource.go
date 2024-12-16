@@ -341,14 +341,19 @@ func (r *NavigatorRunResource) Schema(ctx context.Context, req resource.SchemaRe
 						},
 					},
 					"known_hosts": schema.ListAttribute{
-						Description:         fmt.Sprintf("SSH known host entries. Can help protect against man-in-the-middle attacks by verifying the identity of hosts. Ansible variable '%s' set to path of 'known_hosts' file. If unspecified will be set to contents of 'known_hosts' file after run.", ansible.SSHKnownHostsFileVar),
-						MarkdownDescription: fmt.Sprintf("SSH known host entries. Can help protect against man-in-the-middle attacks by verifying the identity of hosts. Ansible variable `%s` set to path of `known_hosts` file. If unspecified will be set to contents of `known_hosts` file after run.", ansible.SSHKnownHostsFileVar),
+						Description:         fmt.Sprintf("SSH known host entries. Ansible variable '%s' set to path of 'known_hosts' file and SSH option 'UserKnownHostsFile' must be configured to said path. Defaults to all of the 'known_hosts' entries recorded.", ansible.SSHKnownHostsFileVar),
+						MarkdownDescription: fmt.Sprintf("SSH known host entries. Ansible variable `%s` set to path of `known_hosts` file and SSH option `UserKnownHostsFile` must be configured to said path. Defaults to all of the `known_hosts` entries recorded.", ansible.SSHKnownHostsFileVar),
 						Optional:            true,
 						Computed:            true,
 						ElementType:         types.StringType,
 						Validators: []validator.List{
 							listvalidator.ValueStringsAre(stringIsSSHKnownHost()),
 						},
+					},
+					"host_key_checking": schema.BoolAttribute{
+						Description:         fmt.Sprintf("SSH host key checking. Can help protect against man-in-the-middle attacks by verifying the identity of hosts. Ansible runner (library used by '%s') defaults this option to '%t' explicitly.", ansible.NavigatorProgram, ansible.RunnerDefaultHostKeyChecking),
+						MarkdownDescription: fmt.Sprintf("SSH host key checking. Can help protect against man-in-the-middle attacks by verifying the identity of hosts. Ansible runner (library used by `%s`) defaults this option to `%t` explicitly.", ansible.NavigatorProgram, ansible.RunnerDefaultHostKeyChecking),
+						Optional:            true,
 					},
 				},
 			},
