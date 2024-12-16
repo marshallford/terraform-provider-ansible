@@ -77,7 +77,7 @@ func GenerateNavigatorRunCommand(runDir string, workingDir string, ansibleNaviga
 		command.Args = append(command.Args, "--extra-vars", fmt.Sprintf("%s=%s", SSHKnownHostsFileVar, knownHostsPath(runDir, eeEnabled)))
 	}
 
-	if options.HostKeyChecking != RunnerDefaultHostKeyChecking {
+	if options.HostKeyChecking != RunnerDefaultHostKeyChecking { //nolint:gosimple
 		command.Env = append(command.Env, fmt.Sprintf("ANSIBLE_HOST_KEY_CHECKING=%t", options.HostKeyChecking))
 	}
 
