@@ -25,6 +25,27 @@ func TestAccNavigatorRunResource_errors_command_output(t *testing.T) {
 	})
 }
 
+func TestAccNavigatorRunResource_errors_host_key_checking(t *testing.T) {
+	t.Parallel()
+
+	_, serverPrivateKey := testSSHKeygen(t)
+	port := testSSHServer(t, "", serverPrivateKey)
+
+	resource.Test(t, resource.TestCase{
+		PreCheck:                 func() { testPreCheck(t) },
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		Steps: []resource.TestStep{
+			{
+				Config: testTerraformFile(t, filepath.Join("navigator_run_resource", "errors", "host_key_checking")),
+				ConfigVariables: testConfigVariables(t, config.Variables{
+					"ssh_port": config.IntegerVariable(port),
+				}),
+				ExpectError: regexp.MustCompile("Host key verification failed"),
+			},
+		},
+	})
+}
+
 func TestAccNavigatorRunResource_errors(t *testing.T) {
 	t.Parallel()
 

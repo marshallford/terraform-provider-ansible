@@ -19,13 +19,14 @@ const (
 )
 
 type Options struct {
-	ForceHandlers bool
-	SkipTags      []string
-	StartAtTask   string
-	Limit         []string
-	Tags          []string
-	PrivateKeys   []string
-	KnownHosts    bool
+	ForceHandlers   bool
+	SkipTags        []string
+	StartAtTask     string
+	Limit           []string
+	Tags            []string
+	PrivateKeys     []string
+	KnownHosts      bool
+	HostKeyChecking bool
 }
 
 func GenerateNavigatorRunCommand(runDir string, workingDir string, ansibleNavigatorBinary string, eeEnabled bool, options *Options) *exec.Cmd {
@@ -42,7 +43,10 @@ func GenerateNavigatorRunCommand(runDir string, workingDir string, ansibleNaviga
 	command.Dir = workingDir
 
 	// TODO allow setting env vars directly for when EE is disabled
-	command.Env = append(os.Environ(), fmt.Sprintf("ANSIBLE_NAVIGATOR_CONFIG=%s", filepath.Join(runDir, navigatorSettingsFilename)))
+	command.Env = append(
+		os.Environ(),
+		fmt.Sprintf("ANSIBLE_NAVIGATOR_CONFIG=%s", filepath.Join(runDir, navigatorSettingsFilename)),
+	)
 	command.WaitDelay = commandWaitDelay
 
 	if options.ForceHandlers {
@@ -70,8 +74,11 @@ func GenerateNavigatorRunCommand(runDir string, workingDir string, ansibleNaviga
 	}
 
 	if options.KnownHosts {
-		command.Env = append(command.Env, "ANSIBLE_HOST_KEY_CHECKING=true") // ansible-runner sets to false if unset
 		command.Args = append(command.Args, "--extra-vars", fmt.Sprintf("%s=%s", SSHKnownHostsFileVar, knownHostsPath(runDir, eeEnabled)))
+	}
+
+	if options.HostKeyChecking != RunnerDefaultHostKeyChecking { //nolint:gosimple
+		command.Env = append(command.Env, fmt.Sprintf("ANSIBLE_HOST_KEY_CHECKING=%t", options.HostKeyChecking))
 	}
 
 	return command

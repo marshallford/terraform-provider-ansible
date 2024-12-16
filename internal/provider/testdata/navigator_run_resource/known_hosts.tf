@@ -26,6 +26,9 @@ resource "ansible_navigator_run" "test" {
       "--net=host",
     ]
   }
+  ansible_options = {
+    host_key_checking = true
+  }
 }
 
 variable "ssh_port" {

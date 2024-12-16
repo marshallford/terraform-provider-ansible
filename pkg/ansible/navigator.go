@@ -11,9 +11,10 @@ import (
 )
 
 const (
-	NavigatorProgram    = "ansible-navigator"
-	PlaybookProgram     = "ansible-playbook"
-	ContainerEngineAuto = "auto"
+	NavigatorProgram             = "ansible-navigator"
+	PlaybookProgram              = "ansible-playbook"
+	RunnerDefaultHostKeyChecking = false
+	ContainerEngineAuto          = "auto"
 )
 
 var (

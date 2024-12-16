@@ -92,7 +92,8 @@ output "resolv_conf" {
 Optional:
 
 - `force_handlers` (Boolean) Run handlers even if a task fails.
-- `known_hosts` (List of String) SSH known host entries. Can help protect against man-in-the-middle attacks by verifying the identity of hosts. Ansible variable `ansible_ssh_known_hosts_file` set to path of `known_hosts` file. If unspecified will be set to contents of `known_hosts` file after run.
+- `host_key_checking` (Boolean) SSH host key checking. Can help protect against man-in-the-middle attacks by verifying the identity of hosts. Ansible runner (library used by `ansible-navigator`) defaults this option to `false` explicitly.
+- `known_hosts` (List of String) SSH known host entries. Ansible variable `ansible_ssh_known_hosts_file` set to path of `known_hosts` file and SSH option `UserKnownHostsFile` must be configured to said path. Defaults to all of the `known_hosts` entries recorded.
 - `limit` (List of String) Further limit selected hosts to an additional pattern.
 - `private_keys` (Attributes List) SSH private keys used for authentication in addition to the [automatically mounted](https://ansible.readthedocs.io/projects/navigator/faq/#how-do-i-use-my-ssh-keys-with-an-execution-environment) default named keys and SSH agent socket path. (see [below for nested schema](#nestedatt--ansible_options--private_keys))
 - `skip_tags` (List of String) Only run plays and tasks whose tags do not match these values.
