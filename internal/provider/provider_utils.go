@@ -22,6 +22,11 @@ const (
 	diagDetailPrefix         = "Underlying error details"
 )
 
+type attrDescription struct {
+	Description         string
+	MarkdownDescription string
+}
+
 type providerOptions struct {
 	BaseRunDirectory    string
 	PersistRunDirectory bool

@@ -154,8 +154,8 @@ func (r *NavigatorRunResource) Schema(ctx context.Context, req resource.SchemaRe
 		Attributes: map[string]schema.Attribute{
 			// required
 			"playbook": schema.StringAttribute{
-				Description:         "Ansible playbook contents.",
-				MarkdownDescription: "Ansible [playbook](https://docs.ansible.com/ansible/latest/playbook_guide/playbooks_intro.html) contents.",
+				Description:         NavigatorRunDescriptions()["playbook"].Description,
+				MarkdownDescription: NavigatorRunDescriptions()["playbook"].MarkdownDescription,
 				Required:            true,
 				Validators: []validator.String{
 					stringvalidator.LengthAtLeast(1),
@@ -163,8 +163,8 @@ func (r *NavigatorRunResource) Schema(ctx context.Context, req resource.SchemaRe
 				},
 			},
 			"inventory": schema.StringAttribute{
-				Description:         "Ansible inventory contents.",
-				MarkdownDescription: "Ansible [inventory](https://docs.ansible.com/ansible/latest/getting_started/get_started_inventory.html) contents.",
+				Description:         NavigatorRunDescriptions()["inventory"].Description,
+				MarkdownDescription: NavigatorRunDescriptions()["inventory"].MarkdownDescription,
 				Required:            true,
 				Validators: []validator.String{
 					stringvalidator.LengthAtLeast(1),
@@ -172,8 +172,8 @@ func (r *NavigatorRunResource) Schema(ctx context.Context, req resource.SchemaRe
 			},
 			// optional
 			"working_directory": schema.StringAttribute{
-				Description:         fmt.Sprintf("Directory which '%s' is run from. Recommended to be the root Ansible content directory (sometimes called the project directory), which is likely to contain 'ansible.cfg', 'roles/', etc. Defaults to '%s'.", ansible.NavigatorProgram, defaultNavigatorRunWorkingDir),
-				MarkdownDescription: fmt.Sprintf("Directory which `%s` is run from. Recommended to be the root Ansible [content directory](https://docs.ansible.com/ansible/latest/tips_tricks/sample_setup.html#sample-directory-layout) (sometimes called the project directory), which is likely to contain `ansible.cfg`, `roles/`, etc. Defaults to `%s`.", ansible.NavigatorProgram, defaultNavigatorRunWorkingDir),
+				Description:         NavigatorRunDescriptions()["working_directory"].Description,
+				MarkdownDescription: NavigatorRunDescriptions()["working_directory"].MarkdownDescription,
 				Optional:            true,
 				Computed:            true,
 				Default:             stringdefault.StaticString(defaultNavigatorRunWorkingDir),
@@ -182,15 +182,15 @@ func (r *NavigatorRunResource) Schema(ctx context.Context, req resource.SchemaRe
 				},
 			},
 			"execution_environment": schema.SingleNestedAttribute{
-				Description:         "Execution environment (EE) related configuration.",
-				MarkdownDescription: "[Execution environment](https://ansible.readthedocs.io/en/latest/getting_started_ee/index.html) (EE) related configuration.",
+				Description:         NavigatorRunDescriptions()["execution_environment"].Description,
+				MarkdownDescription: NavigatorRunDescriptions()["execution_environment"].MarkdownDescription,
 				Optional:            true,
 				Computed:            true,
 				Default:             objectdefault.StaticValue(ExecutionEnvironmentModel{}.Defaults()),
 				Attributes: map[string]schema.Attribute{
 					"container_engine": schema.StringAttribute{
-						Description:         fmt.Sprintf("Container engine responsible for running the execution environment container image. Options: %s. Defaults to '%s'.", wrapElementsJoin(ansible.ContainerEngineOptions(true), "'"), defaultNavigatorRunContainerEngine),
-						MarkdownDescription: fmt.Sprintf("[Container engine](https://ansible.readthedocs.io/projects/navigator/settings/#container-engine) responsible for running the execution environment container image. Options: %s. Defaults to `%s`.", wrapElementsJoin(ansible.ContainerEngineOptions(true), "`"), defaultNavigatorRunContainerEngine),
+						Description:         ExecutionEnvironmentModel{}.Descriptions()["container_engine"].Description,
+						MarkdownDescription: ExecutionEnvironmentModel{}.Descriptions()["container_engine"].MarkdownDescription,
 						Optional:            true,
 						Computed:            true,
 						Default:             stringdefault.StaticString(defaultNavigatorRunContainerEngine),
@@ -199,15 +199,15 @@ func (r *NavigatorRunResource) Schema(ctx context.Context, req resource.SchemaRe
 						},
 					},
 					"enabled": schema.BoolAttribute{
-						Description:         fmt.Sprintf("Enable or disable the use of an execution environment. Disabling requires '%s' and is only recommended when without a container engine. Defaults to '%t'.", ansible.PlaybookProgram, defaultNavigatorRunEEEnabled),
-						MarkdownDescription: fmt.Sprintf("Enable or disable the use of an execution environment. Disabling requires `%s` and is only recommended when without a container engine. Defaults to `%t`.", ansible.PlaybookProgram, defaultNavigatorRunEEEnabled),
+						Description:         ExecutionEnvironmentModel{}.Descriptions()["enabled"].Description,
+						MarkdownDescription: ExecutionEnvironmentModel{}.Descriptions()["enabled"].MarkdownDescription,
 						Optional:            true,
 						Computed:            true,
 						Default:             booldefault.StaticBool(defaultNavigatorRunEEEnabled),
 					},
 					"environment_variables_pass": schema.ListAttribute{
-						Description:         "Existing environment variables to be passed through to and set within the execution environment.",
-						MarkdownDescription: "Existing environment variables to be [passed](https://ansible.readthedocs.io/projects/navigator/settings/#pass-environment-variable) through to and set within the execution environment.",
+						Description:         ExecutionEnvironmentModel{}.Descriptions()["environment_variables_pass"].Description,
+						MarkdownDescription: ExecutionEnvironmentModel{}.Descriptions()["environment_variables_pass"].MarkdownDescription,
 						Optional:            true,
 						ElementType:         types.StringType,
 						Validators: []validator.List{
@@ -215,8 +215,8 @@ func (r *NavigatorRunResource) Schema(ctx context.Context, req resource.SchemaRe
 						},
 					},
 					"environment_variables_set": schema.MapAttribute{
-						Description:         fmt.Sprintf("Environment variables to be set within the execution environment. By default '%s' is set to the current CRUD operation (%s).", navigatorRunOperationEnvVar, wrapElementsJoin(remove(terraformOperations, "read"), "'")),
-						MarkdownDescription: fmt.Sprintf("Environment variables to be [set](https://ansible.readthedocs.io/projects/navigator/settings/#set-environment-variable) within the execution environment. By default `%s` is set to the current CRUD operation (%s).", navigatorRunOperationEnvVar, wrapElementsJoin(remove(terraformOperations, "read"), "`")),
+						Description:         fmt.Sprintf("%s '%s' is automatically set to the current CRUD operation (%s).", ExecutionEnvironmentModel{}.Descriptions()["environment_variables_set"].Description, navigatorRunOperationEnvVar, wrapElementsJoin(remove(terraformOperations, "read"), "'")),
+						MarkdownDescription: fmt.Sprintf("%s `%s` is automatically set to the current CRUD operation (%s).", ExecutionEnvironmentModel{}.Descriptions()["environment_variables_set"].MarkdownDescription, navigatorRunOperationEnvVar, wrapElementsJoin(remove(terraformOperations, "read"), "`")),
 						Optional:            true,
 						ElementType:         types.StringType,
 						Validators: []validator.Map{
@@ -224,8 +224,8 @@ func (r *NavigatorRunResource) Schema(ctx context.Context, req resource.SchemaRe
 						},
 					},
 					"image": schema.StringAttribute{
-						Description:         fmt.Sprintf("Name of the execution environment container image. Defaults to '%s'.", defaultNavigatorRunImage),
-						MarkdownDescription: fmt.Sprintf("Name of the execution environment container [image](https://ansible.readthedocs.io/projects/navigator/settings/#execution-environment-image). Defaults to `%s`.", defaultNavigatorRunImage),
+						Description:         ExecutionEnvironmentModel{}.Descriptions()["image"].Description,
+						MarkdownDescription: ExecutionEnvironmentModel{}.Descriptions()["image"].MarkdownDescription,
 						Optional:            true,
 						Computed:            true,
 						Default:             stringdefault.StaticString(defaultNavigatorRunImage),
@@ -234,8 +234,8 @@ func (r *NavigatorRunResource) Schema(ctx context.Context, req resource.SchemaRe
 						},
 					},
 					"pull_arguments": schema.ListAttribute{
-						Description:         "Additional parameters that should be added to the pull command when pulling an execution environment container image from a container registry.",
-						MarkdownDescription: "Additional [parameters](https://ansible.readthedocs.io/projects/navigator/settings/#pull-arguments) that should be added to the pull command when pulling an execution environment container image from a container registry.",
+						Description:         ExecutionEnvironmentModel{}.Descriptions()["pull_arguments"].Description,
+						MarkdownDescription: ExecutionEnvironmentModel{}.Descriptions()["pull_arguments"].MarkdownDescription,
 						Optional:            true,
 						ElementType:         types.StringType,
 						Validators: []validator.List{
@@ -243,8 +243,8 @@ func (r *NavigatorRunResource) Schema(ctx context.Context, req resource.SchemaRe
 						},
 					},
 					"pull_policy": schema.StringAttribute{
-						Description:         fmt.Sprintf("Container image pull policy. Defaults to '%s'.", defaultNavigatorRunPullPolicy),
-						MarkdownDescription: fmt.Sprintf("Container image [pull policy](https://ansible.readthedocs.io/projects/navigator/settings/#pull-policy). Defaults to `%s`.", defaultNavigatorRunPullPolicy),
+						Description:         ExecutionEnvironmentModel{}.Descriptions()["pull_policy"].Description,
+						MarkdownDescription: ExecutionEnvironmentModel{}.Descriptions()["pull_policy"].MarkdownDescription,
 						Optional:            true,
 						Computed:            true,
 						Default:             stringdefault.StaticString(defaultNavigatorRunPullPolicy),
@@ -253,8 +253,8 @@ func (r *NavigatorRunResource) Schema(ctx context.Context, req resource.SchemaRe
 						},
 					},
 					"container_options": schema.ListAttribute{
-						Description:         "Extra parameters passed to the container engine command.",
-						MarkdownDescription: "[Extra parameters](https://ansible.readthedocs.io/projects/navigator/settings/#container-options) passed to the container engine command.",
+						Description:         ExecutionEnvironmentModel{}.Descriptions()["container_options"].Description,
+						MarkdownDescription: ExecutionEnvironmentModel{}.Descriptions()["container_options"].MarkdownDescription,
 						Optional:            true,
 						ElementType:         types.StringType,
 						Validators: []validator.List{
@@ -264,26 +264,26 @@ func (r *NavigatorRunResource) Schema(ctx context.Context, req resource.SchemaRe
 				},
 			},
 			"ansible_navigator_binary": schema.StringAttribute{
-				Description:         fmt.Sprintf("Path to the '%s' binary. By default '$PATH' is searched.", ansible.NavigatorProgram),
-				MarkdownDescription: fmt.Sprintf("Path to the `%s` binary. By default `$PATH` is searched.", ansible.NavigatorProgram),
+				Description:         NavigatorRunDescriptions()["ansible_navigator_binary"].Description,
+				MarkdownDescription: NavigatorRunDescriptions()["ansible_navigator_binary"].MarkdownDescription,
 				Optional:            true,
 				Validators: []validator.String{
 					stringvalidator.LengthAtLeast(1),
 				},
 			},
 			"ansible_options": schema.SingleNestedAttribute{
-				Description:         "Ansible playbook run related configuration.",
-				MarkdownDescription: "Ansible [playbook](https://docs.ansible.com/ansible/latest/cli/ansible-playbook.html) run related configuration.",
+				Description:         NavigatorRunDescriptions()["ansible_options"].Description,
+				MarkdownDescription: NavigatorRunDescriptions()["ansible_options"].MarkdownDescription,
 				Optional:            true,
 				Computed:            true,
 				Default:             objectdefault.StaticValue(AnsibleOptionsModel{}.Defaults()),
 				Attributes: map[string]schema.Attribute{
 					"force_handlers": schema.BoolAttribute{
-						Description: "Run handlers even if a task fails.",
+						Description: AnsibleOptionsModel{}.Descriptions()["force_handlers"].Description,
 						Optional:    true,
 					},
 					"skip_tags": schema.ListAttribute{
-						Description: "Only run plays and tasks whose tags do not match these values.",
+						Description: AnsibleOptionsModel{}.Descriptions()["skip_tags"].Description,
 						Optional:    true,
 						ElementType: types.StringType,
 						Validators: []validator.List{
@@ -291,14 +291,14 @@ func (r *NavigatorRunResource) Schema(ctx context.Context, req resource.SchemaRe
 						},
 					},
 					"start_at_task": schema.StringAttribute{
-						Description: "Start the playbook at the task matching this name.",
+						Description: AnsibleOptionsModel{}.Descriptions()["start_at_task"].Description,
 						Optional:    true,
 						Validators: []validator.String{
 							stringvalidator.LengthAtLeast(1),
 						},
 					},
 					"limit": schema.ListAttribute{
-						Description: "Further limit selected hosts to an additional pattern.",
+						Description: AnsibleOptionsModel{}.Descriptions()["limit"].Description,
 						Optional:    true,
 						ElementType: types.StringType,
 						Validators: []validator.List{
@@ -306,7 +306,7 @@ func (r *NavigatorRunResource) Schema(ctx context.Context, req resource.SchemaRe
 						},
 					},
 					"tags": schema.ListAttribute{
-						Description: "Only run plays and tasks tagged with these values.",
+						Description: AnsibleOptionsModel{}.Descriptions()["tags"].Description,
 						Optional:    true,
 						ElementType: types.StringType,
 						Validators: []validator.List{
@@ -314,13 +314,13 @@ func (r *NavigatorRunResource) Schema(ctx context.Context, req resource.SchemaRe
 						},
 					},
 					"private_keys": schema.ListNestedAttribute{
-						Description:         "SSH private keys used for authentication in addition to the automatically mounted default named keys and SSH agent socket path.",
-						MarkdownDescription: "SSH private keys used for authentication in addition to the [automatically mounted](https://ansible.readthedocs.io/projects/navigator/faq/#how-do-i-use-my-ssh-keys-with-an-execution-environment) default named keys and SSH agent socket path.",
+						Description:         AnsibleOptionsModel{}.Descriptions()["private_keys"].Description,
+						MarkdownDescription: AnsibleOptionsModel{}.Descriptions()["private_keys"].MarkdownDescription,
 						Optional:            true,
 						NestedObject: schema.NestedAttributeObject{
 							Attributes: map[string]schema.Attribute{
 								"name": schema.StringAttribute{
-									Description: "Key name.",
+									Description: PrivateKeyModel{}.Descriptions()["name"].Description,
 									Required:    true,
 									Validators: []validator.String{
 										stringvalidator.RegexMatches(
@@ -330,7 +330,7 @@ func (r *NavigatorRunResource) Schema(ctx context.Context, req resource.SchemaRe
 									},
 								},
 								"data": schema.StringAttribute{
-									Description: "Key data.",
+									Description: PrivateKeyModel{}.Descriptions()["data"].Description,
 									Required:    true,
 									Sensitive:   true,
 									Validators: []validator.String{
@@ -341,8 +341,8 @@ func (r *NavigatorRunResource) Schema(ctx context.Context, req resource.SchemaRe
 						},
 					},
 					"known_hosts": schema.ListAttribute{
-						Description:         fmt.Sprintf("SSH known host entries. Ansible variable '%s' set to path of 'known_hosts' file and SSH option 'UserKnownHostsFile' must be configured to said path. Defaults to all of the 'known_hosts' entries recorded.", ansible.SSHKnownHostsFileVar),
-						MarkdownDescription: fmt.Sprintf("SSH known host entries. Ansible variable `%s` set to path of `known_hosts` file and SSH option `UserKnownHostsFile` must be configured to said path. Defaults to all of the `known_hosts` entries recorded.", ansible.SSHKnownHostsFileVar),
+						Description:         AnsibleOptionsModel{}.Descriptions()["known_hosts"].Description,
+						MarkdownDescription: AnsibleOptionsModel{}.Descriptions()["known_hosts"].MarkdownDescription,
 						Optional:            true,
 						Computed:            true,
 						ElementType:         types.StringType,
@@ -351,15 +351,15 @@ func (r *NavigatorRunResource) Schema(ctx context.Context, req resource.SchemaRe
 						},
 					},
 					"host_key_checking": schema.BoolAttribute{
-						Description:         fmt.Sprintf("SSH host key checking. Can help protect against man-in-the-middle attacks by verifying the identity of hosts. Ansible runner (library used by '%s') defaults this option to '%t' explicitly.", ansible.NavigatorProgram, ansible.RunnerDefaultHostKeyChecking),
-						MarkdownDescription: fmt.Sprintf("SSH host key checking. Can help protect against man-in-the-middle attacks by verifying the identity of hosts. Ansible runner (library used by `%s`) defaults this option to `%t` explicitly.", ansible.NavigatorProgram, ansible.RunnerDefaultHostKeyChecking),
+						Description:         AnsibleOptionsModel{}.Descriptions()["host_key_checking"].Description,
+						MarkdownDescription: AnsibleOptionsModel{}.Descriptions()["host_key_checking"].MarkdownDescription,
 						Optional:            true,
 					},
 				},
 			},
 			"timezone": schema.StringAttribute{
-				Description:         fmt.Sprintf("IANA time zone, use 'local' for the system time zone. Defaults to '%s'.", defaultNavigatorRunTimezone),
-				MarkdownDescription: fmt.Sprintf("IANA time zone, use `local` for the system time zone. Defaults to `%s`.", defaultNavigatorRunTimezone),
+				Description:         NavigatorRunDescriptions()["timezone"].Description,
+				MarkdownDescription: NavigatorRunDescriptions()["timezone"].MarkdownDescription,
 				Optional:            true,
 				Computed:            true,
 				Default:             stringdefault.StaticString(defaultNavigatorRunTimezone),
@@ -397,22 +397,22 @@ func (r *NavigatorRunResource) Schema(ctx context.Context, req resource.SchemaRe
 				},
 			},
 			"artifact_queries": schema.MapNestedAttribute{
-				Description:         "Query the Ansible playbook artifact with 'jq' syntax. The playbook artifact contains detailed information about every play and task, as well as the stdout from the playbook run.",
-				MarkdownDescription: "Query the Ansible playbook artifact with [`jq`](https://jqlang.github.io/jq/) syntax. The [playbook artifact](https://access.redhat.com/documentation/en-us/red_hat_ansible_automation_platform/2.0-ea/html/ansible_navigator_creator_guide/assembly-troubleshooting-navigator_ansible-navigator#proc-review-artifact_troubleshooting-navigator) contains detailed information about every play and task, as well as the stdout from the playbook run.",
+				Description:         NavigatorRunDescriptions()["artifact_queries"].Description,
+				MarkdownDescription: NavigatorRunDescriptions()["artifact_queries"].MarkdownDescription,
 				Optional:            true,
 				NestedObject: schema.NestedAttributeObject{
 					Attributes: map[string]schema.Attribute{
 						"jq_filter": schema.StringAttribute{
-							Description:         "'jq' filter. Example: '.status, .stdout'.",
-							MarkdownDescription: "`jq` filter. Example: `.status, .stdout`.",
+							Description:         ArtifactQueryModel{}.Descriptions()["jq_filter"].Description,
+							MarkdownDescription: ArtifactQueryModel{}.Descriptions()["jq_filter"].MarkdownDescription,
 							Required:            true,
 							Validators: []validator.String{
 								stringIsIsJQFilter(),
 							},
 						},
 						"results": schema.ListAttribute{ // TODO switch to a dynamic attribute when supported as an element in a collection
-							Description:         "Results of the 'jq' filter in JSON format.",
-							MarkdownDescription: "Results of the `jq` filter in JSON format.",
+							Description:         ArtifactQueryModel{}.Descriptions()["results"].Description,
+							MarkdownDescription: ArtifactQueryModel{}.Descriptions()["results"].MarkdownDescription,
 							Computed:            true,
 							ElementType:         types.StringType,
 							PlanModifiers: []planmodifier.List{
@@ -422,23 +422,21 @@ func (r *NavigatorRunResource) Schema(ctx context.Context, req resource.SchemaRe
 					},
 				},
 			},
-			// computed
 			"id": schema.StringAttribute{
-				Description: "UUID.",
+				Description: NavigatorRunDescriptions()["id"].Description,
 				Computed:    true,
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.UseStateForUnknown(),
 				},
 			},
 			"command": schema.StringAttribute{
-				Description:         fmt.Sprintf("Generated '%s' run command. Useful for troubleshooting.", ansible.NavigatorProgram),
-				MarkdownDescription: fmt.Sprintf("Generated `%s` run command. Useful for troubleshooting.", ansible.NavigatorProgram),
+				Description:         NavigatorRunDescriptions()["command"].Description,
+				MarkdownDescription: NavigatorRunDescriptions()["command"].MarkdownDescription,
 				Computed:            true,
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.UseStateForUnknown(),
 				},
 			},
-			// timeouts
 			// TODO include defaultNavigatorRunTimeout in description
 			"timeouts": timeouts.Attributes(ctx, timeouts.Opts{
 				Create: true,
