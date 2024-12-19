@@ -32,6 +32,9 @@ func TestAccNavigatorRunEphemeralResource_artifact_queries(t *testing.T) {
 	resource.Test(t, resource.TestCase{
 		PreCheck:                 func() { testPreCheck(t) },
 		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		TerraformVersionChecks: []tfversion.TerraformVersionCheck{
+			tfversion.SkipBelow(tfversion.Version1_10_0),
+		},
 		Steps: []resource.TestStep{
 			{
 				Config: testTerraformConfig(
@@ -132,6 +135,9 @@ func TestAccNavigatorRunEphemeralResource_env_vars(t *testing.T) {
 	resource.Test(t, resource.TestCase{
 		PreCheck:                 func() { testPreCheck(t) },
 		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		TerraformVersionChecks: []tfversion.TerraformVersionCheck{
+			tfversion.SkipBelow(tfversion.Version1_10_0),
+		},
 		Steps: []resource.TestStep{
 			{
 				Config:          testTerraformConfig(t, filepath.Join("navigator_run_ephemeral_resource", "env_vars")),
@@ -150,6 +156,9 @@ func TestAccNavigatorRunEphemeralResource_known_hosts(t *testing.T) {
 	resource.Test(t, resource.TestCase{
 		PreCheck:                 func() { testPreCheck(t) },
 		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		TerraformVersionChecks: []tfversion.TerraformVersionCheck{
+			tfversion.SkipBelow(tfversion.Version1_10_0),
+		},
 		Steps: []resource.TestStep{
 			{
 				Config: testTerraformConfig(
@@ -193,6 +202,9 @@ func TestAccNavigatorRunEphemeralResource_private_keys(t *testing.T) { //nolint:
 			resource.Test(t, resource.TestCase{
 				PreCheck:                 func() { testPreCheck(t) },
 				ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+				TerraformVersionChecks: []tfversion.TerraformVersionCheck{
+					tfversion.SkipBelow(tfversion.Version1_10_0),
+				},
 				Steps: []resource.TestStep{
 					{
 						Config: testTerraformConfig(
