@@ -17,7 +17,7 @@ func TestAccNavigatorRunResource_errors_command_output(t *testing.T) {
 		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
 		Steps: []resource.TestStep{
 			{
-				Config:          testTerraformFile(t, filepath.Join("navigator_run_resource", "errors", "command_output")),
+				Config:          testTerraformConfig(t, filepath.Join("navigator_run_resource", "errors", "command_output")),
 				ConfigVariables: testDefaultConfigVariables(t),
 				ExpectError:     regexp.MustCompile("Ansible navigator run failed"),
 			},
@@ -36,7 +36,7 @@ func TestAccNavigatorRunResource_errors_host_key_checking(t *testing.T) {
 		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
 		Steps: []resource.TestStep{
 			{
-				Config: testTerraformFile(t, filepath.Join("navigator_run_resource", "errors", "host_key_checking")),
+				Config: testTerraformConfig(t, filepath.Join("navigator_run_resource", "errors", "host_key_checking")),
 				ConfigVariables: testConfigVariables(t, config.Variables{
 					"ssh_port": config.IntegerVariable(port),
 				}),
@@ -128,7 +128,7 @@ func TestAccNavigatorRunResource_errors(t *testing.T) {
 				ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
 				Steps: []resource.TestStep{
 					{
-						Config:          testTerraformFile(t, filepath.Join("navigator_run_resource", "errors", test.name)),
+						Config:          testTerraformConfig(t, filepath.Join("navigator_run_resource", "errors", test.name)),
 						ConfigVariables: testConfigVariables(t, variables),
 						ExpectError:     test.expected,
 					},
