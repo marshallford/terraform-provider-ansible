@@ -37,7 +37,7 @@ func TestAccNavigatorRunDataSource_errors(t *testing.T) {
 				ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
 				Steps: []resource.TestStep{
 					{
-						Config:          testTerraformFile(t, filepath.Join("navigator_run_data_source", "errors", test.name)),
+						Config:          testTerraformConfig(t, filepath.Join("navigator_run_data_source", "errors", test.name)),
 						ConfigVariables: testConfigVariables(t, variables),
 						ExpectError:     test.expected,
 					},

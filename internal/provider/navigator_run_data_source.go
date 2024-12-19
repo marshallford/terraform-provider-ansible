@@ -256,8 +256,8 @@ func (d *NavigatorRunDataSource) Schema(ctx context.Context, req datasource.Sche
 						},
 					},
 					"environment_variables_set": schema.MapAttribute{
-						Description:         fmt.Sprintf("%s '%s' is automatically set to '%s'.", ExecutionEnvironmentModel{}.Descriptions()["environment_variables_set"].Description, navigatorRunOperationEnvVar, terraformOperation(terraformOperationRead).String()),
-						MarkdownDescription: fmt.Sprintf("%s `%s` is automatically set to `%s`.", ExecutionEnvironmentModel{}.Descriptions()["environment_variables_set"].MarkdownDescription, navigatorRunOperationEnvVar, terraformOperation(terraformOperationRead).String()),
+						Description:         fmt.Sprintf("%s '%s' is automatically set to '%s'.", ExecutionEnvironmentModel{}.Descriptions()["environment_variables_set"].Description, navigatorRunOperationEnvVar, terraformOp(terraformOpRead)),
+						MarkdownDescription: fmt.Sprintf("%s `%s` is automatically set to `%s`.", ExecutionEnvironmentModel{}.Descriptions()["environment_variables_set"].MarkdownDescription, navigatorRunOperationEnvVar, terraformOp(terraformOpRead)),
 						Optional:            true,
 						ElementType:         types.StringType,
 						Validators: []validator.Map{
@@ -480,7 +480,7 @@ func (d *NavigatorRunDataSource) Read(ctx context.Context, req datasource.ReadRe
 		return
 	}
 
-	run(ctx, &resp.Diagnostics, timeout, terraformOperationRead, &navigatorRun)
+	run(ctx, &resp.Diagnostics, timeout, terraformOpRead, &navigatorRun)
 	resp.Diagnostics.Append(data.Set(ctx, navigatorRun)...)
 
 	if resp.Diagnostics.HasError() {

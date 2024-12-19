@@ -10,16 +10,18 @@ import (
 	resourceTimeouts "github.com/hashicorp/terraform-plugin-framework-timeouts/resource/timeouts"
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
+	"github.com/hashicorp/terraform-plugin-framework/ephemeral"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 )
 
 const (
-	terraformOperationCreate = iota
-	terraformOperationRead   = iota
-	terraformOperationUpdate = iota
-	terraformOperationDelete = iota
-	diagDetailPrefix         = "Underlying error details"
+	terraformOpCreate = iota
+	terraformOpRead   = iota
+	terraformOpUpdate = iota
+	terraformOpDelete = iota
+	terraformOpOpen   = iota
+	diagDetailPrefix  = "Underlying error details"
 )
 
 type attrDescription struct {
@@ -32,23 +34,35 @@ type providerOptions struct {
 	PersistRunDirectory bool
 }
 
-type terraformOperation int
+type (
+	terraformOp  int
+	terraformOps []terraformOp
+)
 
-var terraformOperations = []string{"create", "read", "update", "delete"} //nolint:gochecknoglobals
+var terraformOpNames = []string{"create", "read", "update", "delete", "open"} //nolint:gochecknoglobals
 
-func (op terraformOperation) String() string {
-	return terraformOperations[op]
+func (op terraformOp) String() string {
+	return terraformOpNames[op]
 }
 
-func terraformOperationResourceTimeout(ctx context.Context, operation terraformOperation, value resourceTimeouts.Value, defaultTimeout time.Duration) (time.Duration, diag.Diagnostics) {
-	switch operation {
-	case terraformOperationCreate:
+func (ops terraformOps) Strings() []string {
+	output := make([]string, 0, len(ops))
+	for _, element := range ops {
+		output = append(output, element.String())
+	}
+
+	return output
+}
+
+func terraformOperationResourceTimeout(ctx context.Context, op terraformOp, value resourceTimeouts.Value, defaultTimeout time.Duration) (time.Duration, diag.Diagnostics) {
+	switch op {
+	case terraformOpCreate:
 		return value.Create(ctx, defaultTimeout)
-	case terraformOperationRead:
+	case terraformOpRead:
 		return value.Read(ctx, defaultTimeout)
-	case terraformOperationUpdate:
+	case terraformOpUpdate:
 		return value.Update(ctx, defaultTimeout)
-	case terraformOperationDelete:
+	case terraformOpDelete:
 		return value.Delete(ctx, defaultTimeout)
 	default:
 		return defaultTimeout, nil
@@ -57,6 +71,10 @@ func terraformOperationResourceTimeout(ctx context.Context, operation terraformO
 
 func terraformOperationDataSourceTimeout(ctx context.Context, value dataSourceTimeouts.Value, defaultTimeout time.Duration) (time.Duration, diag.Diagnostics) {
 	return value.Read(ctx, defaultTimeout)
+}
+
+func terraformOperationEphemeralResourceTimeout(_ context.Context, defaultTimeout time.Duration) (time.Duration, diag.Diagnostics) {
+	return defaultTimeout, nil
 }
 
 func unknownProviderValue(value path.Path) (string, string) {
@@ -68,6 +86,21 @@ func unknownProviderValue(value path.Path) (string, string) {
 func unexpectedConfigureType(value string, providerData any) (string, string) {
 	return fmt.Sprintf("Unexpected %s Configure Type", value),
 		fmt.Sprintf("Expected *providerOptions, got: %T. Please report this issue to the provider developers.", providerData)
+}
+
+func configureResourceClient(req resource.ConfigureRequest, resp *resource.ConfigureResponse) (*providerOptions, bool) {
+	if req.ProviderData == nil {
+		return nil, false
+	}
+
+	opts, ok := req.ProviderData.(*providerOptions)
+
+	if !ok {
+		summary, detail := unexpectedConfigureType("Resource", req.ProviderData)
+		resp.Diagnostics.AddError(summary, detail)
+	}
+
+	return opts, ok
 }
 
 func configureDataSourceClient(req datasource.ConfigureRequest, resp *datasource.ConfigureResponse) (*providerOptions, bool) {
@@ -85,7 +118,7 @@ func configureDataSourceClient(req datasource.ConfigureRequest, resp *datasource
 	return opts, ok
 }
 
-func configureResourceClient(req resource.ConfigureRequest, resp *resource.ConfigureResponse) (*providerOptions, bool) {
+func configureEphemeralResourceClient(req ephemeral.ConfigureRequest, resp *ephemeral.ConfigureResponse) (*providerOptions, bool) {
 	if req.ProviderData == nil {
 		return nil, false
 	}
@@ -93,7 +126,7 @@ func configureResourceClient(req resource.ConfigureRequest, resp *resource.Confi
 	opts, ok := req.ProviderData.(*providerOptions)
 
 	if !ok {
-		summary, detail := unexpectedConfigureType("Resource", req.ProviderData)
+		summary, detail := unexpectedConfigureType("Ephemeral Resource", req.ProviderData)
 		resp.Diagnostics.AddError(summary, detail)
 	}
 
@@ -141,15 +174,4 @@ func wrapElements(input []string, wrap string) []string {
 
 func wrapElementsJoin(input []string, wrap string) string {
 	return strings.Join(wrapElements(input, wrap), ", ")
-}
-
-func remove[T comparable](l []T, item T) []T {
-	out := make([]T, 0)
-	for _, element := range l {
-		if element != item {
-			out = append(out, element)
-		}
-	}
-
-	return out
 }

@@ -79,7 +79,7 @@ type navigatorRun struct {
 	command           string
 }
 
-func run(ctx context.Context, diags *diag.Diagnostics, timeout time.Duration, operation terraformOperation, run *navigatorRun) { //nolint:cyclop
+func run(ctx context.Context, diags *diag.Diagnostics, timeout time.Duration, operation terraformOp, run *navigatorRun) { //nolint:cyclop
 	var err error
 
 	ctx = tflog.SetField(ctx, "dir", run.dir)
