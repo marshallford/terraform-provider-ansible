@@ -8,7 +8,7 @@ endif
 DOCKER := docker
 DOCKER_RUN := $(DOCKER) run $(DOCKER_FLAGS)
 
-TERRAFORM_VERSION ?= 1.10.2
+TERRAFORM_VERSION ?= 1.10.4
 
 EDITORCONFIG_CHECKER_VERSION ?= 3.0.3
 EDITORCONFIG_CHECKER := $(DOCKER_RUN) -v=$(CURDIR):/check docker.io/mstruebing/editorconfig-checker:v$(EDITORCONFIG_CHECKER_VERSION)
@@ -19,7 +19,7 @@ SHELLCHECK := $(DOCKER_RUN) -v=$(CURDIR):/mnt docker.io/koalaman/shellcheck:v$(S
 YAMLLINT_VERSION ?= 0.33.0
 YAMLLINT := $(DOCKER_RUN) -v=$(CURDIR):/code docker.io/pipelinecomponents/yamllint:$(YAMLLINT_VERSION) yamllint
 
-GOLANGCI_LINT_VERSION ?= 1.62.2
+GOLANGCI_LINT_VERSION ?= 1.63.4
 GOLANGCI_LINT := $(DOCKER_RUN) -v=$(CURDIR):/code -w /code docker.io/golangci/golangci-lint:v$(GOLANGCI_LINT_VERSION) golangci-lint run
 
 VENV := .venv

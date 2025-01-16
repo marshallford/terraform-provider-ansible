@@ -1,3 +1,4 @@
+//nolint:dupl
 package provider
 
 import (
@@ -6,6 +7,7 @@ import (
 	"regexp"
 
 	"github.com/google/uuid"
+	"github.com/hashicorp/terraform-plugin-framework-timeouts/ephemeral/timeouts"
 	"github.com/hashicorp/terraform-plugin-framework-validators/listvalidator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/mapvalidator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
@@ -32,16 +34,17 @@ type NavigatorRunEphemeralResource struct {
 }
 
 type NavigatorRunEphemeralResourceModel struct {
-	Playbook               types.String `tfsdk:"playbook"`
-	Inventory              types.String `tfsdk:"inventory"`
-	WorkingDirectory       types.String `tfsdk:"working_directory"`
-	ExecutionEnvironment   types.Object `tfsdk:"execution_environment"`
-	AnsibleNavigatorBinary types.String `tfsdk:"ansible_navigator_binary"`
-	AnsibleOptions         types.Object `tfsdk:"ansible_options"`
-	Timezone               types.String `tfsdk:"timezone"`
-	ArtifactQueries        types.Map    `tfsdk:"artifact_queries"`
-	ID                     types.String `tfsdk:"id"`
-	Command                types.String `tfsdk:"command"`
+	Playbook               types.String   `tfsdk:"playbook"`
+	Inventory              types.String   `tfsdk:"inventory"`
+	WorkingDirectory       types.String   `tfsdk:"working_directory"`
+	ExecutionEnvironment   types.Object   `tfsdk:"execution_environment"`
+	AnsibleNavigatorBinary types.String   `tfsdk:"ansible_navigator_binary"`
+	AnsibleOptions         types.Object   `tfsdk:"ansible_options"`
+	Timezone               types.String   `tfsdk:"timezone"`
+	ArtifactQueries        types.Map      `tfsdk:"artifact_queries"`
+	ID                     types.String   `tfsdk:"id"`
+	Command                types.String   `tfsdk:"command"`
+	Timeouts               timeouts.Value `tfsdk:"timeouts"`
 }
 
 func (m NavigatorRunEphemeralResourceModel) Value(ctx context.Context, run *navigatorRun, opts *providerOptions) diag.Diagnostics {
@@ -100,7 +103,6 @@ func (m NavigatorRunEphemeralResourceModel) Value(ctx context.Context, run *navi
 	return diags
 }
 
-//nolint:dupl
 func (m *NavigatorRunEphemeralResourceModel) Set(ctx context.Context, run navigatorRun) diag.Diagnostics {
 	var diags diag.Diagnostics
 
@@ -189,7 +191,6 @@ func (er *NavigatorRunEphemeralResource) Metadata(ctx context.Context, req ephem
 	resp.TypeName = fmt.Sprintf("%s_navigator_run", req.ProviderTypeName)
 }
 
-//nolint:dupl
 func (er *NavigatorRunEphemeralResource) Schema(ctx context.Context, req ephemeral.SchemaRequest, resp *ephemeral.SchemaResponse) {
 	resp.Schema = schema.Schema{
 		Description:         fmt.Sprintf("Run an Ansible playbook as a means to gather temporary and likely sensitive information. It is recommended to only run playbooks without observable side-effects. Requires '%s' and a container engine to run within an execution environment (EE).", ansible.NavigatorProgram),
@@ -434,6 +435,8 @@ func (er *NavigatorRunEphemeralResource) Schema(ctx context.Context, req ephemer
 				MarkdownDescription: NavigatorRunDescriptions()["command"].MarkdownDescription,
 				Computed:            true,
 			},
+			// TODO include defaultNavigatorRunTimeout in description
+			"timeouts": timeouts.Attributes(ctx),
 		},
 	}
 }
@@ -457,7 +460,7 @@ func (er *NavigatorRunEphemeralResource) Open(ctx context.Context, req ephemeral
 		return
 	}
 
-	timeout, newDiags := terraformOperationEphemeralResourceTimeout(ctx, defaultNavigatorRunTimeout)
+	timeout, newDiags := terraformOperationEphemeralResourceTimeout(ctx, data.Timeouts, defaultNavigatorRunTimeout)
 	resp.Diagnostics.Append(newDiags...)
 
 	if resp.Diagnostics.HasError() {

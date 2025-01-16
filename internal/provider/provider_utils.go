@@ -7,6 +7,7 @@ import (
 	"time"
 
 	dataSourceTimeouts "github.com/hashicorp/terraform-plugin-framework-timeouts/datasource/timeouts"
+	ephemeralResourceTimeouts "github.com/hashicorp/terraform-plugin-framework-timeouts/ephemeral/timeouts"
 	resourceTimeouts "github.com/hashicorp/terraform-plugin-framework-timeouts/resource/timeouts"
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
@@ -73,8 +74,8 @@ func terraformOperationDataSourceTimeout(ctx context.Context, value dataSourceTi
 	return value.Read(ctx, defaultTimeout)
 }
 
-func terraformOperationEphemeralResourceTimeout(_ context.Context, defaultTimeout time.Duration) (time.Duration, diag.Diagnostics) {
-	return defaultTimeout, nil
+func terraformOperationEphemeralResourceTimeout(ctx context.Context, value ephemeralResourceTimeouts.Value, defaultTimeout time.Duration) (time.Duration, diag.Diagnostics) {
+	return value.Open(ctx, defaultTimeout)
 }
 
 func unknownProviderValue(value path.Path) (string, string) {

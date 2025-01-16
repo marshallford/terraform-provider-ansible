@@ -120,7 +120,7 @@ func TestAccNavigatorRunEphemeralResource_basic(t *testing.T) {
 					statecheck.ExpectKnownValue(navigatorRunEphemeralResource, tfjsonpath.New("data").AtMapKey("artifact_queries"), knownvalue.Null()),
 					statecheck.ExpectKnownValue(navigatorRunEphemeralResource, tfjsonpath.New("data").AtMapKey("id"), knownvalue.NotNull()),
 					statecheck.ExpectKnownValue(navigatorRunEphemeralResource, tfjsonpath.New("data").AtMapKey("command"), knownvalue.NotNull()),
-					// statecheck.ExpectKnownValue(navigatorRunEphemeralResource, tfjsonpath.New("data").AtMapKey("timeouts"), knownvalue.Null()),
+					statecheck.ExpectKnownValue(navigatorRunEphemeralResource, tfjsonpath.New("data").AtMapKey("timeouts"), knownvalue.Null()),
 					statecheck.ExpectKnownValue(navigatorRunEphemeralResource, tfjsonpath.New("data").AtMapKey("ansible_options").AtMapKey("known_hosts"), knownvalue.ListSizeExact(0)),
 					statecheck.ExpectKnownValue(navigatorRunEphemeralResource, tfjsonpath.New("data").AtMapKey("execution_environment").AtMapKey("container_engine"), knownvalue.StringExact("auto")),
 				},
