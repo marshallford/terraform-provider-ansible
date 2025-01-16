@@ -29,6 +29,8 @@ const (
 	// TODO improve
 	navigatorProgramPath = "../../.venv/bin/ansible-navigator"
 	playbookProgramPath  = "../../.venv/bin/ansible-playbook"
+	testString           = "testing"
+	testUpdateString     = "testing (update)"
 )
 
 var ErrTestCheckFunc = errors.New("test check func")
@@ -95,20 +97,27 @@ func testPrependPlaybookToPath(t *testing.T) {
 	t.Setenv("PATH", fmt.Sprintf("%s%c%s", filepath.Dir(testAbsPath(t, playbookProgramPath)), os.PathListSeparator, os.Getenv("PATH")))
 }
 
-func testTerraformFile(t *testing.T, name string) string {
+func testTerraformFiles(t *testing.T, names ...string) string {
 	t.Helper()
 
-	providerData, err := os.ReadFile(filepath.Join("testdata", "provider.tf"))
-	if err != nil {
-		t.Fatal(err)
+	var combinedFiles string
+
+	for _, name := range names {
+		file, err := os.ReadFile(filepath.Join("testdata", fmt.Sprintf("%s.tf", name)))
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		combinedFiles += string(file)
 	}
 
-	fileData, err := os.ReadFile(filepath.Join("testdata", fmt.Sprintf("%s.tf", name)))
-	if err != nil {
-		t.Fatal(err)
-	}
+	return combinedFiles
+}
 
-	return string(fileData) + string(providerData)
+func testTerraformConfig(t *testing.T, names ...string) string {
+	t.Helper()
+
+	return testTerraformFiles(t, append(names, "provider")...)
 }
 
 func testSSHKeygen(t *testing.T) (string, string) {

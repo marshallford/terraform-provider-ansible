@@ -7,6 +7,7 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
+	"github.com/hashicorp/terraform-plugin-framework/ephemeral"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/provider"
 	"github.com/hashicorp/terraform-plugin-framework/provider/schema"
@@ -97,8 +98,9 @@ func (p *AnsibleProvider) Configure(ctx context.Context, req provider.ConfigureR
 		opts.PersistRunDirectory = data.PersistRunDirectory.ValueBool()
 	}
 
-	resp.DataSourceData = &opts
 	resp.ResourceData = &opts
+	resp.DataSourceData = &opts
+	resp.EphemeralResourceData = &opts
 }
 
 func (p *AnsibleProvider) Resources(ctx context.Context) []func() resource.Resource {
@@ -110,6 +112,12 @@ func (p *AnsibleProvider) Resources(ctx context.Context) []func() resource.Resou
 func (p *AnsibleProvider) DataSources(ctx context.Context) []func() datasource.DataSource {
 	return []func() datasource.DataSource{
 		NewNavigatorRunDataSource,
+	}
+}
+
+func (p *AnsibleProvider) EphemeralResources(_ context.Context) []func() ephemeral.EphemeralResource {
+	return []func() ephemeral.EphemeralResource{
+		NewNavigatorRunEphemeralResource,
 	}
 }
 

@@ -7,13 +7,13 @@ import (
 	"regexp"
 
 	"github.com/google/uuid"
-	"github.com/hashicorp/terraform-plugin-framework-timeouts/datasource/timeouts"
+	"github.com/hashicorp/terraform-plugin-framework-timeouts/ephemeral/timeouts"
 	"github.com/hashicorp/terraform-plugin-framework-validators/listvalidator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/mapvalidator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
-	"github.com/hashicorp/terraform-plugin-framework/datasource"
-	"github.com/hashicorp/terraform-plugin-framework/datasource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
+	"github.com/hashicorp/terraform-plugin-framework/ephemeral"
+	"github.com/hashicorp/terraform-plugin-framework/ephemeral/schema"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-framework/types/basetypes"
@@ -21,19 +21,19 @@ import (
 )
 
 var (
-	_ datasource.DataSource              = &NavigatorRunDataSource{}
-	_ datasource.DataSourceWithConfigure = &NavigatorRunDataSource{}
+	_ ephemeral.EphemeralResource              = &NavigatorRunEphemeralResource{}
+	_ ephemeral.EphemeralResourceWithConfigure = &NavigatorRunEphemeralResource{}
 )
 
-func NewNavigatorRunDataSource() datasource.DataSource { //nolint:ireturn
-	return &NavigatorRunDataSource{}
+func NewNavigatorRunEphemeralResource() ephemeral.EphemeralResource { //nolint:ireturn
+	return &NavigatorRunEphemeralResource{}
 }
 
-type NavigatorRunDataSource struct {
+type NavigatorRunEphemeralResource struct {
 	opts *providerOptions
 }
 
-type NavigatorRunDataSourceModel struct {
+type NavigatorRunEphemeralResourceModel struct {
 	Playbook               types.String   `tfsdk:"playbook"`
 	Inventory              types.String   `tfsdk:"inventory"`
 	WorkingDirectory       types.String   `tfsdk:"working_directory"`
@@ -47,7 +47,7 @@ type NavigatorRunDataSourceModel struct {
 	Timeouts               timeouts.Value `tfsdk:"timeouts"`
 }
 
-func (m NavigatorRunDataSourceModel) Value(ctx context.Context, run *navigatorRun, opts *providerOptions) diag.Diagnostics {
+func (m NavigatorRunEphemeralResourceModel) Value(ctx context.Context, run *navigatorRun, opts *providerOptions) diag.Diagnostics {
 	var diags diag.Diagnostics
 
 	run.dir = runDir(opts.BaseRunDirectory, m.ID.ValueString(), 0)
@@ -103,7 +103,7 @@ func (m NavigatorRunDataSourceModel) Value(ctx context.Context, run *navigatorRu
 	return diags
 }
 
-func (m *NavigatorRunDataSourceModel) Set(ctx context.Context, run navigatorRun) diag.Diagnostics {
+func (m *NavigatorRunEphemeralResourceModel) Set(ctx context.Context, run navigatorRun) diag.Diagnostics {
 	var diags diag.Diagnostics
 
 	m.Command = types.StringValue(run.command)
@@ -131,7 +131,7 @@ func (m *NavigatorRunDataSourceModel) Set(ctx context.Context, run navigatorRun)
 	return diags
 }
 
-func (m *NavigatorRunDataSourceModel) SetDefaults(ctx context.Context) diag.Diagnostics {
+func (m *NavigatorRunEphemeralResourceModel) SetDefaults(ctx context.Context) diag.Diagnostics {
 	var diags diag.Diagnostics
 
 	if m.WorkingDirectory.IsNull() {
@@ -187,14 +187,14 @@ func (m *NavigatorRunDataSourceModel) SetDefaults(ctx context.Context) diag.Diag
 	return diags
 }
 
-func (d *NavigatorRunDataSource) Metadata(ctx context.Context, req datasource.MetadataRequest, resp *datasource.MetadataResponse) {
+func (er *NavigatorRunEphemeralResource) Metadata(ctx context.Context, req ephemeral.MetadataRequest, resp *ephemeral.MetadataResponse) {
 	resp.TypeName = fmt.Sprintf("%s_navigator_run", req.ProviderTypeName)
 }
 
-func (d *NavigatorRunDataSource) Schema(ctx context.Context, req datasource.SchemaRequest, resp *datasource.SchemaResponse) {
+func (er *NavigatorRunEphemeralResource) Schema(ctx context.Context, req ephemeral.SchemaRequest, resp *ephemeral.SchemaResponse) {
 	resp.Schema = schema.Schema{
-		Description:         fmt.Sprintf("Run an Ansible playbook as a means to gather information. It is recommended to only run playbooks without observable side-effects. Requires '%s' and a container engine to run within an execution environment (EE).", ansible.NavigatorProgram),
-		MarkdownDescription: fmt.Sprintf("Run an Ansible playbook as a means to gather information. It is recommended to only run playbooks without observable side-effects. Requires `%s` and a container engine to run within an execution environment (EE).", ansible.NavigatorProgram),
+		Description:         fmt.Sprintf("Run an Ansible playbook as a means to gather temporary and likely sensitive information. It is recommended to only run playbooks without observable side-effects. Requires '%s' and a container engine to run within an execution environment (EE).", ansible.NavigatorProgram),
+		MarkdownDescription: fmt.Sprintf("Run an Ansible playbook as a means to gather temporary and likely sensitive information. It is recommended to only run playbooks without observable side-effects. Requires `%s` and a container engine to run within an execution environment (EE).", ansible.NavigatorProgram),
 		Attributes: map[string]schema.Attribute{
 			// required
 			"playbook": schema.StringAttribute{
@@ -255,8 +255,8 @@ func (d *NavigatorRunDataSource) Schema(ctx context.Context, req datasource.Sche
 						},
 					},
 					"environment_variables_set": schema.MapAttribute{
-						Description:         fmt.Sprintf("%s '%s' is automatically set to '%s'.", ExecutionEnvironmentModel{}.Descriptions()["environment_variables_set"].Description, navigatorRunOperationEnvVar, terraformOp(terraformOpRead)),
-						MarkdownDescription: fmt.Sprintf("%s `%s` is automatically set to `%s`.", ExecutionEnvironmentModel{}.Descriptions()["environment_variables_set"].MarkdownDescription, navigatorRunOperationEnvVar, terraformOp(terraformOpRead)),
+						Description:         fmt.Sprintf("%s '%s' is automatically set to '%s'.", ExecutionEnvironmentModel{}.Descriptions()["environment_variables_set"].Description, navigatorRunOperationEnvVar, terraformOp(terraformOpOpen)),
+						MarkdownDescription: fmt.Sprintf("%s `%s` is automatically set to `%s`.", ExecutionEnvironmentModel{}.Descriptions()["environment_variables_set"].MarkdownDescription, navigatorRunOperationEnvVar, terraformOp(terraformOpOpen)),
 						Optional:            true,
 						ElementType:         types.StringType,
 						Validators: []validator.Map{
@@ -441,17 +441,17 @@ func (d *NavigatorRunDataSource) Schema(ctx context.Context, req datasource.Sche
 	}
 }
 
-func (d *NavigatorRunDataSource) Configure(ctx context.Context, req datasource.ConfigureRequest, resp *datasource.ConfigureResponse) {
-	opts, ok := configureDataSourceClient(req, resp)
+func (er *NavigatorRunEphemeralResource) Configure(ctx context.Context, req ephemeral.ConfigureRequest, resp *ephemeral.ConfigureResponse) {
+	opts, ok := configureEphemeralResourceClient(req, resp)
 	if !ok {
 		return
 	}
 
-	d.opts = opts
+	er.opts = opts
 }
 
-func (d *NavigatorRunDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) {
-	var data *NavigatorRunDataSourceModel
+func (er *NavigatorRunEphemeralResource) Open(ctx context.Context, req ephemeral.OpenRequest, resp *ephemeral.OpenResponse) {
+	var data *NavigatorRunEphemeralResourceModel
 
 	resp.Diagnostics.Append(req.Config.Get(ctx, &data)...)
 	resp.Diagnostics.Append(data.SetDefaults(ctx)...)
@@ -460,7 +460,7 @@ func (d *NavigatorRunDataSource) Read(ctx context.Context, req datasource.ReadRe
 		return
 	}
 
-	timeout, newDiags := terraformOperationDataSourceTimeout(ctx, data.Timeouts, defaultNavigatorRunTimeout)
+	timeout, newDiags := terraformOperationEphemeralResourceTimeout(ctx, data.Timeouts, defaultNavigatorRunTimeout)
 	resp.Diagnostics.Append(newDiags...)
 
 	if resp.Diagnostics.HasError() {
@@ -473,18 +473,18 @@ func (d *NavigatorRunDataSource) Read(ctx context.Context, req datasource.ReadRe
 	data.ID = types.StringValue(uuid.New().String())
 
 	var navigatorRun navigatorRun
-	resp.Diagnostics.Append(data.Value(ctx, &navigatorRun, d.opts)...)
+	resp.Diagnostics.Append(data.Value(ctx, &navigatorRun, er.opts)...)
 
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
-	run(ctx, &resp.Diagnostics, timeout, terraformOpRead, &navigatorRun)
+	run(ctx, &resp.Diagnostics, timeout, terraformOpOpen, &navigatorRun)
 	resp.Diagnostics.Append(data.Set(ctx, navigatorRun)...)
 
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
-	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
+	resp.Diagnostics.Append(resp.Result.Set(ctx, &data)...)
 }

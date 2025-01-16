@@ -20,7 +20,7 @@ const (
 	defaultNavigatorRunTimeout         = 10 * time.Minute
 	defaultNavigatorRunContainerEngine = ansible.ContainerEngineAuto
 	defaultNavigatorRunEEEnabled       = true
-	defaultNavigatorRunImage           = "ghcr.io/ansible/community-ansible-dev-tools:v24.11.0"
+	defaultNavigatorRunImage           = "ghcr.io/ansible/community-ansible-dev-tools:v24.12.0"
 	defaultNavigatorRunPullPolicy      = "tag"
 	defaultNavigatorRunTimezone        = "UTC"
 	defaultNavigatorRunOnDestroy       = false
@@ -79,7 +79,7 @@ type navigatorRun struct {
 	command           string
 }
 
-func run(ctx context.Context, diags *diag.Diagnostics, timeout time.Duration, operation terraformOperation, run *navigatorRun) { //nolint:cyclop
+func run(ctx context.Context, diags *diag.Diagnostics, timeout time.Duration, operation terraformOp, run *navigatorRun) { //nolint:cyclop
 	var err error
 
 	ctx = tflog.SetField(ctx, "dir", run.dir)
