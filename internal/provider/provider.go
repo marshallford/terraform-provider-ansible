@@ -30,12 +30,12 @@ type AnsibleProviderModel struct {
 	PersistRunDirectory types.Bool   `tfsdk:"persist_run_directory"`
 }
 
-func (p *AnsibleProvider) Metadata(ctx context.Context, req provider.MetadataRequest, resp *provider.MetadataResponse) {
+func (p *AnsibleProvider) Metadata(_ context.Context, _ provider.MetadataRequest, resp *provider.MetadataResponse) {
 	resp.TypeName = "ansible"
 	resp.Version = p.version
 }
 
-func (p *AnsibleProvider) Schema(ctx context.Context, req provider.SchemaRequest, resp *provider.SchemaResponse) {
+func (p *AnsibleProvider) Schema(_ context.Context, _ provider.SchemaRequest, resp *provider.SchemaResponse) {
 	resp.Schema = schema.Schema{
 		Description:         "Run Ansible playbooks.",
 		MarkdownDescription: "Run [Ansible](https://github.com/ansible/ansible) playbooks.",
@@ -103,13 +103,13 @@ func (p *AnsibleProvider) Configure(ctx context.Context, req provider.ConfigureR
 	resp.EphemeralResourceData = &opts
 }
 
-func (p *AnsibleProvider) Resources(ctx context.Context) []func() resource.Resource {
+func (p *AnsibleProvider) Resources(_ context.Context) []func() resource.Resource {
 	return []func() resource.Resource{
 		NewNavigatorRunResource,
 	}
 }
 
-func (p *AnsibleProvider) DataSources(ctx context.Context) []func() datasource.DataSource {
+func (p *AnsibleProvider) DataSources(_ context.Context) []func() datasource.DataSource {
 	return []func() datasource.DataSource{
 		NewNavigatorRunDataSource,
 	}

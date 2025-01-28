@@ -43,7 +43,7 @@ type ArtifactQueryModel struct {
 	Results  types.List   `tfsdk:"results"`
 }
 
-func NavigatorRunDescriptions() map[string]attrDescription {
+func navigatorRunDescriptions() map[string]attrDescription {
 	return map[string]attrDescription{
 		"playbook": {
 			Description:         "Ansible playbook contents.",
@@ -87,7 +87,7 @@ func NavigatorRunDescriptions() map[string]attrDescription {
 	}
 }
 
-func (ExecutionEnvironmentModel) Descriptions() map[string]attrDescription {
+func (ExecutionEnvironmentModel) descriptions() map[string]attrDescription {
 	return map[string]attrDescription{
 		"container_engine": {
 			Description:         fmt.Sprintf("Container engine responsible for running the execution environment container image. Options: %s. Defaults to '%s'.", wrapElementsJoin(ansible.ContainerEngineOptions(true), "'"), defaultNavigatorRunContainerEngine),
@@ -193,7 +193,7 @@ func (m ExecutionEnvironmentModel) Value(ctx context.Context, settings *ansible.
 	return diags
 }
 
-func (AnsibleOptionsModel) Descriptions() map[string]attrDescription {
+func (AnsibleOptionsModel) descriptions() map[string]attrDescription {
 	return map[string]attrDescription{
 		"force_handlers": {
 			Description: "Run handlers even if a task fails.",
@@ -312,7 +312,7 @@ func (m *AnsibleOptionsModel) Set(ctx context.Context, run *navigatorRun) diag.D
 	return diags
 }
 
-func (PrivateKeyModel) Descriptions() map[string]attrDescription {
+func (PrivateKeyModel) descriptions() map[string]attrDescription {
 	return map[string]attrDescription{
 		"name": {
 			Description: "Key name.",
@@ -330,7 +330,7 @@ func (PrivateKeyModel) AttrTypes() map[string]attr.Type {
 	}
 }
 
-func (m PrivateKeyModel) Value(ctx context.Context, key *ansible.PrivateKey) diag.Diagnostics {
+func (m PrivateKeyModel) Value(_ context.Context, key *ansible.PrivateKey) diag.Diagnostics {
 	var diags diag.Diagnostics
 
 	key.Name = m.Name.ValueString()
@@ -339,7 +339,7 @@ func (m PrivateKeyModel) Value(ctx context.Context, key *ansible.PrivateKey) dia
 	return diags
 }
 
-func (ArtifactQueryModel) Descriptions() map[string]attrDescription {
+func (ArtifactQueryModel) descriptions() map[string]attrDescription {
 	return map[string]attrDescription{
 		"jq_filter": {
 			Description:         "'jq' filter. Example: '.status, .stdout'.",
@@ -359,7 +359,7 @@ func (ArtifactQueryModel) AttrTypes() map[string]attr.Type {
 	}
 }
 
-func (m ArtifactQueryModel) Value(ctx context.Context, query *ansible.ArtifactQuery) diag.Diagnostics {
+func (m ArtifactQueryModel) Value(_ context.Context, query *ansible.ArtifactQuery) diag.Diagnostics {
 	var diags diag.Diagnostics
 
 	query.JQFilter = m.JQFilter.ValueString()

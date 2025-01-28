@@ -35,7 +35,9 @@ func QueryPlaybookArtifact(dir string, queries map[string]ArtifactQuery) error {
 }
 
 func ValidateJQFilter(filter string) error {
-	_, err := jq.Parse(filter)
+	if _, err := jq.Parse(filter); err != nil {
+		return fmt.Errorf("failed to parse JQ filter, %w", err)
+	}
 
-	return err
+	return nil
 }

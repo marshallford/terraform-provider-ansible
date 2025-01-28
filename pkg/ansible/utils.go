@@ -3,6 +3,7 @@ package ansible
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 	"os"
 	"os/exec"
 
@@ -11,25 +12,29 @@ import (
 
 func programExistsOnPath(program string) error {
 	if _, err := exec.LookPath(program); err != nil {
-		return err
+		return fmt.Errorf("failed to find program on path, %w", err)
 	}
 
 	return nil
 }
 
 func writeFile(path string, contents string) error {
-	return os.WriteFile(path, []byte(contents), 0o600) //nolint:gomnd,mnd
+	if err := os.WriteFile(path, []byte(contents), 0o600); err != nil { //nolint:gomnd,mnd
+		return fmt.Errorf("failed to write file, %w", err)
+	}
+
+	return nil
 }
 
 func jqJSON(data []byte, filter string) ([]string, error) {
 	var blob any
 	if err := json.Unmarshal(data, &blob); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to parse JSON, %w", err)
 	}
 
 	query, err := jq.Parse(filter)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to parse JQ filter, %w", err)
 	}
 
 	var results []string
@@ -47,12 +52,12 @@ func jqJSON(data []byte, filter string) ([]string, error) {
 				break
 			}
 
-			return nil, err
+			return nil, fmt.Errorf("JQ failed, %w", err)
 		}
 
 		result, err := jq.Marshal(value)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("failed to convert JQ result into JSON, %w", err)
 		}
 
 		results = append(results, string(result))
