@@ -4,7 +4,7 @@ import (
 	"context"
 	"errors"
 	"time"
-	_ "time/tzdata"
+	_ "time/tzdata" // embedded copy of the timezone database
 	"unicode"
 
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
@@ -15,7 +15,7 @@ import (
 
 type stringIsSSHPrivateKeyValidator struct{}
 
-func (v stringIsSSHPrivateKeyValidator) Description(ctx context.Context) string {
+func (v stringIsSSHPrivateKeyValidator) Description(_ context.Context) string {
 	return "string must be an unencrypted SSH private key"
 }
 
@@ -23,7 +23,7 @@ func (v stringIsSSHPrivateKeyValidator) MarkdownDescription(ctx context.Context)
 	return v.Description(ctx)
 }
 
-func (v stringIsSSHPrivateKeyValidator) ValidateString(ctx context.Context, req validator.StringRequest, resp *validator.StringResponse) {
+func (v stringIsSSHPrivateKeyValidator) ValidateString(_ context.Context, req validator.StringRequest, resp *validator.StringResponse) {
 	if req.ConfigValue.IsUnknown() || req.ConfigValue.IsNull() {
 		return
 	}
@@ -56,7 +56,7 @@ func stringIsSSHPrivateKey() stringIsSSHPrivateKeyValidator {
 
 type stringIsSSHKnownHostValidator struct{}
 
-func (v stringIsSSHKnownHostValidator) Description(ctx context.Context) string {
+func (v stringIsSSHKnownHostValidator) Description(_ context.Context) string {
 	return "string must be a SSH known host entry"
 }
 
@@ -64,7 +64,7 @@ func (v stringIsSSHKnownHostValidator) MarkdownDescription(ctx context.Context) 
 	return v.Description(ctx)
 }
 
-func (v stringIsSSHKnownHostValidator) ValidateString(ctx context.Context, req validator.StringRequest, resp *validator.StringResponse) {
+func (v stringIsSSHKnownHostValidator) ValidateString(_ context.Context, req validator.StringRequest, resp *validator.StringResponse) {
 	if req.ConfigValue.IsUnknown() || req.ConfigValue.IsNull() {
 		return
 	}
@@ -98,7 +98,7 @@ func stringIsSSHKnownHost() stringIsSSHKnownHostValidator {
 
 type stringIsEnvVarNameValidator struct{}
 
-func (v stringIsEnvVarNameValidator) Description(ctx context.Context) string {
+func (v stringIsEnvVarNameValidator) Description(_ context.Context) string {
 	return "string must be an environment variable name"
 }
 
@@ -106,7 +106,7 @@ func (v stringIsEnvVarNameValidator) MarkdownDescription(ctx context.Context) st
 	return v.Description(ctx)
 }
 
-func (v stringIsEnvVarNameValidator) ValidateString(ctx context.Context, req validator.StringRequest, resp *validator.StringResponse) {
+func (v stringIsEnvVarNameValidator) ValidateString(_ context.Context, req validator.StringRequest, resp *validator.StringResponse) {
 	if req.ConfigValue.IsUnknown() || req.ConfigValue.IsNull() {
 		return
 	}
@@ -140,7 +140,7 @@ func stringIsEnvVarName() stringIsEnvVarNameValidator {
 
 type stringIsYAMLValidator struct{}
 
-func (v stringIsYAMLValidator) Description(ctx context.Context) string {
+func (v stringIsYAMLValidator) Description(_ context.Context) string {
 	return "string must be YAML"
 }
 
@@ -148,7 +148,7 @@ func (v stringIsYAMLValidator) MarkdownDescription(ctx context.Context) string {
 	return v.Description(ctx)
 }
 
-func (v stringIsYAMLValidator) ValidateString(ctx context.Context, req validator.StringRequest, resp *validator.StringResponse) {
+func (v stringIsYAMLValidator) ValidateString(_ context.Context, req validator.StringRequest, resp *validator.StringResponse) {
 	if req.ConfigValue.IsUnknown() || req.ConfigValue.IsNull() {
 		return
 	}
@@ -169,7 +169,7 @@ func stringIsYAML() stringIsYAMLValidator {
 
 type stringIsIANATimezoneValidator struct{}
 
-func (v stringIsIANATimezoneValidator) Description(ctx context.Context) string {
+func (v stringIsIANATimezoneValidator) Description(_ context.Context) string {
 	return "string must be an IANA time zone"
 }
 
@@ -177,7 +177,7 @@ func (v stringIsIANATimezoneValidator) MarkdownDescription(ctx context.Context) 
 	return v.Description(ctx)
 }
 
-func (v stringIsIANATimezoneValidator) ValidateString(ctx context.Context, req validator.StringRequest, resp *validator.StringResponse) {
+func (v stringIsIANATimezoneValidator) ValidateString(_ context.Context, req validator.StringRequest, resp *validator.StringResponse) {
 	if req.ConfigValue.IsUnknown() || req.ConfigValue.IsNull() {
 		return
 	}
@@ -206,7 +206,7 @@ func stringIsIANATimezone() stringIsIANATimezoneValidator {
 
 type stringIsIsJQFilterValidator struct{}
 
-func (v stringIsIsJQFilterValidator) Description(ctx context.Context) string {
+func (v stringIsIsJQFilterValidator) Description(_ context.Context) string {
 	return "string must be a JQ filter"
 }
 
@@ -214,7 +214,7 @@ func (v stringIsIsJQFilterValidator) MarkdownDescription(ctx context.Context) st
 	return v.Description(ctx)
 }
 
-func (v stringIsIsJQFilterValidator) ValidateString(ctx context.Context, req validator.StringRequest, resp *validator.StringResponse) {
+func (v stringIsIsJQFilterValidator) ValidateString(_ context.Context, req validator.StringRequest, resp *validator.StringResponse) {
 	if req.ConfigValue.IsUnknown() || req.ConfigValue.IsNull() {
 		return
 	}

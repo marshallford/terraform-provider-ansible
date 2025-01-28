@@ -17,8 +17,6 @@ linters:
   - lll
   - perfsprint
   - recvcheck # TODO look into further
-  - revive
-  - wrapcheck
   - wsl
 
 linters-settings:

@@ -142,20 +142,20 @@ func (m *NavigatorRunResourceModel) Set(ctx context.Context, run navigatorRun) d
 	return diags
 }
 
-func (r *NavigatorRunResource) Metadata(ctx context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
+func (r *NavigatorRunResource) Metadata(_ context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
 	resp.TypeName = fmt.Sprintf("%s_navigator_run", req.ProviderTypeName)
 }
 
 //nolint:dupl,maintidx
-func (r *NavigatorRunResource) Schema(ctx context.Context, req resource.SchemaRequest, resp *resource.SchemaResponse) {
+func (r *NavigatorRunResource) Schema(ctx context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
 	resp.Schema = schema.Schema{
 		Description:         fmt.Sprintf("Run an Ansible playbook. Requires '%s' and a container engine to run within an execution environment (EE).", ansible.NavigatorProgram),
 		MarkdownDescription: fmt.Sprintf("Run an Ansible playbook. Requires `%s` and a container engine to run within an execution environment (EE).", ansible.NavigatorProgram),
 		Attributes: map[string]schema.Attribute{
 			// required
 			"playbook": schema.StringAttribute{
-				Description:         NavigatorRunDescriptions()["playbook"].Description,
-				MarkdownDescription: NavigatorRunDescriptions()["playbook"].MarkdownDescription,
+				Description:         navigatorRunDescriptions()["playbook"].Description,
+				MarkdownDescription: navigatorRunDescriptions()["playbook"].MarkdownDescription,
 				Required:            true,
 				Validators: []validator.String{
 					stringvalidator.LengthAtLeast(1),
@@ -163,8 +163,8 @@ func (r *NavigatorRunResource) Schema(ctx context.Context, req resource.SchemaRe
 				},
 			},
 			"inventory": schema.StringAttribute{
-				Description:         NavigatorRunDescriptions()["inventory"].Description,
-				MarkdownDescription: NavigatorRunDescriptions()["inventory"].MarkdownDescription,
+				Description:         navigatorRunDescriptions()["inventory"].Description,
+				MarkdownDescription: navigatorRunDescriptions()["inventory"].MarkdownDescription,
 				Required:            true,
 				Validators: []validator.String{
 					stringvalidator.LengthAtLeast(1),
@@ -172,8 +172,8 @@ func (r *NavigatorRunResource) Schema(ctx context.Context, req resource.SchemaRe
 			},
 			// optional
 			"working_directory": schema.StringAttribute{
-				Description:         NavigatorRunDescriptions()["working_directory"].Description,
-				MarkdownDescription: NavigatorRunDescriptions()["working_directory"].MarkdownDescription,
+				Description:         navigatorRunDescriptions()["working_directory"].Description,
+				MarkdownDescription: navigatorRunDescriptions()["working_directory"].MarkdownDescription,
 				Optional:            true,
 				Computed:            true,
 				Default:             stringdefault.StaticString(defaultNavigatorRunWorkingDir),
@@ -182,15 +182,15 @@ func (r *NavigatorRunResource) Schema(ctx context.Context, req resource.SchemaRe
 				},
 			},
 			"execution_environment": schema.SingleNestedAttribute{
-				Description:         NavigatorRunDescriptions()["execution_environment"].Description,
-				MarkdownDescription: NavigatorRunDescriptions()["execution_environment"].MarkdownDescription,
+				Description:         navigatorRunDescriptions()["execution_environment"].Description,
+				MarkdownDescription: navigatorRunDescriptions()["execution_environment"].MarkdownDescription,
 				Optional:            true,
 				Computed:            true,
 				Default:             objectdefault.StaticValue(ExecutionEnvironmentModel{}.Defaults()),
 				Attributes: map[string]schema.Attribute{
 					"container_engine": schema.StringAttribute{
-						Description:         ExecutionEnvironmentModel{}.Descriptions()["container_engine"].Description,
-						MarkdownDescription: ExecutionEnvironmentModel{}.Descriptions()["container_engine"].MarkdownDescription,
+						Description:         ExecutionEnvironmentModel{}.descriptions()["container_engine"].Description,
+						MarkdownDescription: ExecutionEnvironmentModel{}.descriptions()["container_engine"].MarkdownDescription,
 						Optional:            true,
 						Computed:            true,
 						Default:             stringdefault.StaticString(defaultNavigatorRunContainerEngine),
@@ -199,15 +199,15 @@ func (r *NavigatorRunResource) Schema(ctx context.Context, req resource.SchemaRe
 						},
 					},
 					"enabled": schema.BoolAttribute{
-						Description:         ExecutionEnvironmentModel{}.Descriptions()["enabled"].Description,
-						MarkdownDescription: ExecutionEnvironmentModel{}.Descriptions()["enabled"].MarkdownDescription,
+						Description:         ExecutionEnvironmentModel{}.descriptions()["enabled"].Description,
+						MarkdownDescription: ExecutionEnvironmentModel{}.descriptions()["enabled"].MarkdownDescription,
 						Optional:            true,
 						Computed:            true,
 						Default:             booldefault.StaticBool(defaultNavigatorRunEEEnabled),
 					},
 					"environment_variables_pass": schema.ListAttribute{
-						Description:         ExecutionEnvironmentModel{}.Descriptions()["environment_variables_pass"].Description,
-						MarkdownDescription: ExecutionEnvironmentModel{}.Descriptions()["environment_variables_pass"].MarkdownDescription,
+						Description:         ExecutionEnvironmentModel{}.descriptions()["environment_variables_pass"].Description,
+						MarkdownDescription: ExecutionEnvironmentModel{}.descriptions()["environment_variables_pass"].MarkdownDescription,
 						Optional:            true,
 						ElementType:         types.StringType,
 						Validators: []validator.List{
@@ -215,8 +215,8 @@ func (r *NavigatorRunResource) Schema(ctx context.Context, req resource.SchemaRe
 						},
 					},
 					"environment_variables_set": schema.MapAttribute{
-						Description:         fmt.Sprintf("%s '%s' is automatically set to the current CRUD operation (%s).", ExecutionEnvironmentModel{}.Descriptions()["environment_variables_set"].Description, navigatorRunOperationEnvVar, wrapElementsJoin(terraformOps([]terraformOp{terraformOpCreate, terraformOpUpdate, terraformOpDelete}).Strings(), "'")),
-						MarkdownDescription: fmt.Sprintf("%s `%s` is automatically set to the current CRUD operation (%s).", ExecutionEnvironmentModel{}.Descriptions()["environment_variables_set"].MarkdownDescription, navigatorRunOperationEnvVar, wrapElementsJoin(terraformOps([]terraformOp{terraformOpCreate, terraformOpUpdate, terraformOpDelete}).Strings(), "`")),
+						Description:         fmt.Sprintf("%s '%s' is automatically set to the current CRUD operation (%s).", ExecutionEnvironmentModel{}.descriptions()["environment_variables_set"].Description, navigatorRunOperationEnvVar, wrapElementsJoin(terraformOps([]terraformOp{terraformOpCreate, terraformOpUpdate, terraformOpDelete}).Strings(), "'")),
+						MarkdownDescription: fmt.Sprintf("%s `%s` is automatically set to the current CRUD operation (%s).", ExecutionEnvironmentModel{}.descriptions()["environment_variables_set"].MarkdownDescription, navigatorRunOperationEnvVar, wrapElementsJoin(terraformOps([]terraformOp{terraformOpCreate, terraformOpUpdate, terraformOpDelete}).Strings(), "`")),
 						Optional:            true,
 						ElementType:         types.StringType,
 						Validators: []validator.Map{
@@ -224,8 +224,8 @@ func (r *NavigatorRunResource) Schema(ctx context.Context, req resource.SchemaRe
 						},
 					},
 					"image": schema.StringAttribute{
-						Description:         ExecutionEnvironmentModel{}.Descriptions()["image"].Description,
-						MarkdownDescription: ExecutionEnvironmentModel{}.Descriptions()["image"].MarkdownDescription,
+						Description:         ExecutionEnvironmentModel{}.descriptions()["image"].Description,
+						MarkdownDescription: ExecutionEnvironmentModel{}.descriptions()["image"].MarkdownDescription,
 						Optional:            true,
 						Computed:            true,
 						Default:             stringdefault.StaticString(defaultNavigatorRunImage),
@@ -234,8 +234,8 @@ func (r *NavigatorRunResource) Schema(ctx context.Context, req resource.SchemaRe
 						},
 					},
 					"pull_arguments": schema.ListAttribute{
-						Description:         ExecutionEnvironmentModel{}.Descriptions()["pull_arguments"].Description,
-						MarkdownDescription: ExecutionEnvironmentModel{}.Descriptions()["pull_arguments"].MarkdownDescription,
+						Description:         ExecutionEnvironmentModel{}.descriptions()["pull_arguments"].Description,
+						MarkdownDescription: ExecutionEnvironmentModel{}.descriptions()["pull_arguments"].MarkdownDescription,
 						Optional:            true,
 						ElementType:         types.StringType,
 						Validators: []validator.List{
@@ -243,8 +243,8 @@ func (r *NavigatorRunResource) Schema(ctx context.Context, req resource.SchemaRe
 						},
 					},
 					"pull_policy": schema.StringAttribute{
-						Description:         ExecutionEnvironmentModel{}.Descriptions()["pull_policy"].Description,
-						MarkdownDescription: ExecutionEnvironmentModel{}.Descriptions()["pull_policy"].MarkdownDescription,
+						Description:         ExecutionEnvironmentModel{}.descriptions()["pull_policy"].Description,
+						MarkdownDescription: ExecutionEnvironmentModel{}.descriptions()["pull_policy"].MarkdownDescription,
 						Optional:            true,
 						Computed:            true,
 						Default:             stringdefault.StaticString(defaultNavigatorRunPullPolicy),
@@ -253,8 +253,8 @@ func (r *NavigatorRunResource) Schema(ctx context.Context, req resource.SchemaRe
 						},
 					},
 					"container_options": schema.ListAttribute{
-						Description:         ExecutionEnvironmentModel{}.Descriptions()["container_options"].Description,
-						MarkdownDescription: ExecutionEnvironmentModel{}.Descriptions()["container_options"].MarkdownDescription,
+						Description:         ExecutionEnvironmentModel{}.descriptions()["container_options"].Description,
+						MarkdownDescription: ExecutionEnvironmentModel{}.descriptions()["container_options"].MarkdownDescription,
 						Optional:            true,
 						ElementType:         types.StringType,
 						Validators: []validator.List{
@@ -264,26 +264,26 @@ func (r *NavigatorRunResource) Schema(ctx context.Context, req resource.SchemaRe
 				},
 			},
 			"ansible_navigator_binary": schema.StringAttribute{
-				Description:         NavigatorRunDescriptions()["ansible_navigator_binary"].Description,
-				MarkdownDescription: NavigatorRunDescriptions()["ansible_navigator_binary"].MarkdownDescription,
+				Description:         navigatorRunDescriptions()["ansible_navigator_binary"].Description,
+				MarkdownDescription: navigatorRunDescriptions()["ansible_navigator_binary"].MarkdownDescription,
 				Optional:            true,
 				Validators: []validator.String{
 					stringvalidator.LengthAtLeast(1),
 				},
 			},
 			"ansible_options": schema.SingleNestedAttribute{
-				Description:         NavigatorRunDescriptions()["ansible_options"].Description,
-				MarkdownDescription: NavigatorRunDescriptions()["ansible_options"].MarkdownDescription,
+				Description:         navigatorRunDescriptions()["ansible_options"].Description,
+				MarkdownDescription: navigatorRunDescriptions()["ansible_options"].MarkdownDescription,
 				Optional:            true,
 				Computed:            true,
 				Default:             objectdefault.StaticValue(AnsibleOptionsModel{}.Defaults()),
 				Attributes: map[string]schema.Attribute{
 					"force_handlers": schema.BoolAttribute{
-						Description: AnsibleOptionsModel{}.Descriptions()["force_handlers"].Description,
+						Description: AnsibleOptionsModel{}.descriptions()["force_handlers"].Description,
 						Optional:    true,
 					},
 					"skip_tags": schema.ListAttribute{
-						Description: AnsibleOptionsModel{}.Descriptions()["skip_tags"].Description,
+						Description: AnsibleOptionsModel{}.descriptions()["skip_tags"].Description,
 						Optional:    true,
 						ElementType: types.StringType,
 						Validators: []validator.List{
@@ -291,14 +291,14 @@ func (r *NavigatorRunResource) Schema(ctx context.Context, req resource.SchemaRe
 						},
 					},
 					"start_at_task": schema.StringAttribute{
-						Description: AnsibleOptionsModel{}.Descriptions()["start_at_task"].Description,
+						Description: AnsibleOptionsModel{}.descriptions()["start_at_task"].Description,
 						Optional:    true,
 						Validators: []validator.String{
 							stringvalidator.LengthAtLeast(1),
 						},
 					},
 					"limit": schema.ListAttribute{
-						Description: AnsibleOptionsModel{}.Descriptions()["limit"].Description,
+						Description: AnsibleOptionsModel{}.descriptions()["limit"].Description,
 						Optional:    true,
 						ElementType: types.StringType,
 						Validators: []validator.List{
@@ -306,7 +306,7 @@ func (r *NavigatorRunResource) Schema(ctx context.Context, req resource.SchemaRe
 						},
 					},
 					"tags": schema.ListAttribute{
-						Description: AnsibleOptionsModel{}.Descriptions()["tags"].Description,
+						Description: AnsibleOptionsModel{}.descriptions()["tags"].Description,
 						Optional:    true,
 						ElementType: types.StringType,
 						Validators: []validator.List{
@@ -314,13 +314,13 @@ func (r *NavigatorRunResource) Schema(ctx context.Context, req resource.SchemaRe
 						},
 					},
 					"private_keys": schema.ListNestedAttribute{
-						Description:         AnsibleOptionsModel{}.Descriptions()["private_keys"].Description,
-						MarkdownDescription: AnsibleOptionsModel{}.Descriptions()["private_keys"].MarkdownDescription,
+						Description:         AnsibleOptionsModel{}.descriptions()["private_keys"].Description,
+						MarkdownDescription: AnsibleOptionsModel{}.descriptions()["private_keys"].MarkdownDescription,
 						Optional:            true,
 						NestedObject: schema.NestedAttributeObject{
 							Attributes: map[string]schema.Attribute{
 								"name": schema.StringAttribute{
-									Description: PrivateKeyModel{}.Descriptions()["name"].Description,
+									Description: PrivateKeyModel{}.descriptions()["name"].Description,
 									Required:    true,
 									Validators: []validator.String{
 										stringvalidator.RegexMatches(
@@ -330,7 +330,7 @@ func (r *NavigatorRunResource) Schema(ctx context.Context, req resource.SchemaRe
 									},
 								},
 								"data": schema.StringAttribute{
-									Description: PrivateKeyModel{}.Descriptions()["data"].Description,
+									Description: PrivateKeyModel{}.descriptions()["data"].Description,
 									Required:    true,
 									Sensitive:   true,
 									Validators: []validator.String{
@@ -341,8 +341,8 @@ func (r *NavigatorRunResource) Schema(ctx context.Context, req resource.SchemaRe
 						},
 					},
 					"known_hosts": schema.ListAttribute{
-						Description:         AnsibleOptionsModel{}.Descriptions()["known_hosts"].Description,
-						MarkdownDescription: AnsibleOptionsModel{}.Descriptions()["known_hosts"].MarkdownDescription,
+						Description:         AnsibleOptionsModel{}.descriptions()["known_hosts"].Description,
+						MarkdownDescription: AnsibleOptionsModel{}.descriptions()["known_hosts"].MarkdownDescription,
 						Optional:            true,
 						Computed:            true,
 						ElementType:         types.StringType,
@@ -351,15 +351,15 @@ func (r *NavigatorRunResource) Schema(ctx context.Context, req resource.SchemaRe
 						},
 					},
 					"host_key_checking": schema.BoolAttribute{
-						Description:         AnsibleOptionsModel{}.Descriptions()["host_key_checking"].Description,
-						MarkdownDescription: AnsibleOptionsModel{}.Descriptions()["host_key_checking"].MarkdownDescription,
+						Description:         AnsibleOptionsModel{}.descriptions()["host_key_checking"].Description,
+						MarkdownDescription: AnsibleOptionsModel{}.descriptions()["host_key_checking"].MarkdownDescription,
 						Optional:            true,
 					},
 				},
 			},
 			"timezone": schema.StringAttribute{
-				Description:         NavigatorRunDescriptions()["timezone"].Description,
-				MarkdownDescription: NavigatorRunDescriptions()["timezone"].MarkdownDescription,
+				Description:         navigatorRunDescriptions()["timezone"].Description,
+				MarkdownDescription: navigatorRunDescriptions()["timezone"].MarkdownDescription,
 				Optional:            true,
 				Computed:            true,
 				Default:             stringdefault.StaticString(defaultNavigatorRunTimezone),
@@ -397,22 +397,22 @@ func (r *NavigatorRunResource) Schema(ctx context.Context, req resource.SchemaRe
 				},
 			},
 			"artifact_queries": schema.MapNestedAttribute{
-				Description:         NavigatorRunDescriptions()["artifact_queries"].Description,
-				MarkdownDescription: NavigatorRunDescriptions()["artifact_queries"].MarkdownDescription,
+				Description:         navigatorRunDescriptions()["artifact_queries"].Description,
+				MarkdownDescription: navigatorRunDescriptions()["artifact_queries"].MarkdownDescription,
 				Optional:            true,
 				NestedObject: schema.NestedAttributeObject{
 					Attributes: map[string]schema.Attribute{
 						"jq_filter": schema.StringAttribute{
-							Description:         ArtifactQueryModel{}.Descriptions()["jq_filter"].Description,
-							MarkdownDescription: ArtifactQueryModel{}.Descriptions()["jq_filter"].MarkdownDescription,
+							Description:         ArtifactQueryModel{}.descriptions()["jq_filter"].Description,
+							MarkdownDescription: ArtifactQueryModel{}.descriptions()["jq_filter"].MarkdownDescription,
 							Required:            true,
 							Validators: []validator.String{
 								stringIsIsJQFilter(),
 							},
 						},
 						"results": schema.ListAttribute{ // TODO switch to a dynamic attribute when supported as an element in a collection
-							Description:         ArtifactQueryModel{}.Descriptions()["results"].Description,
-							MarkdownDescription: ArtifactQueryModel{}.Descriptions()["results"].MarkdownDescription,
+							Description:         ArtifactQueryModel{}.descriptions()["results"].Description,
+							MarkdownDescription: ArtifactQueryModel{}.descriptions()["results"].MarkdownDescription,
 							Computed:            true,
 							ElementType:         types.StringType,
 							PlanModifiers: []planmodifier.List{
@@ -423,15 +423,15 @@ func (r *NavigatorRunResource) Schema(ctx context.Context, req resource.SchemaRe
 				},
 			},
 			"id": schema.StringAttribute{
-				Description: NavigatorRunDescriptions()["id"].Description,
+				Description: navigatorRunDescriptions()["id"].Description,
 				Computed:    true,
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.UseStateForUnknown(),
 				},
 			},
 			"command": schema.StringAttribute{
-				Description:         NavigatorRunDescriptions()["command"].Description,
-				MarkdownDescription: NavigatorRunDescriptions()["command"].MarkdownDescription,
+				Description:         navigatorRunDescriptions()["command"].Description,
+				MarkdownDescription: navigatorRunDescriptions()["command"].MarkdownDescription,
 				Computed:            true,
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.UseStateForUnknown(),
@@ -477,7 +477,7 @@ func (r *NavigatorRunResource) ShouldRun(plan *NavigatorRunResourceModel, state 
 	return false
 }
 
-func (r *NavigatorRunResource) Configure(ctx context.Context, req resource.ConfigureRequest, resp *resource.ConfigureResponse) {
+func (r *NavigatorRunResource) Configure(_ context.Context, req resource.ConfigureRequest, resp *resource.ConfigureResponse) {
 	opts, ok := configureResourceClient(req, resp)
 	if !ok {
 		return
@@ -593,7 +593,7 @@ func (r *NavigatorRunResource) Create(ctx context.Context, req resource.CreateRe
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
 }
 
-func (r *NavigatorRunResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) {
+func (r *NavigatorRunResource) Read(_ context.Context, _ resource.ReadRequest, _ *resource.ReadResponse) {
 }
 
 func (r *NavigatorRunResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {

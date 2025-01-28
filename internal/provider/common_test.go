@@ -10,7 +10,7 @@ func privateKeyTestCases() []TestCase {
 	return []TestCase{
 		{
 			name: "ee_enabled",
-			variables: func(t *testing.T) config.Variables { //nolint:thelper
+			variables: func(_ *testing.T) config.Variables {
 				return config.Variables{
 					"ee_enabled": config.BoolVariable(true),
 				}
@@ -21,7 +21,7 @@ func privateKeyTestCases() []TestCase {
 		},
 		{
 			name: "ee_disabled",
-			variables: func(t *testing.T) config.Variables { //nolint:thelper
+			variables: func(_ *testing.T) config.Variables {
 				return config.Variables{
 					"ee_enabled": config.BoolVariable(false),
 				}
