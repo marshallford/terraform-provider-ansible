@@ -110,7 +110,7 @@ func (m *NavigatorRunEphemeralResourceModel) Set(ctx context.Context, run naviga
 
 	var optsModel AnsibleOptionsModel
 	diags.Append(m.AnsibleOptions.As(ctx, &optsModel, basetypes.ObjectAsOptions{})...)
-	diags.Append(optsModel.Set(ctx, &run)...)
+	diags.Append(optsModel.Set(ctx, run)...)
 
 	optsResults, newDiags := types.ObjectValueFrom(ctx, AnsibleOptionsModel{}.AttrTypes(), optsModel)
 	diags.Append(newDiags...)

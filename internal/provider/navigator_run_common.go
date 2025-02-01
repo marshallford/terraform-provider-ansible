@@ -300,7 +300,7 @@ func (m AnsibleOptionsModel) Value(ctx context.Context, options *ansible.Options
 	return diags
 }
 
-func (m *AnsibleOptionsModel) Set(ctx context.Context, run *navigatorRun) diag.Diagnostics {
+func (m *AnsibleOptionsModel) Set(ctx context.Context, run navigatorRun) diag.Diagnostics {
 	var diags diag.Diagnostics
 
 	if m.KnownHosts.IsUnknown() {
