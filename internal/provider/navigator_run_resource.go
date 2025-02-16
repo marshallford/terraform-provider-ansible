@@ -6,6 +6,7 @@ import (
 	"regexp"
 
 	"github.com/google/uuid"
+	"github.com/hashicorp/terraform-plugin-framework-jsontypes/jsontypes"
 	"github.com/hashicorp/terraform-plugin-framework-timeouts/resource/timeouts"
 	"github.com/hashicorp/terraform-plugin-framework-validators/listvalidator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/mapvalidator"
@@ -414,7 +415,7 @@ func (r *NavigatorRunResource) Schema(ctx context.Context, _ resource.SchemaRequ
 							Description:         ArtifactQueryModel{}.descriptions()["results"].Description,
 							MarkdownDescription: ArtifactQueryModel{}.descriptions()["results"].MarkdownDescription,
 							Computed:            true,
-							ElementType:         types.StringType,
+							ElementType:         jsontypes.NormalizedType{},
 							PlanModifiers: []planmodifier.List{
 								listplanmodifier.UseStateForUnknown(),
 							},
