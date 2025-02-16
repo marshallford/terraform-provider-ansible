@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/hashicorp/terraform-plugin-framework-jsontypes/jsontypes"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/types"
@@ -355,7 +356,7 @@ func (ArtifactQueryModel) descriptions() map[string]attrDescription {
 func (ArtifactQueryModel) AttrTypes() map[string]attr.Type {
 	return map[string]attr.Type{
 		"jq_filter": types.StringType,
-		"results":   types.ListType{ElemType: types.StringType},
+		"results":   types.ListType{ElemType: jsontypes.NormalizedType{}},
 	}
 }
 
@@ -373,7 +374,7 @@ func (m *ArtifactQueryModel) Set(ctx context.Context, query ansible.ArtifactQuer
 
 	m.JQFilter = types.StringValue(query.JQFilter)
 
-	resultsValue, newDiags := types.ListValueFrom(ctx, types.StringType, query.Results)
+	resultsValue, newDiags := types.ListValueFrom(ctx, jsontypes.NormalizedType{}, query.Results)
 	diags.Append(newDiags...)
 	m.Results = resultsValue
 

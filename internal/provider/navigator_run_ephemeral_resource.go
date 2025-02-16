@@ -7,6 +7,7 @@ import (
 	"regexp"
 
 	"github.com/google/uuid"
+	"github.com/hashicorp/terraform-plugin-framework-jsontypes/jsontypes"
 	"github.com/hashicorp/terraform-plugin-framework-timeouts/ephemeral/timeouts"
 	"github.com/hashicorp/terraform-plugin-framework-validators/listvalidator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/mapvalidator"
@@ -421,7 +422,7 @@ func (er *NavigatorRunEphemeralResource) Schema(ctx context.Context, _ ephemeral
 							Description:         ArtifactQueryModel{}.descriptions()["results"].Description,
 							MarkdownDescription: ArtifactQueryModel{}.descriptions()["results"].MarkdownDescription,
 							Computed:            true,
-							ElementType:         types.StringType,
+							ElementType:         jsontypes.NormalizedType{},
 						},
 					},
 				},
