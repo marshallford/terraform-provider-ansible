@@ -4,8 +4,6 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-
-	jq "github.com/itchyny/gojq"
 )
 
 type ArtifactQuery struct {
@@ -29,14 +27,6 @@ func QueryPlaybookArtifact(dir string, queries map[string]ArtifactQuery) error {
 
 		query.Results = results
 		queries[name] = query
-	}
-
-	return nil
-}
-
-func ValidateJQFilter(filter string) error {
-	if _, err := jq.Parse(filter); err != nil {
-		return fmt.Errorf("failed to parse JQ filter, %w", err)
 	}
 
 	return nil

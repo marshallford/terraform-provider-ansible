@@ -144,7 +144,7 @@ func addError(diags *diag.Diagnostics, summary string, err error) bool {
 	return false
 }
 
-func addPathError(diags *diag.Diagnostics, path path.Path, summary string, err error) bool {
+func addPathError(diags *diag.Diagnostics, path path.Path, summary string, err error) bool { //nolint:unparam
 	if err != nil {
 		diags.AddAttributeError(path, summary, fmt.Sprintf("%s: %s", diagDetailPrefix, err))
 

@@ -4,7 +4,6 @@ package provider
 import (
 	"context"
 	"fmt"
-	"regexp"
 
 	"github.com/google/uuid"
 	"github.com/hashicorp/terraform-plugin-framework-jsontypes/jsontypes"
@@ -270,7 +269,7 @@ func (d *NavigatorRunDataSource) Schema(ctx context.Context, _ datasource.Schema
 						Optional:            true,
 						Computed:            true,
 						Validators: []validator.String{
-							stringvalidator.LengthAtLeast(1),
+							stringIsContainerImageName(),
 						},
 					},
 					"pull_arguments": schema.ListAttribute{
@@ -361,10 +360,7 @@ func (d *NavigatorRunDataSource) Schema(ctx context.Context, _ datasource.Schema
 									Description: PrivateKeyModel{}.descriptions()["name"].Description,
 									Required:    true,
 									Validators: []validator.String{
-										stringvalidator.RegexMatches(
-											regexp.MustCompile(`^[a-zA-Z0-9]+(-[a-zA-Z0-9]+)*$`),
-											"Must only contain dashes and alphanumeric characters",
-										),
+										stringIsSSHPrivateKeyName(),
 									},
 								},
 								"data": schema.StringAttribute{
@@ -415,7 +411,7 @@ func (d *NavigatorRunDataSource) Schema(ctx context.Context, _ datasource.Schema
 							MarkdownDescription: ArtifactQueryModel{}.descriptions()["jq_filter"].MarkdownDescription,
 							Required:            true,
 							Validators: []validator.String{
-								stringIsIsJQFilter(),
+								stringIsJQFilter(),
 							},
 						},
 						"results": schema.ListAttribute{ // TODO switch to a dynamic attribute when supported as an element in a collection

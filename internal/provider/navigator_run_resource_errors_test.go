@@ -56,19 +56,23 @@ func TestAccNavigatorRunResource_errors(t *testing.T) {
 	}{
 		{
 			name:     "artifact_query",
-			expected: regexp.MustCompile("Not a valid JQ filter"),
+			expected: regexp.MustCompile("failed to parse JQ filter"),
 		},
 		{
 			name:     "env_var_name_empty",
-			expected: regexp.MustCompile("must not be empty"),
+			expected: regexp.MustCompile(`must(\s)not(\s)be(\s)empty`),
 		},
 		{
 			name:     "env_var_name_invalid",
-			expected: regexp.MustCompile("must consist only of printable ASCII characters"),
+			expected: regexp.MustCompile(`must(\s)consist(\s)only(\s)of(\s)printable(\s)ASCII`),
+		},
+		{
+			name:     "image",
+			expected: regexp.MustCompile("failed to parse container image"),
 		},
 		{
 			name:     "known_hosts",
-			expected: regexp.MustCompile("must not be empty(?s)(.*)illegal base64 data(?s)(.*)multiple known host entries"),
+			expected: regexp.MustCompile("(?s)SSH known host must not be empty(.*)failed to parse SSH known host(.*)must not include multiple"),
 		},
 		{
 			name: "navigator_preflight",
@@ -89,7 +93,7 @@ func TestAccNavigatorRunResource_errors(t *testing.T) {
 		},
 		{
 			name:     "private_keys",
-			expected: regexp.MustCompile("Not a SSH private key(?s)(.*)Not an unencrypted SSH private key"),
+			expected: regexp.MustCompile(`(?s)SSH private key must be a(.*)key(\s)must(\s)be(\s)unencrypted(.*)key(\s)name(\s)can(\s)only(\s)contain`),
 		},
 		{
 			name:     "timeout",
@@ -97,11 +101,11 @@ func TestAccNavigatorRunResource_errors(t *testing.T) {
 		},
 		{
 			name:     "timezone_empty",
-			expected: regexp.MustCompile("must not be empty"),
+			expected: regexp.MustCompile("IANA time zone must not be empty"),
 		},
 		{
 			name:     "timezone_invalid",
-			expected: regexp.MustCompile("Not a valid IANA time zone"),
+			expected: regexp.MustCompile("IANA time zone not found"),
 		},
 		{
 			name: "working_directory",

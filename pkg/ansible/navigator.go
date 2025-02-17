@@ -27,6 +27,7 @@ var (
 	ErrNavigator               = fmt.Errorf("%s is not functional", NavigatorProgram)
 	ErrPlaybookPath            = fmt.Errorf("%s does not exist in PATH", PlaybookProgram)
 	ErrPlaybook                = fmt.Errorf("%s is not functional", PlaybookProgram)
+	ErrValidation              = errors.New("validation error")
 )
 
 func ContainerEngineOptions(auto bool) []string {
