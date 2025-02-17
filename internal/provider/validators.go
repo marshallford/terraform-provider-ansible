@@ -2,15 +2,9 @@ package provider
 
 import (
 	"context"
-	"errors"
-	"time"
-	_ "time/tzdata" // embedded copy of the timezone database
-	"unicode"
 
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/marshallford/terraform-provider-ansible/pkg/ansible"
-	"golang.org/x/crypto/ssh"
-	"gopkg.in/yaml.v3"
 )
 
 type stringIsSSHPrivateKeyValidator struct{}
@@ -28,30 +22,35 @@ func (v stringIsSSHPrivateKeyValidator) ValidateString(_ context.Context, req va
 		return
 	}
 
-	_, err := ssh.ParseRawPrivateKey([]byte(req.ConfigValue.ValueString()))
-
-	var passphraseErr *ssh.PassphraseMissingError
-	if errors.As(err, &passphraseErr) {
-		resp.Diagnostics.AddAttributeError(
-			req.Path,
-			"Not an unencrypted SSH private key",
-			"Must be an unencrypted (meaning no passphrase) private key",
-		)
-
-		return
-	}
-
-	if err != nil {
-		resp.Diagnostics.AddAttributeError(
-			req.Path,
-			"Not a SSH private key",
-			"Must be a RSA, DSA, ECDSA, or Ed25519 private key formatted as PKCS#1, PKCS#8, OpenSSL, or OpenSSH",
-		)
-	}
+	err := ansible.ValidateSSHPrivateKey(req.ConfigValue.ValueString())
+	addPathError(&resp.Diagnostics, req.Path, "Not an unencrypted SSH private key", err)
 }
 
 func stringIsSSHPrivateKey() stringIsSSHPrivateKeyValidator {
 	return stringIsSSHPrivateKeyValidator{}
+}
+
+type stringIsSSHPrivateKeyNameValidator struct{}
+
+func (v stringIsSSHPrivateKeyNameValidator) Description(_ context.Context) string {
+	return "string must be a valid SSH private key name"
+}
+
+func (v stringIsSSHPrivateKeyNameValidator) MarkdownDescription(ctx context.Context) string {
+	return v.Description(ctx)
+}
+
+func (v stringIsSSHPrivateKeyNameValidator) ValidateString(_ context.Context, req validator.StringRequest, resp *validator.StringResponse) {
+	if req.ConfigValue.IsUnknown() || req.ConfigValue.IsNull() {
+		return
+	}
+
+	err := ansible.ValidateSSHPrivateKeyName(req.ConfigValue.ValueString())
+	addPathError(&resp.Diagnostics, req.Path, "Not a valid SSH private key name", err)
+}
+
+func stringIsSSHPrivateKeyName() stringIsSSHPrivateKeyNameValidator {
+	return stringIsSSHPrivateKeyNameValidator{}
 }
 
 type stringIsSSHKnownHostValidator struct{}
@@ -69,27 +68,8 @@ func (v stringIsSSHKnownHostValidator) ValidateString(_ context.Context, req val
 		return
 	}
 
-	if req.ConfigValue.ValueString() == "" {
-		resp.Diagnostics.AddAttributeError(
-			req.Path,
-			"Not a SSH known host entry",
-			"Known host entry must not be empty",
-		)
-
-		return
-	}
-
-	_, _, _, _, rest, err := ssh.ParseKnownHosts([]byte(req.ConfigValue.ValueString())) //nolint:dogsled
-
-	addPathError(&resp.Diagnostics, req.Path, "Not a SSH known host entry", err)
-
-	if len(rest) > 0 {
-		resp.Diagnostics.AddAttributeError(
-			req.Path,
-			"Not a single SSH known host entry",
-			"Must not include multiple known host entries or additional data",
-		)
-	}
+	err := ansible.ValidateSSHKnownHost(req.ConfigValue.ValueString())
+	addPathError(&resp.Diagnostics, req.Path, "Not a single SSH known host entry", err)
 }
 
 func stringIsSSHKnownHost() stringIsSSHKnownHostValidator {
@@ -111,27 +91,8 @@ func (v stringIsEnvVarNameValidator) ValidateString(_ context.Context, req valid
 		return
 	}
 
-	if req.ConfigValue.ValueString() == "" {
-		resp.Diagnostics.AddAttributeError(
-			req.Path,
-			"Not a valid environment variable name",
-			"Environment variable name must not be empty",
-		)
-
-		return
-	}
-
-	for _, r := range req.ConfigValue.ValueString() {
-		if r > unicode.MaxASCII || !unicode.IsPrint(r) || r == '=' {
-			resp.Diagnostics.AddAttributeError(
-				req.Path,
-				"Not a valid environment variable name",
-				"Environment variable name must consist only of printable ASCII characters other than '='",
-			)
-
-			return
-		}
-	}
+	err := ansible.ValidateEnvVarName(req.ConfigValue.ValueString())
+	addPathError(&resp.Diagnostics, req.Path, "Not a valid environment variable name", err)
 }
 
 func stringIsEnvVarName() stringIsEnvVarNameValidator {
@@ -153,13 +114,7 @@ func (v stringIsYAMLValidator) ValidateString(_ context.Context, req validator.S
 		return
 	}
 
-	var output any
-	err := yaml.Unmarshal([]byte(req.ConfigValue.ValueString()), &output)
-	if addPathError(&resp.Diagnostics, req.Path, "Not valid YAML", err) {
-		return
-	}
-
-	_, err = yaml.Marshal(output)
+	err := ansible.ValidateYAML(req.ConfigValue.ValueString())
 	addPathError(&resp.Diagnostics, req.Path, "Not valid YAML", err)
 }
 
@@ -182,21 +137,7 @@ func (v stringIsIANATimezoneValidator) ValidateString(_ context.Context, req val
 		return
 	}
 
-	if req.ConfigValue.ValueString() == "" {
-		resp.Diagnostics.AddAttributeError(
-			req.Path,
-			"Not a valid IANA time zone",
-			"IANA time zone must not be empty",
-		)
-
-		return
-	}
-
-	if req.ConfigValue.ValueString() == "local" {
-		return
-	}
-
-	_, err := time.LoadLocation(req.ConfigValue.ValueString())
+	err := ansible.ValidateIANATimezone(req.ConfigValue.ValueString())
 	addPathError(&resp.Diagnostics, req.Path, "Not a valid IANA time zone, use 'local' for the system time zone", err)
 }
 
@@ -204,17 +145,17 @@ func stringIsIANATimezone() stringIsIANATimezoneValidator {
 	return stringIsIANATimezoneValidator{}
 }
 
-type stringIsIsJQFilterValidator struct{}
+type stringIsJQFilterValidator struct{}
 
-func (v stringIsIsJQFilterValidator) Description(_ context.Context) string {
+func (v stringIsJQFilterValidator) Description(_ context.Context) string {
 	return "string must be a JQ filter"
 }
 
-func (v stringIsIsJQFilterValidator) MarkdownDescription(ctx context.Context) string {
+func (v stringIsJQFilterValidator) MarkdownDescription(ctx context.Context) string {
 	return v.Description(ctx)
 }
 
-func (v stringIsIsJQFilterValidator) ValidateString(_ context.Context, req validator.StringRequest, resp *validator.StringResponse) {
+func (v stringIsJQFilterValidator) ValidateString(_ context.Context, req validator.StringRequest, resp *validator.StringResponse) {
 	if req.ConfigValue.IsUnknown() || req.ConfigValue.IsNull() {
 		return
 	}
@@ -223,6 +164,29 @@ func (v stringIsIsJQFilterValidator) ValidateString(_ context.Context, req valid
 	addPathError(&resp.Diagnostics, req.Path, "Not a valid JQ filter", err)
 }
 
-func stringIsIsJQFilter() stringIsIsJQFilterValidator {
-	return stringIsIsJQFilterValidator{}
+func stringIsJQFilter() stringIsJQFilterValidator {
+	return stringIsJQFilterValidator{}
+}
+
+type stringIsContainerImageNameValidator struct{}
+
+func (v stringIsContainerImageNameValidator) Description(_ context.Context) string {
+	return "string must be a container image name"
+}
+
+func (v stringIsContainerImageNameValidator) MarkdownDescription(ctx context.Context) string {
+	return v.Description(ctx)
+}
+
+func (v stringIsContainerImageNameValidator) ValidateString(_ context.Context, req validator.StringRequest, resp *validator.StringResponse) {
+	if req.ConfigValue.IsUnknown() || req.ConfigValue.IsNull() {
+		return
+	}
+
+	err := ansible.ValidateContainerImageName(req.ConfigValue.ValueString())
+	addPathError(&resp.Diagnostics, req.Path, "Not a valid container image name", err)
+}
+
+func stringIsContainerImageName() stringIsContainerImageNameValidator {
+	return stringIsContainerImageNameValidator{}
 }
