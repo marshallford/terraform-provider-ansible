@@ -44,11 +44,14 @@ func testDefaultConfigVariables(t *testing.T) config.Variables {
 	}
 }
 
-func testConfigVariables(t *testing.T, overrides config.Variables) config.Variables {
+func testConfigVariables(t *testing.T, overrides ...config.Variables) config.Variables {
 	t.Helper()
 
 	variables := testDefaultConfigVariables(t)
-	maps.Copy(variables, overrides)
+
+	for _, override := range overrides {
+		maps.Copy(variables, override)
+	}
 
 	return variables
 }

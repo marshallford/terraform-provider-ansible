@@ -142,3 +142,40 @@ resource "ansible_navigator_run" "known_hosts" {
     ]
   }
 }
+
+# 11. compare previous inventory with current inventory
+resource "ansible_navigator_run" "compare_inventory" {
+  playbook = <<-EOT
+  - hosts: all
+    tasks:
+    - name: Get inventory of previous run
+      ansible.builtin.command:
+        cmd: "ansible-inventory --list -i {{ lookup('ansible.builtin.env', 'ANSIBLE_TF_PREVIOUS_INVENTORY') }}"
+      register: previous_inventory
+      delegate_to: localhost
+      run_once: true
+      when: lookup('ansible.builtin.env', 'ANSIBLE_TF_OPERATION') == 'update'
+    - name: Get inventory of current run
+      ansible.builtin.command:
+        cmd: "ansible-inventory --list -i {{ inventory_file }}"
+      register: current_inventory
+      delegate_to: localhost
+      run_once: true
+      when: lookup('ansible.builtin.env', 'ANSIBLE_TF_OPERATION') == 'update'
+    - name: Compare
+      ansible.builtin.debug:
+        msg: "{{ previous_hosts | difference(current_hosts) }}"
+      vars:
+        previous_hosts: "{{ (previous_inventory.stdout | from_json)._meta.hostvars.keys() | list }}"
+        current_hosts: "{{ (current_inventory.stdout | from_json)._meta.hostvars.keys() | list }}"
+      when: lookup('ansible.builtin.env', 'ANSIBLE_TF_OPERATION') == 'update'
+  EOT
+  inventory = yamlencode({
+    all = {
+      hosts = {
+        a = { ansible_host = "host-a.example.com" }
+        b = { ansible_host = "host-b.example.com" }
+      }
+    }
+  })
+}

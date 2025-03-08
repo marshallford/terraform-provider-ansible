@@ -6,7 +6,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-testing/config"
 )
 
-func privateKeyTestCases() []TestCase {
+func EETestCases() []TestCase {
 	return []TestCase{
 		{
 			name: "ee_enabled",

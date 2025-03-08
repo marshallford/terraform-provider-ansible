@@ -218,9 +218,54 @@ func TestAccNavigatorRunResource_known_hosts(t *testing.T) {
 	})
 }
 
+func TestAccNavigatorRunResource_previous_inventory(t *testing.T) { //nolint:paralleltest
+	for _, test := range EETestCases() { //nolint:paralleltest
+		t.Run(test.name, func(t *testing.T) {
+			test.setup(t)
+
+			variables := config.Variables{}
+			if test.variables != nil {
+				variables = test.variables(t)
+			}
+
+			resource.Test(t, resource.TestCase{
+				PreCheck:                 func() { testPreCheck(t) },
+				ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+				Steps: []resource.TestStep{
+					{
+						Config: testTerraformConfig(t, filepath.Join("navigator_run_resource", "previous_inventory")),
+						ConfigVariables: testConfigVariables(t, variables, config.Variables{
+							"inventory_file": config.StringVariable(filepath.Join("testdata", "navigator_run_resource", "previous_inventory", "create_inventory.yaml")),
+						}),
+					},
+					{
+						Config: testTerraformConfig(t, filepath.Join("navigator_run_resource", "previous_inventory")),
+						ConfigVariables: testConfigVariables(t, variables, config.Variables{
+							"inventory_file": config.StringVariable(filepath.Join("testdata", "navigator_run_resource", "previous_inventory", "update_inventory.yaml")),
+						}),
+						ConfigPlanChecks: resource.ConfigPlanChecks{
+							PreApply: []plancheck.PlanCheck{
+								plancheck.ExpectNonEmptyPlan(),
+								plancheck.ExpectResourceAction(navigatorRunResource, plancheck.ResourceActionUpdate),
+							},
+						},
+						ConfigStateChecks: []statecheck.StateCheck{
+							statecheck.ExpectKnownOutputValue("previous_hosts", knownvalue.ListExact([]knownvalue.Check{
+								knownvalue.StringExact("a"),
+								knownvalue.StringExact("b"),
+								knownvalue.StringExact("c"),
+							})),
+						},
+					},
+				},
+			})
+		})
+	}
+}
+
 //nolint:dupl
 func TestAccNavigatorRunResource_private_keys(t *testing.T) { //nolint:paralleltest
-	for _, test := range privateKeyTestCases() { //nolint:paralleltest
+	for _, test := range EETestCases() { //nolint:paralleltest
 		t.Run(test.name, func(t *testing.T) {
 			test.setup(t)
 

@@ -1,0 +1,6 @@
+all:
+  hosts:
+    a:
+      ansible_host: a.example.com
+    c:
+      ansible_host: c.example.com

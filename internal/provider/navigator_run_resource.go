@@ -57,13 +57,18 @@ type NavigatorRunResourceModel struct {
 	Timeouts               timeouts.Value `tfsdk:"timeouts"`
 }
 
-func (m NavigatorRunResourceModel) Value(ctx context.Context, run *navigatorRun, opts *providerOptions, runs uint32) diag.Diagnostics {
+func (m NavigatorRunResourceModel) Value(ctx context.Context, run *navigatorRun, opts *providerOptions, runs uint32, previousInventory *string) diag.Diagnostics {
 	var diags diag.Diagnostics
 
 	run.dir = runDir(opts.BaseRunDirectory, m.ID.ValueString(), runs)
 	run.persistDir = opts.PersistRunDirectory
 	run.playbook = m.Playbook.ValueString()
-	run.inventory = m.Inventory.ValueString()
+
+	run.inventories = []ansible.Inventory{{Name: navigatorRunInventoryName, Contents: m.Inventory.ValueString()}}
+	if previousInventory != nil {
+		run.inventories = append(run.inventories, ansible.Inventory{Name: navigatorRunPrevInventoryName, Contents: *previousInventory, Exclude: true})
+	}
+
 	run.workingDir = m.WorkingDirectory.ValueString()
 	run.navigatorBinary = m.AnsibleNavigatorBinary.ValueString()
 
@@ -163,8 +168,8 @@ func (r *NavigatorRunResource) Schema(ctx context.Context, _ resource.SchemaRequ
 				},
 			},
 			"inventory": schema.StringAttribute{
-				Description:         navigatorRunDescriptions()["inventory"].Description,
-				MarkdownDescription: navigatorRunDescriptions()["inventory"].MarkdownDescription,
+				Description:         fmt.Sprintf("%s In addition, the environment variable '%s' is set to the path of the last applied inventory when the resource is updated.", navigatorRunDescriptions()["inventory"].Description, navigatorRunPrevInventoryEnvVar),
+				MarkdownDescription: fmt.Sprintf("%s In addition, the environment variable `%s` is set to the path of the last applied inventory when the resource is updated.", navigatorRunDescriptions()["inventory"].MarkdownDescription, navigatorRunPrevInventoryEnvVar),
 				Required:            true,
 				Validators: []validator.String{
 					stringvalidator.LengthAtLeast(1),
@@ -574,7 +579,7 @@ func (r *NavigatorRunResource) Create(ctx context.Context, req resource.CreateRe
 	data.ID = types.StringValue(uuid.New().String())
 
 	var navigatorRun navigatorRun
-	resp.Diagnostics.Append(data.Value(ctx, &navigatorRun, r.opts, runs)...)
+	resp.Diagnostics.Append(data.Value(ctx, &navigatorRun, r.opts, runs, nil)...)
 
 	if resp.Diagnostics.HasError() {
 		return
@@ -634,7 +639,7 @@ func (r *NavigatorRunResource) Update(ctx context.Context, req resource.UpdateRe
 	defer cancel()
 
 	var navigatorRun navigatorRun
-	resp.Diagnostics.Append(data.Value(ctx, &navigatorRun, r.opts, runs)...)
+	resp.Diagnostics.Append(data.Value(ctx, &navigatorRun, r.opts, runs, state.Inventory.ValueStringPointer())...)
 
 	if resp.Diagnostics.HasError() {
 		return
@@ -682,7 +687,7 @@ func (r *NavigatorRunResource) Delete(ctx context.Context, req resource.DeleteRe
 	defer cancel()
 
 	var navigatorRun navigatorRun
-	resp.Diagnostics.Append(data.Value(ctx, &navigatorRun, r.opts, runs)...)
+	resp.Diagnostics.Append(data.Value(ctx, &navigatorRun, r.opts, runs, nil)...)
 
 	if resp.Diagnostics.HasError() {
 		return

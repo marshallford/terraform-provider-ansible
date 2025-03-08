@@ -157,6 +157,43 @@ resource "ansible_navigator_run" "known_hosts" {
     ]
   }
 }
+
+# 11. compare previous inventory with current inventory
+resource "ansible_navigator_run" "compare_inventory" {
+  playbook = <<-EOT
+  - hosts: all
+    tasks:
+    - name: Get inventory of previous run
+      ansible.builtin.command:
+        cmd: "ansible-inventory --list -i {{ lookup('ansible.builtin.env', 'ANSIBLE_TF_PREVIOUS_INVENTORY') }}"
+      register: previous_inventory
+      delegate_to: localhost
+      run_once: true
+      when: lookup('ansible.builtin.env', 'ANSIBLE_TF_OPERATION') == 'update'
+    - name: Get inventory of current run
+      ansible.builtin.command:
+        cmd: "ansible-inventory --list -i {{ inventory_file }}"
+      register: current_inventory
+      delegate_to: localhost
+      run_once: true
+      when: lookup('ansible.builtin.env', 'ANSIBLE_TF_OPERATION') == 'update'
+    - name: Compare
+      ansible.builtin.debug:
+        msg: "{{ previous_hosts | difference(current_hosts) }}"
+      vars:
+        previous_hosts: "{{ (previous_inventory.stdout | from_json)._meta.hostvars.keys() | list }}"
+        current_hosts: "{{ (current_inventory.stdout | from_json)._meta.hostvars.keys() | list }}"
+      when: lookup('ansible.builtin.env', 'ANSIBLE_TF_OPERATION') == 'update'
+  EOT
+  inventory = yamlencode({
+    all = {
+      hosts = {
+        a = { ansible_host = "host-a.example.com" }
+        b = { ansible_host = "host-b.example.com" }
+      }
+    }
+  })
+}
 ```
 
 ### Example `ansible.cfg`
@@ -187,7 +224,7 @@ pipelining=True
 
 ### Required
 
-- `inventory` (String) Ansible [inventory](https://docs.ansible.com/ansible/latest/getting_started/get_started_inventory.html) contents.
+- `inventory` (String) Ansible [inventory](https://docs.ansible.com/ansible/latest/getting_started/get_started_inventory.html) contents. The environment variable `ANSIBLE_TF_INVENTORY` is set to the path of the inventory in cases where `{{ inventory_file }}` cannot be referenced. In addition, the environment variable `ANSIBLE_TF_PREVIOUS_INVENTORY` is set to the path of the last applied inventory when the resource is updated.
 - `playbook` (String) Ansible [playbook](https://docs.ansible.com/ansible/latest/playbook_guide/playbooks_intro.html) contents.
 
 ### Optional

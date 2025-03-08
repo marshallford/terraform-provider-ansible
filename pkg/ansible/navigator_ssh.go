@@ -24,12 +24,12 @@ type PrivateKey struct {
 
 type KnownHost = string
 
-func privateKeyPath(dir string, key string, eeEnabled bool) string {
+func PrivateKeyPath(dir string, name string, eeEnabled bool) string {
 	if eeEnabled {
-		return strings.Join([]string{eePrivateKeysDir, key}, "/") // assume EE is unix-like
+		return strings.Join([]string{eePrivateKeysDir, name}, "/") // assume EE is unix-like
 	}
 
-	return filepath.Join(dir, privateKeysDir, key)
+	return filepath.Join(dir, privateKeysDir, name)
 }
 
 func CreatePrivateKeys(dir string, keys []PrivateKey, settings *NavigatorSettings) error {
@@ -54,7 +54,7 @@ func CreatePrivateKeys(dir string, keys []PrivateKey, settings *NavigatorSetting
 	return nil
 }
 
-func knownHostsPath(dir string, eeEnabled bool) string {
+func KnownHostsPath(dir string, eeEnabled bool) string {
 	if eeEnabled {
 		return strings.Join([]string{eeKnownHostsDir, knownHostsFile}, "/") // assume EE is unix-like
 	}

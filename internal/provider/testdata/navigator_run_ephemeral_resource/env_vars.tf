@@ -6,6 +6,7 @@ ephemeral "ansible_navigator_run" "test" {
     tasks:
     - ansible.builtin.assert:
         that:
+        - lookup('ansible.builtin.env', 'ANSIBLE_TF_INVENTORY') != ''
         - lookup('ansible.builtin.env', 'ANSIBLE_TF_OPERATION') == 'open'
         - lookup('ansible.builtin.env', 'TF_ACC') == '1'
         - lookup('ansible.builtin.env', 'TESTING') == 'abc'
