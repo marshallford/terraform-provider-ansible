@@ -7,7 +7,7 @@ data "ansible_navigator_run" "test" {
     - ansible.builtin.debug:
         msg: "{{ some_var }}"
     - ansible.builtin.assert:
-      that: inventory_hostname == "local_container"
+        that: inventory_hostname == "local_container"
   EOT
   inventory = yamlencode({
     all = {
