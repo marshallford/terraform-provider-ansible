@@ -14,8 +14,12 @@ import (
 )
 
 const (
+	navigatorRunInventoryName          = "terraform"
+	navigatorRunPrevInventoryName      = "previous-terraform"
 	navigatorRunDir                    = "tf-ansible-navigator-run"
 	navigatorRunOperationEnvVar        = "ANSIBLE_TF_OPERATION"
+	navigatorRunInventoryEnvVar        = "ANSIBLE_TF_INVENTORY"
+	navigatorRunPrevInventoryEnvVar    = "ANSIBLE_TF_PREVIOUS_INVENTORY"
 	defaultNavigatorRunWorkingDir      = "."
 	defaultNavigatorRunTimeout         = 10 * time.Minute
 	defaultNavigatorRunContainerEngine = ansible.ContainerEngineAuto
@@ -68,7 +72,7 @@ type navigatorRun struct {
 	dir               string
 	persistDir        bool
 	playbook          string
-	inventory         string
+	inventories       []ansible.Inventory
 	workingDir        string
 	navigatorBinary   string
 	options           ansible.Options
@@ -113,11 +117,11 @@ func run(ctx context.Context, diags *diag.Diagnostics, timeout time.Duration, op
 	err = ansible.CreateRunDir(run.dir)
 	addError(diags, "Run directory not created", err)
 
-	err = ansible.CreatePlaybookFile(run.dir, run.playbook)
-	addError(diags, "Ansible playbook file not created", err)
+	err = ansible.CreatePlaybook(run.dir, run.playbook)
+	addError(diags, "Ansible playbook not created", err)
 
-	err = ansible.CreateInventoryFile(run.dir, run.inventory)
-	addError(diags, "Ansible inventory file not created", err)
+	err = ansible.CreateInventories(run.dir, run.inventories, &run.navigatorSettings)
+	addError(diags, "Ansible inventories not created", err)
 
 	if len(run.privateKeys) > 0 {
 		err = ansible.CreatePrivateKeys(run.dir, run.privateKeys, &run.navigatorSettings)
@@ -130,6 +134,21 @@ func run(ctx context.Context, diags *diag.Diagnostics, timeout time.Duration, op
 	}
 
 	run.navigatorSettings.EnvironmentVariablesSet[navigatorRunOperationEnvVar] = operation.String()
+	run.navigatorSettings.EnvironmentVariablesSet[navigatorRunInventoryEnvVar] = ansible.InventoryPath(
+		run.dir,
+		navigatorRunInventoryName,
+		run.navigatorSettings.EEEnabled,
+		false,
+	)
+	if operation == terraformOpUpdate {
+		run.navigatorSettings.EnvironmentVariablesSet[navigatorRunPrevInventoryEnvVar] = ansible.InventoryPath(
+			run.dir,
+			navigatorRunPrevInventoryName,
+			run.navigatorSettings.EEEnabled,
+			true,
+		)
+	}
+
 	run.navigatorSettings.Timeout = timeout
 
 	navigatorSettingsContents, err := ansible.GenerateNavigatorSettings(&run.navigatorSettings)

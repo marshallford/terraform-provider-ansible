@@ -12,13 +12,13 @@ import (
 const (
 	commandWaitDelay         = 10 * time.Second
 	playbookFilename         = "playbook.yaml"
-	inventoryFilename        = "inventory"
 	playbookArtifactFilename = "playbook-artifact.json"
 	navigatorLogFilename     = "ansible-navigator.log"
 	SSHKnownHostsFileVar     = "ansible_ssh_known_hosts_file"
 )
 
 type Options struct {
+	Inventories     []string
 	ForceHandlers   bool
 	SkipTags        []string
 	StartAtTask     string
@@ -33,8 +33,6 @@ func GenerateNavigatorRunCommand(runDir string, workingDir string, ansibleNaviga
 	command := exec.Command(ansibleNavigatorBinary, []string{ // #nosec G204
 		"run",
 		filepath.Join(runDir, playbookFilename),
-		"--inventory",
-		filepath.Join(runDir, inventoryFilename),
 		"--playbook-artifact-save-as",
 		filepath.Join(runDir, playbookArtifactFilename),
 		"--log-file",
@@ -48,6 +46,10 @@ func GenerateNavigatorRunCommand(runDir string, workingDir string, ansibleNaviga
 		fmt.Sprintf("ANSIBLE_NAVIGATOR_CONFIG=%s", filepath.Join(runDir, navigatorSettingsFilename)),
 	)
 	command.WaitDelay = commandWaitDelay
+
+	for _, inventory := range options.Inventories {
+		command.Args = append(command.Args, "--inventory", InventoryPath(runDir, inventory, eeEnabled, false))
+	}
 
 	if options.ForceHandlers {
 		command.Args = append(command.Args, "--force-handlers")
@@ -70,11 +72,11 @@ func GenerateNavigatorRunCommand(runDir string, workingDir string, ansibleNaviga
 	}
 
 	for _, key := range options.PrivateKeys {
-		command.Args = append(command.Args, "--private-key", privateKeyPath(runDir, key, eeEnabled))
+		command.Args = append(command.Args, "--private-key", PrivateKeyPath(runDir, key, eeEnabled))
 	}
 
 	if options.KnownHosts {
-		command.Args = append(command.Args, "--extra-vars", fmt.Sprintf("%s=%s", SSHKnownHostsFileVar, knownHostsPath(runDir, eeEnabled)))
+		command.Args = append(command.Args, "--extra-vars", fmt.Sprintf("%s=%s", SSHKnownHostsFileVar, KnownHostsPath(runDir, eeEnabled)))
 	}
 
 	if options.HostKeyChecking != RunnerDefaultHostKeyChecking { //nolint:gosimple
@@ -98,6 +100,10 @@ func CreateRunDir(dir string) error {
 		return fmt.Errorf("failed to create directory for run, %w", err)
 	}
 
+	if err := os.Mkdir(filepath.Join(dir, inventoriesDir), 0o700); err != nil { //nolint:gomnd,mnd
+		return fmt.Errorf("failed to create inventories directory for run, %w", err)
+	}
+
 	if err := os.Mkdir(filepath.Join(dir, privateKeysDir), 0o700); err != nil { //nolint:gomnd,mnd
 		return fmt.Errorf("failed to create private keys directory for run, %w", err)
 	}
@@ -117,23 +123,12 @@ func RemoveRunDir(dir string) error {
 	return nil
 }
 
-func CreatePlaybookFile(dir string, playbookContents string) error {
+func CreatePlaybook(dir string, playbookContents string) error {
 	path := filepath.Join(dir, playbookFilename)
 
 	err := writeFile(path, playbookContents)
 	if err != nil {
 		return fmt.Errorf("failed to create ansible playbook file for run, %w", err)
-	}
-
-	return nil
-}
-
-func CreateInventoryFile(dir string, inventoryContents string) error {
-	path := filepath.Join(dir, inventoryFilename)
-
-	err := writeFile(path, inventoryContents)
-	if err != nil {
-		return fmt.Errorf("failed to create ansible inventory file, %w", err)
 	}
 
 	return nil

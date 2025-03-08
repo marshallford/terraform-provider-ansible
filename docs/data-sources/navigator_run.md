@@ -68,7 +68,7 @@ output "resolv_conf" {
 
 ### Required
 
-- `inventory` (String) Ansible [inventory](https://docs.ansible.com/ansible/latest/getting_started/get_started_inventory.html) contents.
+- `inventory` (String) Ansible [inventory](https://docs.ansible.com/ansible/latest/getting_started/get_started_inventory.html) contents. The environment variable `ANSIBLE_TF_INVENTORY` is set to the path of the inventory in cases where `{{ inventory_file }}` cannot be referenced.
 - `playbook` (String) Ansible [playbook](https://docs.ansible.com/ansible/latest/playbook_guide/playbooks_intro.html) contents.
 
 ### Optional

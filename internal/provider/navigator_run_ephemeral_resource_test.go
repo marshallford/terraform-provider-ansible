@@ -182,7 +182,7 @@ func TestAccNavigatorRunEphemeralResource_known_hosts(t *testing.T) {
 }
 
 func TestAccNavigatorRunEphemeralResource_private_keys(t *testing.T) { //nolint:paralleltest
-	for _, test := range privateKeyTestCases() { //nolint:paralleltest
+	for _, test := range EETestCases() { //nolint:paralleltest
 		t.Run(test.name, func(t *testing.T) {
 			test.setup(t)
 

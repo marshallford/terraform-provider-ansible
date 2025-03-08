@@ -51,8 +51,8 @@ func navigatorRunDescriptions() map[string]attrDescription {
 			MarkdownDescription: "Ansible [playbook](https://docs.ansible.com/ansible/latest/playbook_guide/playbooks_intro.html) contents.",
 		},
 		"inventory": {
-			Description:         "Ansible inventory contents.",
-			MarkdownDescription: "Ansible [inventory](https://docs.ansible.com/ansible/latest/getting_started/get_started_inventory.html) contents.",
+			Description:         fmt.Sprintf("Ansible inventory contents. The environment variable '%s' is set to the path of the inventory in cases where '{{ inventory_file }}' cannot be referenced.", navigatorRunInventoryEnvVar),
+			MarkdownDescription: fmt.Sprintf("Ansible [inventory](https://docs.ansible.com/ansible/latest/getting_started/get_started_inventory.html) contents. The environment variable `%s` is set to the path of the inventory in cases where `{{ inventory_file }}` cannot be referenced.", navigatorRunInventoryEnvVar),
 		},
 		"working_directory": {
 			Description:         fmt.Sprintf("Directory which '%s' is run from. Recommended to be the root Ansible content directory (sometimes called the project directory), which is likely to contain 'ansible.cfg', 'roles/', etc. Defaults to '%s'.", ansible.NavigatorProgram, defaultNavigatorRunWorkingDir),
@@ -257,6 +257,8 @@ func (AnsibleOptionsModel) Defaults() basetypes.ObjectValue {
 
 func (m AnsibleOptionsModel) Value(ctx context.Context, options *ansible.Options) diag.Diagnostics {
 	var diags diag.Diagnostics
+
+	options.Inventories = []string{navigatorRunInventoryName}
 
 	options.ForceHandlers = m.ForceHandlers.ValueBool()
 

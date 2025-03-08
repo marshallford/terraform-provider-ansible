@@ -53,7 +53,7 @@ func (m NavigatorRunDataSourceModel) Value(ctx context.Context, run *navigatorRu
 	run.dir = runDir(opts.BaseRunDirectory, m.ID.ValueString(), 0)
 	run.persistDir = opts.PersistRunDirectory
 	run.playbook = m.Playbook.ValueString()
-	run.inventory = m.Inventory.ValueString()
+	run.inventories = []ansible.Inventory{{Name: navigatorRunInventoryName, Contents: m.Inventory.ValueString()}}
 	run.workingDir = m.WorkingDirectory.ValueString()
 	run.navigatorBinary = m.AnsibleNavigatorBinary.ValueString()
 
