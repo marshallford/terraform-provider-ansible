@@ -3,7 +3,7 @@ module github.com/marshallford/terraform-provider-ansible
 go 1.24.1
 
 require (
-	github.com/containers/image/v5 v5.34.1
+	github.com/containers/image/v5 v5.34.2
 	github.com/gliderlabs/ssh v0.3.8
 	github.com/google/uuid v1.6.0
 	github.com/hashicorp/terraform-plugin-docs v0.21.0
@@ -33,7 +33,7 @@ require (
 	github.com/bgentry/speakeasy v0.1.0 // indirect
 	github.com/bmatcuk/doublestar/v4 v4.8.1 // indirect
 	github.com/cloudflare/circl v1.3.7 // indirect
-	github.com/containers/storage v1.57.1 // indirect
+	github.com/containers/storage v1.57.2 // indirect
 	github.com/fatih/color v1.16.0 // indirect
 	github.com/golang/protobuf v1.5.4 // indirect
 	github.com/google/go-cmp v0.6.0 // indirect

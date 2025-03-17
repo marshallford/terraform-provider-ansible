@@ -258,7 +258,7 @@ func (AnsibleOptionsModel) Defaults() basetypes.ObjectValue {
 func (m AnsibleOptionsModel) Value(ctx context.Context, options *ansible.Options) diag.Diagnostics {
 	var diags diag.Diagnostics
 
-	options.Inventories = []string{navigatorRunInventoryName}
+	options.Inventories = []string{navigatorRunName}
 
 	options.ForceHandlers = m.ForceHandlers.ValueBool()
 

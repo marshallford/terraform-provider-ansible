@@ -14,7 +14,7 @@ import (
 )
 
 const (
-	navigatorRunInventoryName          = "terraform"
+	navigatorRunName                   = "terraform"
 	navigatorRunPrevInventoryName      = "previous-terraform"
 	navigatorRunDir                    = "tf-ansible-navigator-run"
 	navigatorRunOperationEnvVar        = "ANSIBLE_TF_OPERATION"
@@ -73,6 +73,7 @@ type navigatorRun struct {
 	persistDir        bool
 	playbook          string
 	inventories       []ansible.Inventory
+	extraVarsFiles    []ansible.ExtraVarsFile
 	workingDir        string
 	navigatorBinary   string
 	options           ansible.Options
@@ -123,6 +124,9 @@ func run(ctx context.Context, diags *diag.Diagnostics, timeout time.Duration, op
 	err = ansible.CreateInventories(run.dir, run.inventories, &run.navigatorSettings)
 	addError(diags, "Ansible inventories not created", err)
 
+	err = ansible.CreateExtraVarsFiles(run.dir, run.extraVarsFiles, &run.navigatorSettings)
+	addError(diags, "Ansible extra-vars files not created", err)
+
 	if len(run.privateKeys) > 0 {
 		err = ansible.CreatePrivateKeys(run.dir, run.privateKeys, &run.navigatorSettings)
 		addError(diags, "Private keys not created", err)
@@ -136,7 +140,7 @@ func run(ctx context.Context, diags *diag.Diagnostics, timeout time.Duration, op
 	run.navigatorSettings.EnvironmentVariablesSet[navigatorRunOperationEnvVar] = operation.String()
 	run.navigatorSettings.EnvironmentVariablesSet[navigatorRunInventoryEnvVar] = ansible.InventoryPath(
 		run.dir,
-		navigatorRunInventoryName,
+		navigatorRunName,
 		run.navigatorSettings.EEEnabled,
 		false,
 	)
