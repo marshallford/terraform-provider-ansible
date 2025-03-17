@@ -19,6 +19,7 @@ const (
 
 type Options struct {
 	Inventories     []string
+	ExtraVarsFiles  []string
 	ForceHandlers   bool
 	SkipTags        []string
 	StartAtTask     string
@@ -27,6 +28,48 @@ type Options struct {
 	PrivateKeys     []string
 	KnownHosts      bool
 	HostKeyChecking bool
+}
+
+func navigatorRunCommandArgs(runDir string, eeEnabled bool, options *Options) []string {
+	var args []string //nolint:prealloc
+
+	for _, inventory := range options.Inventories {
+		args = append(args, "--inventory", InventoryPath(runDir, inventory, eeEnabled, false))
+	}
+
+	for _, extraVarsFile := range options.ExtraVarsFiles {
+		args = append(args, "--extra-vars", fmt.Sprintf("@%s", ExtraVarsPath(runDir, extraVarsFile, eeEnabled)))
+	}
+
+	if options.ForceHandlers {
+		args = append(args, "--force-handlers")
+	}
+
+	if len(options.SkipTags) > 0 {
+		args = append(args, "--skip-tags", strings.Join(options.SkipTags, ","))
+	}
+
+	if options.StartAtTask != "" {
+		args = append(args, "--start-at-task", options.StartAtTask)
+	}
+
+	if len(options.Limit) > 0 {
+		args = append(args, "--limit", strings.Join(options.Limit, ","))
+	}
+
+	if len(options.Tags) > 0 {
+		args = append(args, "--tags", strings.Join(options.Tags, ","))
+	}
+
+	for _, key := range options.PrivateKeys {
+		args = append(args, "--private-key", PrivateKeyPath(runDir, key, eeEnabled))
+	}
+
+	if options.KnownHosts {
+		args = append(args, "--extra-vars", fmt.Sprintf("%s=%s", SSHKnownHostsFileVar, KnownHostsPath(runDir, eeEnabled)))
+	}
+
+	return args
 }
 
 func GenerateNavigatorRunCommand(runDir string, workingDir string, ansibleNavigatorBinary string, eeEnabled bool, options *Options) *exec.Cmd {
@@ -47,37 +90,7 @@ func GenerateNavigatorRunCommand(runDir string, workingDir string, ansibleNaviga
 	)
 	command.WaitDelay = commandWaitDelay
 
-	for _, inventory := range options.Inventories {
-		command.Args = append(command.Args, "--inventory", InventoryPath(runDir, inventory, eeEnabled, false))
-	}
-
-	if options.ForceHandlers {
-		command.Args = append(command.Args, "--force-handlers")
-	}
-
-	if len(options.SkipTags) > 0 {
-		command.Args = append(command.Args, "--skip-tags", strings.Join(options.SkipTags, ","))
-	}
-
-	if options.StartAtTask != "" {
-		command.Args = append(command.Args, "--start-at-task", options.StartAtTask)
-	}
-
-	if len(options.Limit) > 0 {
-		command.Args = append(command.Args, "--limit", strings.Join(options.Limit, ","))
-	}
-
-	if len(options.Tags) > 0 {
-		command.Args = append(command.Args, "--tags", strings.Join(options.Tags, ","))
-	}
-
-	for _, key := range options.PrivateKeys {
-		command.Args = append(command.Args, "--private-key", PrivateKeyPath(runDir, key, eeEnabled))
-	}
-
-	if options.KnownHosts {
-		command.Args = append(command.Args, "--extra-vars", fmt.Sprintf("%s=%s", SSHKnownHostsFileVar, KnownHostsPath(runDir, eeEnabled)))
-	}
+	command.Args = append(command.Args, navigatorRunCommandArgs(runDir, eeEnabled, options)...)
 
 	if options.HostKeyChecking != RunnerDefaultHostKeyChecking { //nolint:gosimple
 		command.Env = append(command.Env, fmt.Sprintf("ANSIBLE_HOST_KEY_CHECKING=%t", options.HostKeyChecking))

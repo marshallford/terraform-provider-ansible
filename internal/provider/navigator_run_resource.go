@@ -3,15 +3,18 @@ package provider
 import (
 	"context"
 	"fmt"
+	"maps"
 
 	"github.com/google/uuid"
 	"github.com/hashicorp/terraform-plugin-framework-jsontypes/jsontypes"
 	"github.com/hashicorp/terraform-plugin-framework-timeouts/resource/timeouts"
+	"github.com/hashicorp/terraform-plugin-framework-validators/int64validator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/listvalidator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/mapvalidator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
+	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/booldefault"
@@ -41,6 +44,49 @@ type NavigatorRunResource struct {
 	opts *providerOptions
 }
 
+type AnsibleOptionsResourceModel struct {
+	AnsibleOptionsModel
+	ExtraVarsWO         types.String `tfsdk:"extra_vars_wo"`
+	ExtraVarsWORevision types.Int64  `tfsdk:"extra_vars_wo_revision"`
+}
+
+func (AnsibleOptionsResourceModel) AttrTypes() map[string]attr.Type {
+	attrTypes := map[string]attr.Type{
+		"extra_vars_wo":          types.StringType,
+		"extra_vars_wo_revision": types.Int64Type,
+	}
+	maps.Copy(attrTypes, AnsibleOptionsModel{}.AttrTypes())
+
+	return attrTypes
+}
+
+func (AnsibleOptionsResourceModel) Defaults() basetypes.ObjectValue {
+	defaults := map[string]attr.Value{
+		"extra_vars_wo":          types.StringNull(),
+		"extra_vars_wo_revision": types.Int64Null(),
+	}
+	maps.Copy(defaults, AnsibleOptionsModel{}.Defaults().Attributes())
+
+	return types.ObjectValueMust(
+		AnsibleOptionsResourceModel{}.AttrTypes(),
+		defaults,
+	)
+}
+
+func (m AnsibleOptionsResourceModel) Value(ctx context.Context, options *ansible.Options) diag.Diagnostics {
+	diags := m.AnsibleOptionsModel.Value(ctx, options)
+
+	if !m.ExtraVarsWO.IsNull() {
+		options.ExtraVarsFiles = []string{navigatorRunName}
+	}
+
+	return diags
+}
+
+func (m *AnsibleOptionsResourceModel) Set(ctx context.Context, run navigatorRun) diag.Diagnostics {
+	return m.AnsibleOptionsModel.Set(ctx, run)
+}
+
 type NavigatorRunResourceModel struct {
 	Playbook               types.String   `tfsdk:"playbook"`
 	Inventory              types.String   `tfsdk:"inventory"`
@@ -64,7 +110,7 @@ func (m NavigatorRunResourceModel) Value(ctx context.Context, run *navigatorRun,
 	run.persistDir = opts.PersistRunDirectory
 	run.playbook = m.Playbook.ValueString()
 
-	run.inventories = []ansible.Inventory{{Name: navigatorRunInventoryName, Contents: m.Inventory.ValueString()}}
+	run.inventories = []ansible.Inventory{{Name: navigatorRunName, Contents: m.Inventory.ValueString()}}
 	if previousInventory != nil {
 		run.inventories = append(run.inventories, ansible.Inventory{Name: navigatorRunPrevInventoryName, Contents: *previousInventory, Exclude: true})
 	}
@@ -79,10 +125,12 @@ func (m NavigatorRunResourceModel) Value(ctx context.Context, run *navigatorRun,
 
 	diags.Append(eeModel.Value(ctx, &run.navigatorSettings)...)
 
-	var optsModel AnsibleOptionsModel
+	var optsModel AnsibleOptionsResourceModel
 	diags.Append(m.AnsibleOptions.As(ctx, &optsModel, basetypes.ObjectAsOptions{})...)
 
 	diags.Append(optsModel.Value(ctx, &run.options)...)
+
+	run.extraVarsFiles = []ansible.ExtraVarsFile{{Name: navigatorRunName, Contents: optsModel.ExtraVarsWO.ValueString()}}
 
 	var privateKeysModel []PrivateKeyModel
 	if !optsModel.PrivateKeys.IsNull() {
@@ -124,11 +172,11 @@ func (m *NavigatorRunResourceModel) Set(ctx context.Context, run navigatorRun) d
 
 	m.Command = types.StringValue(run.command)
 
-	var optsModel AnsibleOptionsModel
+	var optsModel AnsibleOptionsResourceModel
 	diags.Append(m.AnsibleOptions.As(ctx, &optsModel, basetypes.ObjectAsOptions{})...)
 	diags.Append(optsModel.Set(ctx, run)...)
 
-	optsResults, newDiags := types.ObjectValueFrom(ctx, AnsibleOptionsModel{}.AttrTypes(), optsModel)
+	optsResults, newDiags := types.ObjectValueFrom(ctx, AnsibleOptionsResourceModel{}.AttrTypes(), optsModel)
 	diags.Append(newDiags...)
 	m.AnsibleOptions = optsResults
 
@@ -151,7 +199,7 @@ func (r *NavigatorRunResource) Metadata(_ context.Context, req resource.Metadata
 	resp.TypeName = fmt.Sprintf("%s_navigator_run", req.ProviderTypeName)
 }
 
-//nolint:dupl,maintidx
+//nolint:maintidx
 func (r *NavigatorRunResource) Schema(ctx context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
 	resp.Schema = schema.Schema{
 		Description:         fmt.Sprintf("Run an Ansible playbook. Requires '%s' and a container engine to run within an execution environment (EE).", ansible.NavigatorProgram),
@@ -281,8 +329,25 @@ func (r *NavigatorRunResource) Schema(ctx context.Context, _ resource.SchemaRequ
 				MarkdownDescription: navigatorRunDescriptions()["ansible_options"].MarkdownDescription,
 				Optional:            true,
 				Computed:            true,
-				Default:             objectdefault.StaticValue(AnsibleOptionsModel{}.Defaults()),
+				Default:             objectdefault.StaticValue(AnsibleOptionsResourceModel{}.Defaults()),
 				Attributes: map[string]schema.Attribute{
+					"extra_vars_wo": schema.StringAttribute{
+						Description: "",
+						Optional:    true,
+						WriteOnly:   true,
+						Validators: []validator.String{
+							stringvalidator.LengthAtLeast(1),
+							stringvalidator.AlsoRequires(path.MatchRelative().AtParent().AtName("extra_vars_wo_revision")),
+						},
+					},
+					"extra_vars_wo_revision": schema.Int64Attribute{
+						Description: "",
+						Optional:    true,
+						Validators: []validator.Int64{
+							int64validator.AtLeast(1),
+							int64validator.AlsoRequires(path.MatchRelative().AtParent().AtName("extra_vars_wo")),
+						},
+					},
 					"force_handlers": schema.BoolAttribute{
 						Description: AnsibleOptionsModel{}.descriptions()["force_handlers"].Description,
 						Optional:    true,
@@ -517,7 +582,7 @@ func (r *NavigatorRunResource) ModifyPlan(ctx context.Context, req resource.Modi
 		}
 	}()
 
-	var optsPlanModel, optsStateModel AnsibleOptionsModel
+	var optsPlanModel, optsStateModel AnsibleOptionsResourceModel
 	resp.Diagnostics.Append(data.AnsibleOptions.As(ctx, &optsPlanModel, basetypes.ObjectAsOptions{})...)
 	resp.Diagnostics.Append(state.AnsibleOptions.As(ctx, &optsStateModel, basetypes.ObjectAsOptions{})...)
 
@@ -525,7 +590,7 @@ func (r *NavigatorRunResource) ModifyPlan(ctx context.Context, req resource.Modi
 		optsPlanModel.KnownHosts = optsStateModel.KnownHosts
 	}
 
-	optsPlanValue, newDiags := types.ObjectValueFrom(ctx, AnsibleOptionsModel{}.AttrTypes(), optsPlanModel)
+	optsPlanValue, newDiags := types.ObjectValueFrom(ctx, AnsibleOptionsResourceModel{}.AttrTypes(), optsPlanModel)
 	resp.Diagnostics.Append(newDiags...)
 	data.AnsibleOptions = optsPlanValue
 
