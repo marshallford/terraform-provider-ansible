@@ -8,7 +8,7 @@ import (
 
 const (
 	inventoriesDir = "inventories"
-	// TODO assumes EE is unix-like with a /tmp dir
+	// TODO assumes EE is unix-like with a /tmp dir.
 	eeInventoriesDir = "/tmp/inventories"
 )
 

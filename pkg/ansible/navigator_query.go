@@ -14,7 +14,7 @@ type ArtifactQuery struct {
 func QueryPlaybookArtifact(dir string, queries map[string]ArtifactQuery) error {
 	path := filepath.Join(dir, playbookArtifactFilename)
 
-	contents, err := os.ReadFile(path)
+	contents, err := os.ReadFile(path) // #nosec G304
 	if err != nil {
 		return fmt.Errorf("failed to read playbook artifact, %w", err)
 	}

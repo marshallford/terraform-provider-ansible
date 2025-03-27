@@ -64,7 +64,7 @@ func (m NavigatorRunResourceModel) Value(ctx context.Context, run *navigatorRun,
 	run.persistDir = opts.PersistRunDirectory
 	run.playbook = m.Playbook.ValueString()
 
-	run.inventories = []ansible.Inventory{{Name: navigatorRunInventoryName, Contents: m.Inventory.ValueString()}}
+	run.inventories = []ansible.Inventory{{Name: navigatorRunName, Contents: m.Inventory.ValueString()}}
 	if previousInventory != nil {
 		run.inventories = append(run.inventories, ansible.Inventory{Name: navigatorRunPrevInventoryName, Contents: *previousInventory, Exclude: true})
 	}
@@ -151,7 +151,7 @@ func (r *NavigatorRunResource) Metadata(_ context.Context, req resource.Metadata
 	resp.TypeName = fmt.Sprintf("%s_navigator_run", req.ProviderTypeName)
 }
 
-//nolint:dupl,maintidx
+//nolint:maintidx,dupl
 func (r *NavigatorRunResource) Schema(ctx context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
 	resp.Schema = schema.Schema{
 		Description:         fmt.Sprintf("Run an Ansible playbook. Requires '%s' and a container engine to run within an execution environment (EE).", ansible.NavigatorProgram),
@@ -449,7 +449,7 @@ func (r *NavigatorRunResource) Schema(ctx context.Context, _ resource.SchemaRequ
 	}
 }
 
-// TODO find better solution
+// TODO find better solution.
 func (NavigatorRunResource) TriggersAttr(data *NavigatorRunResourceModel, attribute string) attr.Value { //nolint:ireturn
 	if data.Triggers.IsNull() {
 		return types.DynamicNull()

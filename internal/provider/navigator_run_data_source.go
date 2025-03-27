@@ -53,7 +53,7 @@ func (m NavigatorRunDataSourceModel) Value(ctx context.Context, run *navigatorRu
 	run.dir = runDir(opts.BaseRunDirectory, m.ID.ValueString(), 0)
 	run.persistDir = opts.PersistRunDirectory
 	run.playbook = m.Playbook.ValueString()
-	run.inventories = []ansible.Inventory{{Name: navigatorRunInventoryName, Contents: m.Inventory.ValueString()}}
+	run.inventories = []ansible.Inventory{{Name: navigatorRunName, Contents: m.Inventory.ValueString()}}
 	run.workingDir = m.WorkingDirectory.ValueString()
 	run.navigatorBinary = m.AnsibleNavigatorBinary.ValueString()
 
@@ -191,6 +191,7 @@ func (d *NavigatorRunDataSource) Metadata(_ context.Context, req datasource.Meta
 	resp.TypeName = fmt.Sprintf("%s_navigator_run", req.ProviderTypeName)
 }
 
+//nolint:dupl
 func (d *NavigatorRunDataSource) Schema(ctx context.Context, _ datasource.SchemaRequest, resp *datasource.SchemaResponse) {
 	resp.Schema = schema.Schema{
 		Description:         fmt.Sprintf("Run an Ansible playbook as a means to gather information. It is recommended to only run playbooks without observable side-effects. Requires '%s' and a container engine to run within an execution environment (EE).", ansible.NavigatorProgram),

@@ -105,8 +105,7 @@ func NavigatorPathPreflight(path string) (string, error) {
 	return path, nil
 }
 
-// TODO include output in error
-// TODO require a min version
+// TODO require a min version and include output in error.
 func NavigatorPreflight(binary string) error {
 	command := exec.Command(binary, "--version")
 	stdoutStderr, err := command.CombinedOutput()
@@ -121,8 +120,7 @@ func NavigatorPreflight(binary string) error {
 	return nil
 }
 
-// TODO include output in error
-// TODO require a min version
+// TODO require a min version and include output in error.
 func PlaybookPreflight() error {
 	if err := programExistsOnPath(PlaybookProgram); err != nil {
 		return fmt.Errorf("%w, ansible is required when running without an execution environment", ErrPlaybookPath)

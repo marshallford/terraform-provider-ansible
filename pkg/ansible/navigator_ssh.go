@@ -12,7 +12,7 @@ const (
 	privateKeysDir = "private-keys"
 	knownHostsDir  = "known-hosts"
 	knownHostsFile = "known_hosts"
-	// TODO assumes EE is unix-like with a /tmp dir
+	// TODO assumes EE is unix-like with a /tmp dir.
 	eePrivateKeysDir = "/tmp/private-keys"
 	eeKnownHostsDir  = "/tmp/known-hosts"
 )
@@ -87,12 +87,12 @@ func CreateKnownHosts(dir string, knownHosts []KnownHost, settings *NavigatorSet
 func GetKnownHosts(dir string) ([]KnownHost, error) {
 	path := filepath.Join(dir, knownHostsDir, knownHostsFile)
 
-	file, err := os.Open(path)
+	file, err := os.Open(path) // #nosec G304
 	if err != nil {
 		return nil, fmt.Errorf("failed to read %s, %w", knownHostsFile, err)
 	}
 
-	defer file.Close()
+	defer file.Close() //nolint:errcheck
 
 	knownHosts := make([]KnownHost, 0)
 	scanner := bufio.NewScanner(file)

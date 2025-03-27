@@ -19,7 +19,7 @@ func programExistsOnPath(program string) error {
 }
 
 func writeFile(path string, contents string) error {
-	if err := os.WriteFile(path, []byte(contents), 0o600); err != nil { //nolint:gomnd,mnd
+	if err := os.WriteFile(path, []byte(contents), 0o600); err != nil { //nolint:mnd
 		return fmt.Errorf("failed to write file, %w", err)
 	}
 

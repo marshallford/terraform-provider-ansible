@@ -14,7 +14,7 @@ import (
 )
 
 const (
-	navigatorRunInventoryName          = "terraform"
+	navigatorRunName                   = "terraform"
 	navigatorRunPrevInventoryName      = "previous-terraform"
 	navigatorRunDir                    = "tf-ansible-navigator-run"
 	navigatorRunOperationEnvVar        = "ANSIBLE_TF_OPERATION"
@@ -136,7 +136,7 @@ func run(ctx context.Context, diags *diag.Diagnostics, timeout time.Duration, op
 	run.navigatorSettings.EnvironmentVariablesSet[navigatorRunOperationEnvVar] = operation.String()
 	run.navigatorSettings.EnvironmentVariablesSet[navigatorRunInventoryEnvVar] = ansible.InventoryPath(
 		run.dir,
-		navigatorRunInventoryName,
+		navigatorRunName,
 		run.navigatorSettings.EEEnabled,
 		false,
 	)

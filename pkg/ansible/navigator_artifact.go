@@ -16,7 +16,7 @@ type PlaybookArtifact struct {
 func getPlaybookArtifact(dir string) (*PlaybookArtifact, error) {
 	path := filepath.Join(dir, playbookArtifactFilename)
 
-	contents, err := os.ReadFile(path)
+	contents, err := os.ReadFile(path) // #nosec G304
 	if err != nil {
 		return nil, fmt.Errorf("failed to read playbook artifact, %w", err)
 	}
