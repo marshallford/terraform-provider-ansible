@@ -191,55 +191,6 @@ func TestAccNavigatorRunResource_env_vars(t *testing.T) {
 	})
 }
 
-func TestAccNavigatorRunResource_extra_vars(t *testing.T) { //nolint:paralleltest
-	for _, test := range EETestCases() { //nolint:paralleltest
-		t.Run(test.name, func(t *testing.T) {
-			test.setup(t)
-
-			variables := config.Variables{}
-			if test.variables != nil {
-				variables = test.variables(t)
-			}
-
-			resource.Test(t, resource.TestCase{
-				PreCheck:                 func() { testPreCheck(t) },
-				ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
-				Steps: []resource.TestStep{
-					{
-						Config: testTerraformConfig(t, filepath.Join("navigator_run_resource", "extra_vars")),
-						ConfigVariables: testConfigVariables(t, variables, config.Variables{
-							"revision": config.IntegerVariable(1),
-						}),
-					},
-					{
-						Config: testTerraformConfig(t, filepath.Join("navigator_run_resource", "extra_vars")),
-						ConfigVariables: testConfigVariables(t, variables, config.Variables{
-							"revision": config.IntegerVariable(1),
-						}),
-						ConfigPlanChecks: resource.ConfigPlanChecks{
-							PreApply: []plancheck.PlanCheck{
-								plancheck.ExpectEmptyPlan(),
-							},
-						},
-					},
-					{
-						Config: testTerraformConfig(t, filepath.Join("navigator_run_resource", "extra_vars")),
-						ConfigVariables: testConfigVariables(t, variables, config.Variables{
-							"revision": config.IntegerVariable(2),
-						}),
-						ConfigPlanChecks: resource.ConfigPlanChecks{
-							PreApply: []plancheck.PlanCheck{
-								plancheck.ExpectNonEmptyPlan(),
-								plancheck.ExpectResourceAction(navigatorRunResource, plancheck.ResourceActionUpdate),
-							},
-						},
-					},
-				},
-			})
-		})
-	}
-}
-
 func TestAccNavigatorRunResource_known_hosts(t *testing.T) {
 	t.Parallel()
 

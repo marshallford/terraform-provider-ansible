@@ -92,7 +92,7 @@ func GenerateNavigatorRunCommand(runDir string, workingDir string, ansibleNaviga
 
 	command.Args = append(command.Args, navigatorRunCommandArgs(runDir, eeEnabled, options)...)
 
-	if options.HostKeyChecking != RunnerDefaultHostKeyChecking { //nolint:gosimple
+	if options.HostKeyChecking != RunnerDefaultHostKeyChecking { //nolint:staticcheck
 		command.Env = append(command.Env, fmt.Sprintf("ANSIBLE_HOST_KEY_CHECKING=%t", options.HostKeyChecking))
 	}
 
@@ -109,19 +109,19 @@ func ExecNavigatorRunCommand(command *exec.Cmd) (string, error) {
 }
 
 func CreateRunDir(dir string) error {
-	if err := os.Mkdir(dir, 0o700); err != nil { //nolint:gomnd,mnd
+	if err := os.Mkdir(dir, 0o700); err != nil { //nolint:mnd
 		return fmt.Errorf("failed to create directory for run, %w", err)
 	}
 
-	if err := os.Mkdir(filepath.Join(dir, inventoriesDir), 0o700); err != nil { //nolint:gomnd,mnd
+	if err := os.Mkdir(filepath.Join(dir, inventoriesDir), 0o700); err != nil { //nolint:mnd
 		return fmt.Errorf("failed to create inventories directory for run, %w", err)
 	}
 
-	if err := os.Mkdir(filepath.Join(dir, privateKeysDir), 0o700); err != nil { //nolint:gomnd,mnd
+	if err := os.Mkdir(filepath.Join(dir, privateKeysDir), 0o700); err != nil { //nolint:mnd
 		return fmt.Errorf("failed to create private keys directory for run, %w", err)
 	}
 
-	if err := os.Mkdir(filepath.Join(dir, knownHostsDir), 0o700); err != nil { //nolint:gomnd,mnd
+	if err := os.Mkdir(filepath.Join(dir, knownHostsDir), 0o700); err != nil { //nolint:mnd
 		return fmt.Errorf("failed to create known hosts directory for run, %w", err)
 	}
 

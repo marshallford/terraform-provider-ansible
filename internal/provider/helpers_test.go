@@ -26,7 +26,7 @@ type TestCase struct {
 }
 
 const (
-	// TODO improve
+	// TODO improve.
 	navigatorProgramPath = "../../.venv/bin/ansible-navigator"
 	playbookProgramPath  = "../../.venv/bin/ansible-playbook"
 	testString           = "testing"

@@ -8,7 +8,7 @@ import (
 
 const (
 	extraVarsDir = "extra-vars"
-	// TODO assumes EE is unix-like with a /tmp dir
+	// TODO assumes EE is unix-like with a /tmp dir.
 	eeExtraVarsDir = "/tmp/extra-vars"
 )
 

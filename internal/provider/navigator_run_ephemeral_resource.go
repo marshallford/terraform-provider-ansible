@@ -191,6 +191,7 @@ func (er *NavigatorRunEphemeralResource) Metadata(_ context.Context, req ephemer
 	resp.TypeName = fmt.Sprintf("%s_navigator_run", req.ProviderTypeName)
 }
 
+//nolint:dupl
 func (er *NavigatorRunEphemeralResource) Schema(ctx context.Context, _ ephemeral.SchemaRequest, resp *ephemeral.SchemaResponse) {
 	resp.Schema = schema.Schema{
 		Description:         fmt.Sprintf("Run an Ansible playbook as a means to gather temporary and likely sensitive information. It is recommended to only run playbooks without observable side-effects. Requires '%s' and a container engine to run within an execution environment (EE).", ansible.NavigatorProgram),

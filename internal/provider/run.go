@@ -73,7 +73,6 @@ type navigatorRun struct {
 	persistDir        bool
 	playbook          string
 	inventories       []ansible.Inventory
-	extraVarsFiles    []ansible.ExtraVarsFile
 	workingDir        string
 	navigatorBinary   string
 	options           ansible.Options
@@ -123,9 +122,6 @@ func run(ctx context.Context, diags *diag.Diagnostics, timeout time.Duration, op
 
 	err = ansible.CreateInventories(run.dir, run.inventories, &run.navigatorSettings)
 	addError(diags, "Ansible inventories not created", err)
-
-	err = ansible.CreateExtraVarsFiles(run.dir, run.extraVarsFiles, &run.navigatorSettings)
-	addError(diags, "Ansible extra-vars files not created", err)
 
 	if len(run.privateKeys) > 0 {
 		err = ansible.CreatePrivateKeys(run.dir, run.privateKeys, &run.navigatorSettings)
