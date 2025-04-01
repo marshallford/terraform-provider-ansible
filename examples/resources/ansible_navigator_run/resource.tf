@@ -78,7 +78,25 @@ resource "ansible_navigator_run" "destroy" {
   run_on_destroy = true
 }
 
-# 7. triggers
+# 7. destroy playbook
+resource "ansible_navigator_run" "destroy_playbook" {
+  playbook         = <<-EOT
+  - hosts: all
+    tasks:
+    - ansible.builtin.debug:
+        msg: "resource is being created or updated!"
+  EOT
+  inventory        = yamlencode({})
+  run_on_destroy   = true
+  destroy_playbook = <<-EOT
+  - hosts: all
+    tasks:
+    - ansible.builtin.debug:
+        msg: "resource is being destroyed!"
+  EOT
+}
+
+# 8. triggers
 resource "ansible_navigator_run" "triggers" {
   playbook  = "# example"
   inventory = yamlencode({})
@@ -89,7 +107,7 @@ resource "ansible_navigator_run" "triggers" {
   }
 }
 
-# 8. artifact queries -- get playbook stdout
+# 9. artifact queries -- get playbook stdout
 resource "ansible_navigator_run" "artifact_query_stdout" {
   playbook  = "# example"
   inventory = yamlencode({})
@@ -104,7 +122,7 @@ output "playbook_stdout" {
   value = join("\n", jsondecode(ansible_navigator_run.artifact_query_stdout.artifact_queries.stdout.results[0]))
 }
 
-# 9. ssh private keys
+# 10. ssh private keys
 resource "tls_private_key" "client" {
   algorithm = "ED25519"
 }
@@ -122,7 +140,7 @@ resource "ansible_navigator_run" "private_keys" {
   }
 }
 
-# 10. ssh known hosts
+# 11. ssh known hosts
 resource "tls_private_key" "server" {
   algorithm = "ED25519"
 }
@@ -143,7 +161,7 @@ resource "ansible_navigator_run" "known_hosts" {
   }
 }
 
-# 11. compare previous inventory with current inventory
+# 12. compare previous inventory with current inventory
 resource "ansible_navigator_run" "compare_inventory" {
   playbook = <<-EOT
   - hosts: all

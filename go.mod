@@ -3,7 +3,7 @@ module github.com/marshallford/terraform-provider-ansible
 go 1.24.1
 
 require (
-	github.com/containers/image/v5 v5.34.2
+	github.com/containers/image/v5 v5.34.3
 	github.com/gliderlabs/ssh v0.3.8
 	github.com/google/uuid v1.6.0
 	github.com/hashicorp/terraform-plugin-docs v0.21.0
