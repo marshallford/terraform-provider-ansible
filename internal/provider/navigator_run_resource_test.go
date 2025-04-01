@@ -147,6 +147,21 @@ func TestAccNavigatorRunResource_binary_in_path(t *testing.T) { //nolint:paralle
 	})
 }
 
+func TestAccNavigatorRunResource_destroy_playbook(t *testing.T) {
+	t.Parallel()
+
+	resource.Test(t, resource.TestCase{
+		PreCheck:                 func() { testPreCheck(t) },
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		Steps: []resource.TestStep{
+			{
+				Config:          testTerraformConfig(t, filepath.Join("navigator_run_resource", "destroy_playbook")),
+				ConfigVariables: testDefaultConfigVariables(t),
+			},
+		},
+	})
+}
+
 func TestAccNavigatorRunResource_ee_disabled(t *testing.T) { //nolint:paralleltest
 	testPrependPlaybookToPath(t)
 

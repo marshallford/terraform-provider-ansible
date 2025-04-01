@@ -93,7 +93,25 @@ resource "ansible_navigator_run" "destroy" {
   run_on_destroy = true
 }
 
-# 7. triggers
+# 7. destroy playbook
+resource "ansible_navigator_run" "destroy_playbook" {
+  playbook         = <<-EOT
+  - hosts: all
+    tasks:
+    - ansible.builtin.debug:
+        msg: "resource is being created or updated!"
+  EOT
+  inventory        = yamlencode({})
+  run_on_destroy   = true
+  destroy_playbook = <<-EOT
+  - hosts: all
+    tasks:
+    - ansible.builtin.debug:
+        msg: "resource is being destroyed!"
+  EOT
+}
+
+# 8. triggers
 resource "ansible_navigator_run" "triggers" {
   playbook  = "# example"
   inventory = yamlencode({})
@@ -104,7 +122,7 @@ resource "ansible_navigator_run" "triggers" {
   }
 }
 
-# 8. artifact queries -- get playbook stdout
+# 9. artifact queries -- get playbook stdout
 resource "ansible_navigator_run" "artifact_query_stdout" {
   playbook  = "# example"
   inventory = yamlencode({})
@@ -119,7 +137,7 @@ output "playbook_stdout" {
   value = join("\n", jsondecode(ansible_navigator_run.artifact_query_stdout.artifact_queries.stdout.results[0]))
 }
 
-# 9. ssh private keys
+# 10. ssh private keys
 resource "tls_private_key" "client" {
   algorithm = "ED25519"
 }
@@ -137,7 +155,7 @@ resource "ansible_navigator_run" "private_keys" {
   }
 }
 
-# 10. ssh known hosts
+# 11. ssh known hosts
 resource "tls_private_key" "server" {
   algorithm = "ED25519"
 }
@@ -158,7 +176,7 @@ resource "ansible_navigator_run" "known_hosts" {
   }
 }
 
-# 11. compare previous inventory with current inventory
+# 12. compare previous inventory with current inventory
 resource "ansible_navigator_run" "compare_inventory" {
   playbook = <<-EOT
   - hosts: all
@@ -232,8 +250,9 @@ pipelining=True
 - `ansible_navigator_binary` (String) Path to the `ansible-navigator` binary. By default `$PATH` is searched.
 - `ansible_options` (Attributes) Ansible [playbook](https://docs.ansible.com/ansible/latest/cli/ansible-playbook.html) run related configuration. (see [below for nested schema](#nestedatt--ansible_options))
 - `artifact_queries` (Attributes Map) Query the Ansible playbook artifact with [`jq`](https://jqlang.github.io/jq/) syntax. The [playbook artifact](https://access.redhat.com/documentation/en-us/red_hat_ansible_automation_platform/2.0-ea/html/ansible_navigator_creator_guide/assembly-troubleshooting-navigator_ansible-navigator#proc-review-artifact_troubleshooting-navigator) contains detailed information about every play and task, as well as the stdout from the playbook run. (see [below for nested schema](#nestedatt--artifact_queries))
+- `destroy_playbook` (String) Ansible playbook contents. Only run on destroy (`run_on_destroy` must be `true`).
 - `execution_environment` (Attributes) [Execution environment](https://ansible.readthedocs.io/en/latest/getting_started_ee/index.html) (EE) related configuration. (see [below for nested schema](#nestedatt--execution_environment))
-- `run_on_destroy` (Boolean) Run playbook on destroy. The environment variable `ANSIBLE_TF_OPERATION` is set to `delete` during the run to allow for conditional plays, tasks, etc. Defaults to `false`.
+- `run_on_destroy` (Boolean) Run playbook (or alternatively `destroy_playbook` if configured) on destroy. The environment variable `ANSIBLE_TF_OPERATION` is set to `delete` during the run to allow for conditional plays, tasks, etc. Defaults to `false`.
 - `timeouts` (Attributes) (see [below for nested schema](#nestedatt--timeouts))
 - `timezone` (String) IANA time zone, use `local` for the system time zone. Defaults to `UTC`.
 - `triggers` (Attributes) Trigger various behaviors via arbitrary values. (see [below for nested schema](#nestedatt--triggers))

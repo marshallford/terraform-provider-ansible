@@ -50,6 +50,7 @@ type NavigatorRunResourceModel struct {
 	AnsibleOptions         types.Object   `tfsdk:"ansible_options"`
 	Timezone               types.String   `tfsdk:"timezone"`
 	RunOnDestroy           types.Bool     `tfsdk:"run_on_destroy"`
+	DestroyPlaybook        types.String   `tfsdk:"destroy_playbook"`
 	Triggers               types.Object   `tfsdk:"triggers"`
 	ArtifactQueries        types.Map      `tfsdk:"artifact_queries"`
 	ID                     types.String   `tfsdk:"id"`
@@ -57,12 +58,16 @@ type NavigatorRunResourceModel struct {
 	Timeouts               timeouts.Value `tfsdk:"timeouts"`
 }
 
-func (m NavigatorRunResourceModel) Value(ctx context.Context, run *navigatorRun, opts *providerOptions, runs uint32, previousInventory *string) diag.Diagnostics {
+func (m NavigatorRunResourceModel) Value(ctx context.Context, run *navigatorRun, destroy bool, opts *providerOptions, runs uint32, previousInventory *string) diag.Diagnostics {
 	var diags diag.Diagnostics
 
 	run.dir = runDir(opts.BaseRunDirectory, m.ID.ValueString(), runs)
 	run.persistDir = opts.PersistRunDirectory
+
 	run.playbook = m.Playbook.ValueString()
+	if destroy && !m.DestroyPlaybook.IsNull() {
+		run.playbook = m.DestroyPlaybook.ValueString()
+	}
 
 	run.inventories = []ansible.Inventory{{Name: navigatorRunName, Contents: m.Inventory.ValueString()}}
 	if previousInventory != nil {
@@ -370,11 +375,20 @@ func (r *NavigatorRunResource) Schema(ctx context.Context, _ resource.SchemaRequ
 				},
 			},
 			"run_on_destroy": schema.BoolAttribute{
-				Description:         fmt.Sprintf("Run playbook on destroy. The environment variable '%s' is set to '%s' during the run to allow for conditional plays, tasks, etc. Defaults to '%t'.", navigatorRunOperationEnvVar, terraformOp(terraformOpDelete), defaultNavigatorRunOnDestroy),
-				MarkdownDescription: fmt.Sprintf("Run playbook on destroy. The environment variable `%s` is set to `%s` during the run to allow for conditional plays, tasks, etc. Defaults to `%t`.", navigatorRunOperationEnvVar, terraformOp(terraformOpDelete), defaultNavigatorRunOnDestroy),
+				Description:         fmt.Sprintf("Run playbook (or alternatively 'destroy_playbook' if configured) on destroy. The environment variable '%s' is set to '%s' during the run to allow for conditional plays, tasks, etc. Defaults to '%t'.", navigatorRunOperationEnvVar, terraformOp(terraformOpDelete), defaultNavigatorRunOnDestroy),
+				MarkdownDescription: fmt.Sprintf("Run playbook (or alternatively `destroy_playbook` if configured) on destroy. The environment variable `%s` is set to `%s` during the run to allow for conditional plays, tasks, etc. Defaults to `%t`.", navigatorRunOperationEnvVar, terraformOp(terraformOpDelete), defaultNavigatorRunOnDestroy),
 				Optional:            true,
 				Computed:            true,
 				Default:             booldefault.StaticBool(defaultNavigatorRunOnDestroy),
+			},
+			"destroy_playbook": schema.StringAttribute{
+				Description:         fmt.Sprintf("%s Only run on destroy ('run_on_destroy' must be 'true').", navigatorRunDescriptions()["playbook"].Description),
+				MarkdownDescription: fmt.Sprintf("%s Only run on destroy (`run_on_destroy` must be `true`).", navigatorRunDescriptions()["playbook"].Description),
+				Optional:            true,
+				Validators: []validator.String{
+					stringvalidator.LengthAtLeast(1),
+					stringIsYAML(),
+				},
 			},
 			"triggers": schema.SingleNestedAttribute{
 				Description: "Trigger various behaviors via arbitrary values.",
@@ -579,7 +593,7 @@ func (r *NavigatorRunResource) Create(ctx context.Context, req resource.CreateRe
 	data.ID = types.StringValue(uuid.New().String())
 
 	var navigatorRun navigatorRun
-	resp.Diagnostics.Append(data.Value(ctx, &navigatorRun, r.opts, runs, nil)...)
+	resp.Diagnostics.Append(data.Value(ctx, &navigatorRun, false, r.opts, runs, nil)...)
 
 	if resp.Diagnostics.HasError() {
 		return
@@ -639,7 +653,7 @@ func (r *NavigatorRunResource) Update(ctx context.Context, req resource.UpdateRe
 	defer cancel()
 
 	var navigatorRun navigatorRun
-	resp.Diagnostics.Append(data.Value(ctx, &navigatorRun, r.opts, runs, state.Inventory.ValueStringPointer())...)
+	resp.Diagnostics.Append(data.Value(ctx, &navigatorRun, false, r.opts, runs, state.Inventory.ValueStringPointer())...)
 
 	if resp.Diagnostics.HasError() {
 		return
@@ -687,7 +701,7 @@ func (r *NavigatorRunResource) Delete(ctx context.Context, req resource.DeleteRe
 	defer cancel()
 
 	var navigatorRun navigatorRun
-	resp.Diagnostics.Append(data.Value(ctx, &navigatorRun, r.opts, runs, nil)...)
+	resp.Diagnostics.Append(data.Value(ctx, &navigatorRun, true, r.opts, runs, nil)...)
 
 	if resp.Diagnostics.HasError() {
 		return
