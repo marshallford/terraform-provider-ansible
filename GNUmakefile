@@ -9,7 +9,7 @@ DOCKER := docker
 DOCKER_RUN := $(DOCKER) run $(DOCKER_FLAGS)
 DOCKER_PULL := $(DOCKER) pull -q
 
-TERRAFORM_VERSION ?= 1.11.3
+TERRAFORM_VERSION ?= 1.11.4
 
 EDITORCONFIG_CHECKER_VERSION ?= 3.2.1
 EDITORCONFIG_CHECKER_IMAGE ?= docker.io/mstruebing/editorconfig-checker:v$(EDITORCONFIG_CHECKER_VERSION)
@@ -23,13 +23,22 @@ YAMLLINT_VERSION ?= 0.34.0
 YAMLLINT_IMAGE ?= docker.io/pipelinecomponents/yamllint:$(YAMLLINT_VERSION)
 YAMLLINT := $(DOCKER_RUN) -v=$(CURDIR):/code $(YAMLLINT_IMAGE) yamllint
 
-GOLANGCI_VERSION ?= 2.0.2
+GOLANGCI_VERSION ?= 2.1.2
 GOLANGCI_IMAGE ?= docker.io/golangci/golangci-lint:v$(GOLANGCI_VERSION)
 GOLANGCI := $(DOCKER_RUN) -v=$(CURDIR):/code -w /code $(GOLANGCI_IMAGE) golangci-lint run
 
 VENV := .venv
 VENV_STAMP := $(VENV)/stamp
 ACTIVATE := . $(VENV)/bin/activate
+
+$(VENV_STAMP): requirements.txt
+	test -d $(VENV_STAMP) || python3 -qm venv $(VENV)
+	$(ACTIVATE); pip install -qU pip setuptools wheel
+	$(ACTIVATE); pip install -qr requirements.txt
+	touch $(VENV_STAMP)
+
+.PHONY: python
+python: $(VENV_STAMP)
 
 .PHONY: pull pull/editorconfig pull/shellcheck pull/yamllint pull/golangci
 pull: pull/editorconfig pull/shellcheck pull/yamllint pull/golangci
@@ -64,7 +73,7 @@ lint/yamllint:
 lint/golangci:
 	$(GOLANGCI)
 
-lint/ansible: bin/ansible-navigator
+lint/ansible: python
 	$(ACTIVATE); ansible-lint docs examples
 
 .PHONY: install cover docs
@@ -84,20 +93,8 @@ test: test/docs test/pkg test/acc
 test/docs:
 	TFENV_TERRAFORM_VERSION=$(TERRAFORM_VERSION) go run github.com/hashicorp/terraform-plugin-docs/cmd/tfplugindocs validate
 
-test/pkg:
+test/pkg: python
 	go test ./pkg/... -v -coverprofile=cover.out $(TESTARGS) -timeout 60m
 
-test/acc:
+test/acc: python
 	TF_ACC=1 TFENV_TERRAFORM_VERSION=$(TERRAFORM_VERSION) go test ./internal/provider/... -v -coverprofile=cover.out $(TESTARGS) -timeout 60m
-
-.PHONY: deps bin/ansible-navigator
-
-deps: bin/ansible-navigator
-
-bin/ansible-navigator: $(VENV_STAMP)
-
-$(VENV_STAMP): requirements.txt
-	test -d $(VENV_STAMP) || python3 -qm venv $(VENV)
-	$(ACTIVATE); pip install -qU pip setuptools wheel
-	$(ACTIVATE); pip install -qr requirements.txt
-	touch $(VENV_STAMP)
