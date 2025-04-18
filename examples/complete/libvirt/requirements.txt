@@ -1,1 +1,1 @@
-ansible-navigator==24.6.1
+ansible-navigator==25.4.0

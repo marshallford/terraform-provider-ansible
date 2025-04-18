@@ -11,5 +11,5 @@ This Terraform configuration creates a KVM domain using the [`dmacvicar/libvirt`
 
 ## Steps
 
-1. Run `make bin` to install the `ansible-navigator` package into a Python virtual environment.
+1. Run `make` to install the `ansible-navigator` package into a Python virtual environment.
 2. Run `terraform init` and `terraform apply`
