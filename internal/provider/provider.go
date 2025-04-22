@@ -19,7 +19,7 @@ import (
 
 const defaultProviderPersistRunDir = false
 
-var _ provider.Provider = &AnsibleProvider{}
+var _ provider.Provider = (*AnsibleProvider)(nil)
 
 type AnsibleProvider struct {
 	version string

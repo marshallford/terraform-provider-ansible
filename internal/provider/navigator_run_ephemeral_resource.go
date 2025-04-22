@@ -21,8 +21,8 @@ import (
 )
 
 var (
-	_ ephemeral.EphemeralResource              = &NavigatorRunEphemeralResource{}
-	_ ephemeral.EphemeralResourceWithConfigure = &NavigatorRunEphemeralResource{}
+	_ ephemeral.EphemeralResource              = (*NavigatorRunEphemeralResource)(nil)
+	_ ephemeral.EphemeralResourceWithConfigure = (*NavigatorRunEphemeralResource)(nil)
 )
 
 func NewNavigatorRunEphemeralResource() ephemeral.EphemeralResource { //nolint:ireturn

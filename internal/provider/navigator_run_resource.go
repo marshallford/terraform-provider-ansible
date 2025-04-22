@@ -29,8 +29,9 @@ import (
 )
 
 var (
-	_ resource.Resource               = &NavigatorRunResource{}
-	_ resource.ResourceWithModifyPlan = &NavigatorRunResource{}
+	_ resource.Resource               = (*NavigatorRunResource)(nil)
+	_ resource.ResourceWithConfigure  = (*NavigatorRunResource)(nil)
+	_ resource.ResourceWithModifyPlan = (*NavigatorRunResource)(nil)
 )
 
 func NewNavigatorRunResource() resource.Resource { //nolint:ireturn
