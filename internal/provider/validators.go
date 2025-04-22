@@ -9,6 +9,8 @@ import (
 
 type stringIsSSHPrivateKeyValidator struct{}
 
+var _ validator.String = (*stringIsSSHPrivateKeyValidator)(nil)
+
 func (v stringIsSSHPrivateKeyValidator) Description(_ context.Context) string {
 	return "string must be an unencrypted SSH private key"
 }
@@ -31,6 +33,8 @@ func stringIsSSHPrivateKey() stringIsSSHPrivateKeyValidator {
 }
 
 type stringIsSSHPrivateKeyNameValidator struct{}
+
+var _ validator.String = (*stringIsSSHPrivateKeyNameValidator)(nil)
 
 func (v stringIsSSHPrivateKeyNameValidator) Description(_ context.Context) string {
 	return "string must be a valid SSH private key name"
@@ -55,6 +59,8 @@ func stringIsSSHPrivateKeyName() stringIsSSHPrivateKeyNameValidator {
 
 type stringIsSSHKnownHostValidator struct{}
 
+var _ validator.String = (*stringIsSSHKnownHostValidator)(nil)
+
 func (v stringIsSSHKnownHostValidator) Description(_ context.Context) string {
 	return "string must be a SSH known host entry"
 }
@@ -77,6 +83,8 @@ func stringIsSSHKnownHost() stringIsSSHKnownHostValidator {
 }
 
 type stringIsEnvVarNameValidator struct{}
+
+var _ validator.String = (*stringIsEnvVarNameValidator)(nil)
 
 func (v stringIsEnvVarNameValidator) Description(_ context.Context) string {
 	return "string must be an environment variable name"
@@ -101,6 +109,8 @@ func stringIsEnvVarName() stringIsEnvVarNameValidator {
 
 type stringIsYAMLValidator struct{}
 
+var _ validator.String = (*stringIsYAMLValidator)(nil)
+
 func (v stringIsYAMLValidator) Description(_ context.Context) string {
 	return "string must be YAML"
 }
@@ -123,6 +133,8 @@ func stringIsYAML() stringIsYAMLValidator {
 }
 
 type stringIsIANATimezoneValidator struct{}
+
+var _ validator.String = (*stringIsIANATimezoneValidator)(nil)
 
 func (v stringIsIANATimezoneValidator) Description(_ context.Context) string {
 	return "string must be an IANA time zone"
@@ -147,6 +159,8 @@ func stringIsIANATimezone() stringIsIANATimezoneValidator {
 
 type stringIsJQFilterValidator struct{}
 
+var _ validator.String = (*stringIsJQFilterValidator)(nil)
+
 func (v stringIsJQFilterValidator) Description(_ context.Context) string {
 	return "string must be a JQ filter"
 }
@@ -169,6 +183,8 @@ func stringIsJQFilter() stringIsJQFilterValidator {
 }
 
 type stringIsContainerImageNameValidator struct{}
+
+var _ validator.String = (*stringIsContainerImageNameValidator)(nil)
 
 func (v stringIsContainerImageNameValidator) Description(_ context.Context) string {
 	return "string must be a container image name"

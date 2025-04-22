@@ -21,8 +21,8 @@ import (
 )
 
 var (
-	_ datasource.DataSource              = &NavigatorRunDataSource{}
-	_ datasource.DataSourceWithConfigure = &NavigatorRunDataSource{}
+	_ datasource.DataSource              = (*NavigatorRunDataSource)(nil)
+	_ datasource.DataSourceWithConfigure = (*NavigatorRunDataSource)(nil)
 )
 
 func NewNavigatorRunDataSource() datasource.DataSource { //nolint:ireturn
