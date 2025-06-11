@@ -56,8 +56,9 @@ output "uptimes" {
 2. Construct Ansible inventories using other data sources and resources. Set Ansible host and group variables to values and secrets from other providers.
 3. Utilize Ansible [execution environments](https://ansible.readthedocs.io/en/latest/getting_started_ee/index.html) (containers images) to customize and run the Ansible software stack. Isolate Ansible and its related dependencies (Python/System packages, collections, etc) to simplify pipeline and workstation setup.
 4. Write [`jq`](https://jqlang.github.io/jq/) queries against [playbook artifacts](https://access.redhat.com/documentation/en-us/red_hat_ansible_automation_platform/2.0-ea/html/ansible_navigator_creator_guide/assembly-troubleshooting-navigator_ansible-navigator#proc-review-artifact_troubleshooting-navigator). Extract values from the playbook run for use elsewhere in the Terraform configuration. Examples include: Ansible facts, remote file contents, task results -- the possibilities are endless!
-5. Control playbook re-run behavior using several "lifecycle" options, including an attribute for running the playbook on resource destruction. Implement conditional plays/tasks with the environment variable `ANSIBLE_TF_OPERATION`.
-6. Connect to hosts securely by specifying SSH private keys and known host entries. No need manage `~/.ssh` files or setup `ssh-agent` in the environment which Terraform runs.
+5. Control playbook re-run behavior using several "lifecycle" options, including an attribute for running the playbook on resource destruction. Implement conditional tasks with the environment variable `ANSIBLE_TF_OPERATION`.
+6. Access the previous run's inventory via the `ANSIBLE_TF_PREVIOUS_INVENTORY` environment variable. This enables advanced use cases like comparing inventories to manage upgrades, mitigate configuration drift, or perform cleanup tasks on removed hosts.
+7. Connect to hosts securely by specifying SSH private keys and known host entries. No need manage `~/.ssh` files or setup `ssh-agent` in the environment which Terraform runs.
 
 {{ if .HasExample -}}
 ## Example Provider Usage
