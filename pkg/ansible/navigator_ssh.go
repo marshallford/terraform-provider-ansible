@@ -6,6 +6,9 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+
+	"github.com/gliderlabs/ssh"
+	"golang.org/x/crypto/ssh/knownhosts"
 )
 
 const (
@@ -105,4 +108,27 @@ func GetKnownHosts(dir string) ([]KnownHost, error) {
 	}
 
 	return knownHosts, nil
+}
+
+func KnownHostsLine(addresses []string, publicKey string) (string, error) {
+	if len(addresses) == 0 {
+		return "", fmt.Errorf("%w, no addresses provided", ErrValidation)
+	}
+
+	entry, _, _, _, err := ssh.ParseAuthorizedKey([]byte(publicKey)) //nolint:dogsled
+	if err != nil {
+		return "", fmt.Errorf("%w, failed to parse public key, %w", ErrValidation, err)
+	}
+
+	return knownhosts.Line(addresses, entry), nil
+}
+
+func SSHArgs(acceptNew bool) string {
+	strictHostKeyChecking := "yes"
+
+	if acceptNew {
+		strictHostKeyChecking = "accept-new"
+	}
+
+	return fmt.Sprintf("-o StrictHostKeyChecking=%s -o UserKnownHostsFile={{ %s }}", strictHostKeyChecking, SSHKnownHostsFileVar)
 }
