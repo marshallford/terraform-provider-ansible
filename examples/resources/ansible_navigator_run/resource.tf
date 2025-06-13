@@ -15,7 +15,7 @@ resource "ansible_navigator_run" "inline" {
   })
 }
 
-# 2. existing playbook and inventory
+# 2. playbook and inventory from files
 resource "ansible_navigator_run" "existing" {
   playbook  = file("playbook.yaml")
   inventory = file("inventory/baremetal.yaml")
@@ -150,13 +150,13 @@ resource "ansible_navigator_run" "known_hosts" {
   inventory = yamlencode({
     all = {
       vars = {
-        ansible_ssh_common_args = "-o StrictHostKeyChecking=yes -o UserKnownHostsFile={{ ansible_ssh_known_hosts_file }}"
+        ansible_ssh_common_args = provider::ansible::ssh_args(false)
       }
     }
   })
   ansible_options = {
     known_hosts = [
-      "10.0.0.1 ${tls_private_key.server.public_key_openssh}"
+      provider::ansible::ssh_known_host(tls_private_key.server.public_key_openssh, "host.example.com"),
     ]
   }
 }

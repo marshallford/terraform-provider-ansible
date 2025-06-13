@@ -164,7 +164,7 @@ func testSSHServer(t *testing.T, clientPublicKey string, serverPrivateKey string
 	if clientPublicKey != "" {
 		err = sshServer.SetOption(
 			ssh.PublicKeyAuth(func(_ ssh.Context, key ssh.PublicKey) bool {
-				allowed, _, _, _, err := ssh.ParseAuthorizedKey([]byte(clientPublicKey))
+				allowed, _, _, _, err := gossh.ParseAuthorizedKey([]byte(clientPublicKey))
 				if err != nil {
 					t.Fatal(err)
 				}

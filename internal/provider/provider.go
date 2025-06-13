@@ -8,6 +8,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/ephemeral"
+	"github.com/hashicorp/terraform-plugin-framework/function"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/provider"
 	"github.com/hashicorp/terraform-plugin-framework/provider/schema"
@@ -19,7 +20,11 @@ import (
 
 const defaultProviderPersistRunDir = false
 
-var _ provider.Provider = (*AnsibleProvider)(nil)
+var (
+	_ provider.Provider                       = (*AnsibleProvider)(nil)
+	_ provider.ProviderWithEphemeralResources = (*AnsibleProvider)(nil)
+	_ provider.ProviderWithFunctions          = (*AnsibleProvider)(nil)
+)
 
 type AnsibleProvider struct {
 	version string
@@ -118,6 +123,13 @@ func (p *AnsibleProvider) DataSources(_ context.Context) []func() datasource.Dat
 func (p *AnsibleProvider) EphemeralResources(_ context.Context) []func() ephemeral.EphemeralResource {
 	return []func() ephemeral.EphemeralResource{
 		NewNavigatorRunEphemeralResource,
+	}
+}
+
+func (p *AnsibleProvider) Functions(_ context.Context) []func() function.Function {
+	return []func() function.Function{
+		NewSSHArgsFunction,
+		NewSSHKnownHostFunction,
 	}
 }
 
