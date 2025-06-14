@@ -1,17 +1,17 @@
 terraform {
-  required_version = ">= 1.7.0"
+  required_version = ">= 1.12.0"
   required_providers {
     aws = {
       source  = "hashicorp/aws"
-      version = "5.46.0"
+      version = "5.99.1"
     }
     tls = {
       source  = "hashicorp/tls"
-      version = "4.0.5"
+      version = "4.1.0"
     }
     ansible = {
       source  = "marshallford/ansible"
-      version = "0.10.1"
+      version = "0.31.0"
     }
   }
 }
@@ -44,9 +44,13 @@ data "aws_iam_policy_document" "this" {
 }
 
 resource "aws_iam_role" "this" {
-  name                = "ansible-provider-example"
-  assume_role_policy  = data.aws_iam_policy_document.this.json
-  managed_policy_arns = ["arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore"]
+  name               = "ansible-provider-example"
+  assume_role_policy = data.aws_iam_policy_document.this.json
+}
+
+resource "aws_iam_role_policy_attachment" "this" {
+  role       = aws_iam_role.this.name
+  policy_arn = "arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore"
 }
 
 resource "aws_iam_instance_profile" "this" {
@@ -131,17 +135,16 @@ locals {
   inventory = yamlencode({
     all = {
       vars = {
-        ansible_ssh_common_args = "-o ProxyCommand=\"sh -c \\\"aws ssm start-session --target %h --document-name AWS-StartSSHSession --parameters 'portNumber=%p'\\\"\""
+        ansible_ssh_common_args    = "-o ProxyCommand=\"sh -c \\\"aws ssm start-session --target %h --document-name AWS-StartSSHSession --parameters 'portNumber=%p'\\\"\""
+        ansible_python_interpreter = "/usr/bin/python3"
+        ansible_user               = "ec2-user"
+        hello_msg                  = "hello world (AWS)"
       }
       children = {
         example_group = {
           hosts = { for instance in aws_instance.this : instance.tags.Name => {
-            ansible_host = instance.id,
-            ansible_user = "ec2-user"
+            ansible_host = instance.id
           } }
-          vars = {
-            hello_msg = "hello world (AWS)"
-          }
         }
       }
     }
@@ -154,7 +157,8 @@ resource "ansible_navigator_run" "this" {
   working_directory        = "${path.root}/working-directory"
   ansible_navigator_binary = "${path.root}/.venv/bin/ansible-navigator"
   execution_environment = {
-    image = "ansible-execution-env-aws-example:v1"
+    container_engine = "docker" # same engine used to build the EEI
+    image            = "ansible-execution-env-aws-example:v1"
     environment_variables_set = {
       AWS_ACCESS_KEY_ID     = aws_iam_access_key.ssh_ssm.id
       AWS_SECRET_ACCESS_KEY = aws_iam_access_key.ssh_ssm.secret

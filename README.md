@@ -61,6 +61,7 @@ output "uptimes" {
 
 * [AWS](./examples/complete/aws/)
 * [Libvirt](./examples/complete/libvirt/)
+* [Proxmox](./examples/complete/proxmox/)
 
 ## Support Matrix
 
