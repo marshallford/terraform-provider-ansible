@@ -1,4 +1,4 @@
-version: 3
+version: 3 # noqa schema[execution-environment]
 
 images:
   base_image:
