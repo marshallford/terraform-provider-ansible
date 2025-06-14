@@ -1,0 +1,64 @@
+variant: fcos
+version: 1.5.0
+storage:
+  files:
+  - path: /etc/hostname
+    mode: 0644
+    overwrite: true
+    contents:
+      inline: ${hostname}
+  - path: /etc/zincati/config.d/55-updates-strategy.toml
+    mode: 0644
+    overwrite: true
+    contents:
+      inline: |
+        [updates]
+        enabled = false
+passwd:
+  users:
+  - name: core
+    ssh_authorized_keys:
+    - ${ssh_authorized_key}
+systemd:
+  units:
+  - name: rpm-ostree-install-qemu-ga.service
+    enabled: true
+    contents: |
+      [Unit]
+      Description=Layer qemu-ga with rpm-ostree
+      Wants=network-online.target
+      After=network-online.target
+      Before=zincati.service
+      ConditionPathExists=!/var/lib/%N.stamp
+
+      [Service]
+      Type=oneshot
+      RemainAfterExit=true
+      ExecStartPre=/bin/sh -c 'for i in $(seq 1 300); do getent hosts mirrors.fedoraproject.org >/dev/null && exit 0 || sleep 1; done; exit 1'
+      ExecStart=/bin/sh -c '\
+        flock /var/lib/rpm-ostree.lock rpm-ostree install --apply-live --assumeyes --allow-inactive --idempotent qemu-guest-agent && \
+        systemctl enable --now qemu-guest-agent.service && \
+        touch /var/lib/%N.stamp'
+
+      [Install]
+      WantedBy=multi-user.target
+  - name: rpm-ostree-install-python.service
+    enabled: true
+    contents: |
+      [Unit]
+      Description=Layer python with rpm-ostree
+      Wants=network-online.target
+      After=network-online.target
+      Before=zincati.service
+      ConditionPathExists=!/var/lib/%N.stamp
+
+      [Service]
+      Type=oneshot
+      RemainAfterExit=true
+      ExecStartPre=/bin/sh -c 'for i in $(seq 1 300); do getent hosts mirrors.fedoraproject.org >/dev/null && exit 0 || sleep 1; done; exit 1'
+      ExecStart=/bin/sh -c '\
+        flock /var/lib/rpm-ostree.lock rpm-ostree install --apply-live --assumeyes --allow-inactive --idempotent python3 python3-libselinux && \
+        touch /var/lib/%N.stamp'
+
+      [Install]
+      WantedBy=multi-user.target

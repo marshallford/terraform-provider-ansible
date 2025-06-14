@@ -1,6 +1,6 @@
 # AWS Example
 
-This Terraform configuration creates an AWS EC2 instance using the [`hashicorp/aws`](https://registry.terraform.io/providers/hashicorp/aws/latest/docs) provider, constructs an Ansible inventory containing the virtual machine, and runs a playbook against said inventory.
+This Terraform configuration creates an AL2023 AWS EC2 instance using the [`hashicorp/aws`](https://registry.terraform.io/providers/hashicorp/aws/latest/docs) provider, constructs an Ansible inventory containing the virtual machine, and runs a playbook against said inventory.
 
 ## Prerequisites
 
@@ -11,7 +11,7 @@ This Terraform configuration creates an AWS EC2 instance using the [`hashicorp/a
 
 ## Steps
 
-1. Run `make` to install `ansible-builder` and `ansible-navigator` packages into a Python virtual environment.
-2. Run `make build` to build the Ansible EEI (container image).
+1. Run `make` to install `ansible-builder` and `ansible-navigator` packages into a Python virtual environment
+2. Run `make build` to build the Ansible EEI (container image)
 3. Setup [AWS authentication](https://registry.terraform.io/providers/hashicorp/aws/latest/docs#authentication-and-configuration)
 4. Run `terraform init` and `terraform apply`

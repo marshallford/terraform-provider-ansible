@@ -1,17 +1,17 @@
 terraform {
-  required_version = ">= 1.7.0"
+  required_version = ">= 1.12.0"
   required_providers {
     libvirt = {
       source  = "dmacvicar/libvirt"
-      version = "0.7.6"
+      version = "0.8.3"
     }
     tls = {
       source  = "hashicorp/tls"
-      version = "4.0.5"
+      version = "4.1.0"
     }
     ansible = {
       source  = "marshallford/ansible"
-      version = "0.10.1"
+      version = "0.31.0"
     }
   }
 }
@@ -34,13 +34,15 @@ resource "tls_private_key" "this" {
 resource "libvirt_pool" "this" {
   name = "example"
   type = "dir"
-  path = "/var/lib/libvirt/images/example"
+  target {
+    path = "/var/lib/libvirt/images/example"
+  }
 }
 
 resource "libvirt_volume" "ubuntu" {
   name   = "ubuntu.qcow2"
   pool   = libvirt_pool.this.name
-  source = "https://cloud-images.ubuntu.com/releases/22.04/release-20240416/ubuntu-22.04-server-cloudimg-amd64.img"
+  source = "https://cloud-images.ubuntu.com/releases/noble/release-20250610/ubuntu-24.04-server-cloudimg-amd64.img"
   format = "qcow2"
 }
 
@@ -97,15 +99,16 @@ resource "libvirt_domain" "this" {
 locals {
   inventory = yamlencode({
     all = {
+      vars = {
+        ansible_python_interpreter = "/usr/bin/python3"
+        ansible_user               = "ubuntu"
+        hello_msg                  = "hello world (Libvirt)"
+      }
       children = {
         example_group = {
           hosts = { for domain in libvirt_domain.this : domain.name => {
             ansible_host = domain.network_interface[0].addresses[0]
-            ansible_user = "ubuntu"
           } }
-          vars = {
-            hello_msg = "hello world (Libvirt)"
-          }
         }
       }
     }
@@ -135,5 +138,5 @@ resource "ansible_navigator_run" "this" {
 }
 
 output "playbook_stdout" {
-  value = join("\n", jsondecode(ansible_navigator_run.this.artifact_queries.stdout.result[0]))
+  value = join("\n", jsondecode(ansible_navigator_run.this.artifact_queries.stdout.results[0]))
 }
