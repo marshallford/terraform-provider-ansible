@@ -5,18 +5,25 @@ resource "ansible_navigator_run" "test" {
     gather_facts: false
     become: false
   EOT
-  inventory                = "# localhost"
+  inventory                = var.inventory
   artifact_queries = {
     "test" = {
       jq_filter = "now"
     }
   }
   triggers = {
-    run = var.trigger
+    exclusive_run = var.trigger
   }
+}
+
+variable "inventory" {
+  type     = string
+  nullable = false
+
 }
 
 variable "trigger" {
   type     = string
-  nullable = false
+  nullable = true
+  default  = null
 }

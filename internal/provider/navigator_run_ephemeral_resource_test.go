@@ -47,7 +47,7 @@ func TestAccNavigatorRunEphemeralResource_artifact_queries(t *testing.T) {
 					statecheck.ExpectKnownValue(
 						"echo.first_test",
 						stdoutArtifactQueryPath,
-						knownvalue.StringRegexp(regexp.MustCompile("ok=3")),
+						knownvalue.StringRegexp(regexp.MustCompile("ok=2")),
 					),
 					statecheck.ExpectKnownValue(
 						"echo.first_test",
@@ -75,7 +75,7 @@ func TestAccNavigatorRunEphemeralResource_artifact_queries(t *testing.T) {
 					statecheck.ExpectKnownValue(
 						"echo.second_test",
 						stdoutArtifactQueryPath,
-						knownvalue.StringRegexp(regexp.MustCompile("ok=3")),
+						knownvalue.StringRegexp(regexp.MustCompile("ok=2")),
 					),
 					statecheck.ExpectKnownValue(
 						"echo.second_test",

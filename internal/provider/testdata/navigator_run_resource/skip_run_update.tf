@@ -2,6 +2,7 @@ resource "ansible_navigator_run" "test" {
   ansible_navigator_binary = "${path.module}/${var.ansible_navigator_binary}"
   playbook                 = <<-EOT
   - hosts: localhost
+    gather_facts: false
     become: false
   EOT
   inventory                = "# localhost"

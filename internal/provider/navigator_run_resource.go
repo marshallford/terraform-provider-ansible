@@ -399,6 +399,10 @@ func (r *NavigatorRunResource) Schema(ctx context.Context, _ resource.SchemaRequ
 						Description: "A value that, when changed, will run the playbook again. Provides a way to initiate a run without changing other attributes such as the inventory or playbook.",
 						Optional:    true,
 					},
+					"exclusive_run": schema.DynamicAttribute{
+						Description: "When non-null, only changes to this value will run the playbook again. All other changes are ignored, the exception being resource destruction or replacement. Provides fine-grained control for advanced use cases.",
+						Optional:    true,
+					},
 					"replace": schema.DynamicAttribute{
 						Description:         "A value that, when changed, will recreate the resource. Serves as an alternative to the native 'replace_triggered_by' lifecycle argument. Will cause 'id' to change. May be useful when combined with 'run_on_destroy'.",
 						MarkdownDescription: "A value that, when changed, will recreate the resource. Serves as an alternative to the native [`replace_triggered_by`](https://developer.hashicorp.com/terraform/language/meta-arguments/lifecycle#replace_triggered_by) lifecycle argument. Will cause `id` to change. May be useful when combined with `run_on_destroy`.",
@@ -474,7 +478,14 @@ func (NavigatorRunResource) TriggersAttr(data *NavigatorRunResourceModel, attrib
 }
 
 func (r *NavigatorRunResource) ShouldRun(plan *NavigatorRunResourceModel, state *NavigatorRunResourceModel) bool {
-	// skip working_directory, ansible_navigator_binary, run_on_destroy, timeouts
+	if !r.TriggersAttr(plan, "exclusive_run").IsNull() {
+		if r.TriggersAttr(plan, "exclusive_run").Equal(r.TriggersAttr(state, "exclusive_run")) {
+			return false
+		}
+		return true
+	}
+
+	// skip working_directory, ansible_navigator_binary, run_on_destroy, destroy_playbook, timeouts
 	attributeChanges := []bool{
 		plan.Playbook.Equal(state.Playbook),
 		plan.Inventory.Equal(state.Inventory),
