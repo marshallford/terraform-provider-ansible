@@ -479,10 +479,7 @@ func (NavigatorRunResource) TriggersAttr(data *NavigatorRunResourceModel, attrib
 
 func (r *NavigatorRunResource) ShouldRun(plan *NavigatorRunResourceModel, state *NavigatorRunResourceModel) bool {
 	if !r.TriggersAttr(plan, "exclusive_run").IsNull() {
-		if r.TriggersAttr(plan, "exclusive_run").Equal(r.TriggersAttr(state, "exclusive_run")) {
-			return false
-		}
-		return true
+		return !r.TriggersAttr(plan, "exclusive_run").Equal(r.TriggersAttr(state, "exclusive_run"))
 	}
 
 	// skip working_directory, ansible_navigator_binary, run_on_destroy, destroy_playbook, timeouts
