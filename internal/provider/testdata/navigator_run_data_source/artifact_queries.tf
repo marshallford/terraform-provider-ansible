@@ -3,6 +3,7 @@ data "ansible_navigator_run" "test" {
   playbook                 = <<-EOT
   - name: Test
     hosts: localhost
+    gather_facts: false
     become: false
     tasks:
     - name: Write file

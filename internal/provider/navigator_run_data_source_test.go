@@ -40,7 +40,7 @@ func TestAccNavigatorRunDataSource_artifact_queries(t *testing.T) {
 					statecheck.ExpectKnownValue(
 						navigatorRunDataSource,
 						tfjsonpath.New("artifact_queries").AtMapKey("stdout").AtMapKey("results").AtSliceIndex(0),
-						knownvalue.StringRegexp(regexp.MustCompile("ok=3")),
+						knownvalue.StringRegexp(regexp.MustCompile("ok=2")),
 					),
 					statecheck.ExpectKnownOutputValue("file_contents", knownvalue.StringExact(testString)),
 				},
@@ -60,7 +60,7 @@ func TestAccNavigatorRunDataSource_artifact_queries(t *testing.T) {
 					statecheck.ExpectKnownValue(
 						navigatorRunDataSource,
 						tfjsonpath.New("artifact_queries").AtMapKey("stdout").AtMapKey("results").AtSliceIndex(0),
-						knownvalue.StringRegexp(regexp.MustCompile("ok=3")),
+						knownvalue.StringRegexp(regexp.MustCompile("ok=2")),
 					),
 					statecheck.ExpectKnownOutputValue("file_contents", knownvalue.StringExact(testUpdateString)),
 				},

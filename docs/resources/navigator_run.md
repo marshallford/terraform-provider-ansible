@@ -112,13 +112,24 @@ resource "ansible_navigator_run" "destroy_playbook" {
 }
 
 # 8. triggers
+locals {
+  example = "some-value"
+}
+
+resource "example" "this" {
+  status = "some-status"
+  id     = "some-id"
+  name   = "some-name"
+}
+
 resource "ansible_navigator_run" "triggers" {
   playbook  = "# example"
   inventory = yamlencode({})
   triggers = {
-    run         = some_resource.example.status # run playbook when status changes
-    replace     = some_resource.example.id     # recreate resource when id changes
-    known_hosts = some_resource.example.name   # reset known_hosts when name changes
+    exclusive_run = local.example       # only run playbook when local value changes
+    run           = example.this.status # run playbook when status changes
+    replace       = example.this.id     # recreate resource when id changes
+    known_hosts   = example.this.name   # reset known_hosts when name changes
   }
 }
 
@@ -329,6 +340,7 @@ Optional:
 
 Optional:
 
+- `exclusive_run` (Dynamic) When non-null, only changes to this value will run the playbook again. All other changes are ignored, the exception being resource destruction or replacement. Provides fine-grained control for advanced use cases.
 - `known_hosts` (Dynamic) A value that, when changed, will reset the computed list of SSH known host entries. Useful when inventory hosts are recreated with the same hostnames/IP addresses, but different SSH keypairs.
 - `replace` (Dynamic) A value that, when changed, will recreate the resource. Serves as an alternative to the native [`replace_triggered_by`](https://developer.hashicorp.com/terraform/language/meta-arguments/lifecycle#replace_triggered_by) lifecycle argument. Will cause `id` to change. May be useful when combined with `run_on_destroy`.
 - `run` (Dynamic) A value that, when changed, will run the playbook again. Provides a way to initiate a run without changing other attributes such as the inventory or playbook.

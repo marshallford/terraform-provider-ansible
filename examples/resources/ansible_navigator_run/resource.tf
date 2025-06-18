@@ -97,13 +97,24 @@ resource "ansible_navigator_run" "destroy_playbook" {
 }
 
 # 8. triggers
+locals {
+  example = "some-value"
+}
+
+resource "example" "this" {
+  status = "some-status"
+  id     = "some-id"
+  name   = "some-name"
+}
+
 resource "ansible_navigator_run" "triggers" {
   playbook  = "# example"
   inventory = yamlencode({})
   triggers = {
-    run         = some_resource.example.status # run playbook when status changes
-    replace     = some_resource.example.id     # recreate resource when id changes
-    known_hosts = some_resource.example.name   # reset known_hosts when name changes
+    exclusive_run = local.example       # only run playbook when local value changes
+    run           = example.this.status # run playbook when status changes
+    replace       = example.this.id     # recreate resource when id changes
+    known_hosts   = example.this.name   # reset known_hosts when name changes
   }
 }
 

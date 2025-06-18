@@ -61,7 +61,7 @@ func TestAccNavigatorRunResource_artifact_queries(t *testing.T) {
 					statecheck.ExpectKnownValue(
 						navigatorRunResource,
 						tfjsonpath.New("artifact_queries").AtMapKey("stdout").AtMapKey("results").AtSliceIndex(0),
-						knownvalue.StringRegexp(regexp.MustCompile("ok=3")),
+						knownvalue.StringRegexp(regexp.MustCompile("ok=2")),
 					),
 					statecheck.ExpectKnownOutputValue("file_contents", knownvalue.StringExact(testString)),
 				},
@@ -82,7 +82,7 @@ func TestAccNavigatorRunResource_artifact_queries(t *testing.T) {
 					statecheck.ExpectKnownValue(
 						navigatorRunResource,
 						tfjsonpath.New("artifact_queries").AtMapKey("stdout").AtMapKey("results").AtSliceIndex(0),
-						knownvalue.StringRegexp(regexp.MustCompile("ok=3")),
+						knownvalue.StringRegexp(regexp.MustCompile("ok=2")),
 					),
 					statecheck.ExpectKnownOutputValue("file_contents", knownvalue.StringExact(testUpdateString)),
 				},
@@ -393,6 +393,90 @@ func TestAccNavigatorRunResource_skip_run(t *testing.T) {
 					commandValueSame.AddStateValue(navigatorRunResource, tfjsonpath.New("command")),
 					statecheck.ExpectKnownValue(navigatorRunResource, queryResultPath, knownvalue.NotNull()),
 					queryResultValueSame.AddStateValue(navigatorRunResource, queryResultPath),
+				},
+			},
+		},
+	})
+}
+
+func TestAccNavigatorRunResource_trigger_exclusive_run(t *testing.T) {
+	t.Parallel()
+
+	commandValue1 := statecheck.CompareValue(compare.ValuesDiffer())
+	queryResultValue1 := statecheck.CompareValue(compare.ValuesDiffer())
+	commandValue2 := statecheck.CompareValue(compare.ValuesSame())
+	queryResultValue2 := statecheck.CompareValue(compare.ValuesSame())
+	commandValue3 := statecheck.CompareValue(compare.ValuesDiffer())
+	queryResultValue3 := statecheck.CompareValue(compare.ValuesDiffer())
+	queryResultPath := tfjsonpath.New("artifact_queries").AtMapKey("test").AtMapKey("results").AtSliceIndex(0)
+
+	resource.Test(t, resource.TestCase{
+		PreCheck:                 func() { testPreCheck(t) },
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		Steps: []resource.TestStep{
+			{
+				Config: testTerraformConfig(t, filepath.Join("navigator_run_resource", "trigger_exclusive_run")),
+				ConfigVariables: testConfigVariables(t, config.Variables{
+					"inventory": config.StringVariable("# inventory a"),
+				}),
+				ConfigStateChecks: []statecheck.StateCheck{
+					commandValue1.AddStateValue(navigatorRunResource, tfjsonpath.New("command")),
+					queryResultValue1.AddStateValue(navigatorRunResource, queryResultPath),
+				},
+			},
+			{
+				Config: testTerraformConfig(t, filepath.Join("navigator_run_resource", "trigger_exclusive_run")),
+				ConfigVariables: testConfigVariables(t, config.Variables{
+					"trigger":   config.StringVariable("x"),
+					"inventory": config.StringVariable("# inventory b"),
+				}),
+				ConfigPlanChecks: resource.ConfigPlanChecks{
+					PreApply: []plancheck.PlanCheck{
+						plancheck.ExpectNonEmptyPlan(),
+						plancheck.ExpectResourceAction(navigatorRunResource, plancheck.ResourceActionUpdate),
+					},
+				},
+				ConfigStateChecks: []statecheck.StateCheck{
+					commandValue1.AddStateValue(navigatorRunResource, tfjsonpath.New("command")),
+					commandValue2.AddStateValue(navigatorRunResource, tfjsonpath.New("command")),
+					queryResultValue1.AddStateValue(navigatorRunResource, queryResultPath),
+					queryResultValue2.AddStateValue(navigatorRunResource, queryResultPath),
+				},
+			},
+			{
+				Config: testTerraformConfig(t, filepath.Join("navigator_run_resource", "trigger_exclusive_run")),
+				ConfigVariables: testConfigVariables(t, config.Variables{
+					"trigger":   config.StringVariable("x"),
+					"inventory": config.StringVariable("# inventory c"),
+				}),
+				ConfigPlanChecks: resource.ConfigPlanChecks{
+					PreApply: []plancheck.PlanCheck{
+						plancheck.ExpectNonEmptyPlan(),
+						plancheck.ExpectResourceAction(navigatorRunResource, plancheck.ResourceActionUpdate),
+					},
+				},
+				ConfigStateChecks: []statecheck.StateCheck{
+					commandValue2.AddStateValue(navigatorRunResource, tfjsonpath.New("command")),
+					commandValue3.AddStateValue(navigatorRunResource, tfjsonpath.New("command")),
+					queryResultValue2.AddStateValue(navigatorRunResource, queryResultPath),
+					queryResultValue3.AddStateValue(navigatorRunResource, queryResultPath),
+				},
+			},
+			{
+				Config: testTerraformConfig(t, filepath.Join("navigator_run_resource", "trigger_exclusive_run")),
+				ConfigVariables: testConfigVariables(t, config.Variables{
+					"trigger":   config.StringVariable("y"),
+					"inventory": config.StringVariable("# inventory c"),
+				}),
+				ConfigPlanChecks: resource.ConfigPlanChecks{
+					PreApply: []plancheck.PlanCheck{
+						plancheck.ExpectNonEmptyPlan(),
+						plancheck.ExpectResourceAction(navigatorRunResource, plancheck.ResourceActionUpdate),
+					},
+				},
+				ConfigStateChecks: []statecheck.StateCheck{
+					commandValue3.AddStateValue(navigatorRunResource, tfjsonpath.New("command")),
+					queryResultValue3.AddStateValue(navigatorRunResource, queryResultPath),
 				},
 			},
 		},
