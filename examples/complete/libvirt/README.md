@@ -5,7 +5,7 @@ This Terraform configuration creates an Ubuntu KVM domain using the [`dmacvicar/
 ## Prerequisites
 
 1. `docker`
-2. `python3` with `venv`
+2. `python3` with `uv`
 3. `terraform`
 4. KVM host accessible [via libvirt](https://registry.terraform.io/providers/dmacvicar/libvirt/latest/docs#the-connection-uri)
 

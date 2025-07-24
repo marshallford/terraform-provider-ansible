@@ -5,7 +5,7 @@ This Terraform configuration creates an AL2023 AWS EC2 instance using the [`hash
 ## Prerequisites
 
 1. `docker`
-2. `python3` with `venv`
+2. `python3` with `uv`
 3. `terraform`
 4. AWS account and matching credentials (`AmazonEC2FullAccess` and `IAMFullAccess` managed policies or equivalent access required)
 

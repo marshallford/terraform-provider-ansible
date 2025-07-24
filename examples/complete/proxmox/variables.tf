@@ -24,7 +24,3 @@ variable "proxmox_datastore_disk" {
   type    = string
   default = "local-lvm"
 }
-
-variable "proxmox_image_name" {
-  type = string
-}

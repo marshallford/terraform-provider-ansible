@@ -158,7 +158,7 @@ resource "ansible_navigator_run" "this" {
   ansible_navigator_binary = "${path.root}/.venv/bin/ansible-navigator"
   execution_environment = {
     container_engine = "docker" # same engine used to build the EEI
-    image            = "ansible-execution-env-aws-example:v1"
+    image            = "terraform-provider-ansible-example-aws:v1"
     environment_variables_set = {
       AWS_ACCESS_KEY_ID     = aws_iam_access_key.ssh_ssm.id
       AWS_SECRET_ACCESS_KEY = aws_iam_access_key.ssh_ssm.secret

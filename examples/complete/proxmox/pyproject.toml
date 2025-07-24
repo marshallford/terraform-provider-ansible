@@ -1,0 +1,7 @@
+[project]
+name = "terraform-provider-ansible-example-proxmox"
+version = "0.1.0"
+requires-python = ">=3.13.5"
+dependencies = [
+    "ansible-navigator>=25.5.0",
+]

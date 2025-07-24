@@ -27,14 +27,14 @@ GOLANGCI_VERSION ?= 2.1.6
 GOLANGCI_IMAGE ?= docker.io/golangci/golangci-lint:v$(GOLANGCI_VERSION)
 GOLANGCI := $(DOCKER_RUN) -v=$(CURDIR):/code -w /code $(GOLANGCI_IMAGE) golangci-lint run
 
+UV ?= uv
 VENV := .venv
 VENV_STAMP := $(VENV)/stamp
 ACTIVATE := . $(VENV)/bin/activate
 
-$(VENV_STAMP): requirements.txt
-	test -d $(VENV_STAMP) || python3 -qm venv $(VENV)
-	$(ACTIVATE); pip install -qU pip setuptools wheel
-	$(ACTIVATE); pip install -qr requirements.txt
+$(VENV_STAMP): pyproject.toml $(wildcard uv.lock)
+	$(UV) venv $(VENV)
+	$(UV) sync
 	touch $(VENV_STAMP)
 
 .PHONY: python
@@ -73,7 +73,7 @@ lint/yamllint:
 lint/golangci:
 	$(GOLANGCI)
 
-lint/ansible: python
+lint/ansible: $(VENV_STAMP)
 	$(ACTIVATE); ansible-lint docs examples
 
 .PHONY: install cover docs
@@ -93,8 +93,8 @@ test: test/docs test/pkg test/acc
 test/docs:
 	TFENV_TERRAFORM_VERSION=$(TERRAFORM_VERSION) go run github.com/hashicorp/terraform-plugin-docs/cmd/tfplugindocs validate
 
-test/pkg: python
+test/pkg: $(VENV_STAMP)
 	go test ./pkg/... -v -coverprofile=cover.out $(TESTARGS) -timeout 60m
 
-test/acc: python
+test/acc: $(VENV_STAMP)
 	TF_ACC=1 TFENV_TERRAFORM_VERSION=$(TERRAFORM_VERSION) go test ./internal/provider/... -v -coverprofile=cover.out $(TESTARGS) -timeout 60m
