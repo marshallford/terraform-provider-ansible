@@ -8,10 +8,12 @@ linters:
   - funlen
   - godox
   - lll
+  - noinlineerr
   - perfsprint
   - recvcheck
   - revive
   - wsl
+  - wsl_v5
   settings:
     varnamelen:
       ignore-type-assert-ok: true

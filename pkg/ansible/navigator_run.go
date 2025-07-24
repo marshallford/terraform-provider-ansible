@@ -1,6 +1,7 @@
 package ansible
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"os/exec"
@@ -72,8 +73,8 @@ func navigatorRunCommandArgs(runDir string, eeEnabled bool, options *Options) []
 	return args
 }
 
-func GenerateNavigatorRunCommand(runDir string, workingDir string, ansibleNavigatorBinary string, eeEnabled bool, options *Options) *exec.Cmd {
-	command := exec.Command(ansibleNavigatorBinary, []string{ // #nosec G204
+func GenerateNavigatorRunCommand(ctx context.Context, runDir string, workingDir string, ansibleNavigatorBinary string, eeEnabled bool, options *Options) *exec.Cmd {
+	command := exec.CommandContext(ctx, ansibleNavigatorBinary, []string{ // #nosec G204
 		"run",
 		filepath.Join(runDir, playbookFilename),
 		"--playbook-artifact-save-as",

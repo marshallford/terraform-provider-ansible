@@ -147,7 +147,7 @@ func testSSHKeygen(t *testing.T) (string, string) {
 func testSSHServer(t *testing.T, clientPublicKey string, serverPrivateKey string) int {
 	t.Helper()
 
-	listener, err := net.Listen("tcp", "localhost:0")
+	listener, err := net.Listen("tcp", "localhost:0") //nolint:noctx
 	if err != nil {
 		t.Fatal(err)
 	}
