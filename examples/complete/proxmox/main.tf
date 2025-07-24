@@ -3,7 +3,7 @@ terraform {
   required_providers {
     proxmox = {
       source  = "bpg/proxmox"
-      version = "0.78.1"
+      version = "0.80.0"
     }
     ct = {
       source  = "poseidon/ct"
@@ -62,6 +62,17 @@ resource "proxmox_virtual_environment_file" "ignition" {
   }
 }
 
+resource "proxmox_virtual_environment_download_file" "fcos" {
+  content_type            = "iso"
+  datastore_id            = var.proxmox_datastore_directory
+  file_name               = "fedora-coreos-42.20250705.3.0-proxmoxve.x86_64.img"
+  node_name               = var.proxmox_node
+  url                     = "https://builds.coreos.fedoraproject.org/prod/streams/stable/builds/42.20250705.3.0/x86_64/fedora-coreos-42.20250705.3.0-proxmoxve.x86_64.qcow2.xz"
+  checksum                = "dab2cfafe397aa96e2885d11ab89a1463bc0dd49a04c7f06bfef7246d13f0437"
+  checksum_algorithm      = "sha256"
+  decompression_algorithm = "zst"
+}
+
 resource "proxmox_virtual_environment_vm" "this" {
   for_each  = proxmox_virtual_environment_file.ignition
   name      = "example-${each.key}"
@@ -82,7 +93,7 @@ resource "proxmox_virtual_environment_vm" "this" {
 
   disk {
     datastore_id = var.proxmox_datastore_disk
-    file_id      = "${var.proxmox_datastore_directory}:iso/${var.proxmox_image_name}"
+    file_id      = proxmox_virtual_environment_download_file.fcos.id
     interface    = "virtio0"
     iothread     = true
     discard      = "on"

@@ -42,7 +42,7 @@ resource "libvirt_pool" "this" {
 resource "libvirt_volume" "ubuntu" {
   name   = "ubuntu.qcow2"
   pool   = libvirt_pool.this.name
-  source = "https://cloud-images.ubuntu.com/releases/noble/release-20250610/ubuntu-24.04-server-cloudimg-amd64.img"
+  source = "https://cloud-images.ubuntu.com/releases/noble/release-20250704/ubuntu-24.04-server-cloudimg-amd64.img"
   format = "qcow2"
 }
 
