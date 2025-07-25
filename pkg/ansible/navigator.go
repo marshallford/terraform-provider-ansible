@@ -1,6 +1,7 @@
 package ansible
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"os"
@@ -57,7 +58,7 @@ func DirectoryPreflight(dir string) error {
 	return nil
 }
 
-func ContainerEnginePreflight(containerEngine string) error {
+func ContainerEnginePreflight(ctx context.Context, containerEngine string) error {
 	if !slices.Contains(ContainerEngineOptions(true), containerEngine) {
 		return fmt.Errorf("%w, %s is not an option", ErrContainerEngineValidate, containerEngine)
 	}
@@ -80,7 +81,7 @@ func ContainerEnginePreflight(containerEngine string) error {
 		return ErrContainerEnginePath
 	}
 
-	command := exec.Command(containerEngine, "info")
+	command := exec.CommandContext(ctx, containerEngine, "info")
 	if err := command.Run(); err != nil {
 		return fmt.Errorf("%w, '%s info' command failed, %w", ErrContainerEngineRunning, containerEngine, err)
 	}
@@ -106,8 +107,8 @@ func NavigatorPathPreflight(path string) (string, error) {
 }
 
 // TODO require a min version and include output in error.
-func NavigatorPreflight(binary string) error {
-	command := exec.Command(binary, "--version")
+func NavigatorPreflight(ctx context.Context, binary string) error {
+	command := exec.CommandContext(ctx, binary, "--version")
 	stdoutStderr, err := command.CombinedOutput()
 	if err != nil {
 		return fmt.Errorf("%w, '%s --version' command failed, %w", ErrNavigator, binary, err)
@@ -121,12 +122,12 @@ func NavigatorPreflight(binary string) error {
 }
 
 // TODO require a min version and include output in error.
-func PlaybookPreflight() error {
+func PlaybookPreflight(ctx context.Context) error {
 	if err := programExistsOnPath(PlaybookProgram); err != nil {
 		return fmt.Errorf("%w, ansible is required when running without an execution environment", ErrPlaybookPath)
 	}
 
-	command := exec.Command(PlaybookProgram, "--version")
+	command := exec.CommandContext(ctx, PlaybookProgram, "--version")
 	stdoutStderr, err := command.CombinedOutput()
 	if err != nil {
 		return fmt.Errorf("%w, '%s --version' command failed, %w", ErrPlaybook, PlaybookProgram, err)

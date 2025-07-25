@@ -465,7 +465,7 @@ func (d *NavigatorRunDataSource) Read(ctx context.Context, req datasource.ReadRe
 		return
 	}
 
-	ctx, cancel := context.WithTimeout(ctx, timeout)
+	ctx, cancel := context.WithTimeout(ctx, timeout+navigatorRunTimeoutOverhead)
 	defer cancel()
 
 	data.ID = types.StringValue(uuid.New().String())

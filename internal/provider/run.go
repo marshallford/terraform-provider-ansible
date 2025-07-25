@@ -20,6 +20,7 @@ const (
 	navigatorRunOperationEnvVar        = "ANSIBLE_TF_OPERATION"
 	navigatorRunInventoryEnvVar        = "ANSIBLE_TF_INVENTORY"
 	navigatorRunPrevInventoryEnvVar    = "ANSIBLE_TF_PREVIOUS_INVENTORY"
+	navigatorRunTimeoutOverhead        = 5 * time.Second
 	defaultNavigatorRunWorkingDir      = "."
 	defaultNavigatorRunTimeout         = 10 * time.Minute
 	defaultNavigatorRunContainerEngine = ansible.ContainerEngineAuto
@@ -96,11 +97,11 @@ func run(ctx context.Context, diags *diag.Diagnostics, timeout time.Duration, op
 
 	if run.navigatorSettings.EEEnabled {
 		tflog.Trace(ctx, "container engine preflight")
-		err = ansible.ContainerEnginePreflight(run.navigatorSettings.ContainerEngine)
+		err = ansible.ContainerEnginePreflight(ctx, run.navigatorSettings.ContainerEngine)
 		addPathError(diags, path.Root("execution_environment").AtMapKey("container_engine"), "Container engine preflight check", err)
 	} else {
 		tflog.Trace(ctx, "playbook preflight")
-		err = ansible.PlaybookPreflight()
+		err = ansible.PlaybookPreflight(ctx)
 		addPathError(diags, path.Root("execution_environment").AtMapKey("enabled"), "Ansible playbook preflight check", err)
 	}
 
@@ -109,7 +110,7 @@ func run(ctx context.Context, diags *diag.Diagnostics, timeout time.Duration, op
 	addPathError(diags, path.Root("ansible_navigator_binary"), "Ansible navigator not found", err)
 
 	tflog.Trace(ctx, "navigator preflight")
-	err = ansible.NavigatorPreflight(binary)
+	err = ansible.NavigatorPreflight(ctx, binary)
 	addPathError(diags, path.Root("ansible_navigator_binary"), "Ansible navigator preflight check", err)
 
 	tflog.Trace(ctx, "creating directories and files")
@@ -167,6 +168,7 @@ func run(ctx context.Context, diags *diag.Diagnostics, timeout time.Duration, op
 	}
 
 	command := ansible.GenerateNavigatorRunCommand(
+		ctx,
 		run.dir,
 		run.workingDir,
 		binary,
