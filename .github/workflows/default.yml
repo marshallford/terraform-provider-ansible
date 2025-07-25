@@ -22,6 +22,15 @@ jobs:
         cache: true
     - name: Download dependencies
       run: go mod download
+    - name: Setup uv
+      uses: astral-sh/setup-uv@v6
+      with:
+        enable-cache: true
+        version: 0.7.20
+    - name: Setup Python
+      uses: actions/setup-python@v5
+      with:
+        python-version-file: .python-version
     - name: Setup Terraform
       uses: hashicorp/setup-terraform@v3
       with:
