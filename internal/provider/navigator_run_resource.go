@@ -596,7 +596,7 @@ func (r *NavigatorRunResource) Create(ctx context.Context, req resource.CreateRe
 		return
 	}
 
-	ctx, cancel := context.WithTimeout(ctx, timeout)
+	ctx, cancel := context.WithTimeout(ctx, timeout+navigatorRunTimeoutOverhead)
 	defer cancel()
 
 	data.ID = types.StringValue(uuid.New().String())
@@ -658,7 +658,7 @@ func (r *NavigatorRunResource) Update(ctx context.Context, req resource.UpdateRe
 		return
 	}
 
-	ctx, cancel := context.WithTimeout(ctx, timeout)
+	ctx, cancel := context.WithTimeout(ctx, timeout+navigatorRunTimeoutOverhead)
 	defer cancel()
 
 	var navigatorRun navigatorRun
@@ -706,7 +706,7 @@ func (r *NavigatorRunResource) Delete(ctx context.Context, req resource.DeleteRe
 		return
 	}
 
-	ctx, cancel := context.WithTimeout(ctx, timeout)
+	ctx, cancel := context.WithTimeout(ctx, timeout+navigatorRunTimeoutOverhead)
 	defer cancel()
 
 	var navigatorRun navigatorRun

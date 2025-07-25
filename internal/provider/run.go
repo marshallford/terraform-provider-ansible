@@ -20,6 +20,7 @@ const (
 	navigatorRunOperationEnvVar        = "ANSIBLE_TF_OPERATION"
 	navigatorRunInventoryEnvVar        = "ANSIBLE_TF_INVENTORY"
 	navigatorRunPrevInventoryEnvVar    = "ANSIBLE_TF_PREVIOUS_INVENTORY"
+	navigatorRunTimeoutOverhead        = 5 * time.Second
 	defaultNavigatorRunWorkingDir      = "."
 	defaultNavigatorRunTimeout         = 10 * time.Minute
 	defaultNavigatorRunContainerEngine = ansible.ContainerEngineAuto

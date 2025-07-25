@@ -465,7 +465,7 @@ func (er *NavigatorRunEphemeralResource) Open(ctx context.Context, req ephemeral
 		return
 	}
 
-	ctx, cancel := context.WithTimeout(ctx, timeout)
+	ctx, cancel := context.WithTimeout(ctx, timeout+navigatorRunTimeoutOverhead)
 	defer cancel()
 
 	data.ID = types.StringValue(uuid.New().String())
