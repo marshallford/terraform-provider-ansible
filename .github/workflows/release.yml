@@ -15,7 +15,7 @@ jobs:
     # environment: release
     steps:
     - name: Checkout
-      uses: actions/checkout@v4
+      uses: actions/checkout@v5
       with:
         fetch-depth: 0
     - name: Fetch tags
@@ -33,7 +33,7 @@ jobs:
     - name: GoReleaser
       uses: goreleaser/goreleaser-action@v6
       with:
-        version: v2.9.0
+        version: v2.11.2
         args: release --clean
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

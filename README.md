@@ -73,7 +73,7 @@ output "uptimes" {
 
 | Release  | Ansible Navigator | Terraform |
 |:--------:|:-----------------:|:---------:|
-| < v1.0.0 |     >= 24.7.0     | >= 1.10.0 |
+| < v1.0.0 |     >= 25.4.0     | >= 1.11.0 |
 
 ## Development Requirements
 

@@ -6,7 +6,7 @@ VENV_STAMP := $(VENV)/stamp
 ACTIVATE := . $(VENV)/bin/activate
 
 $(VENV_STAMP): pyproject.toml $(wildcard uv.lock)
-	$(UV) venv $(VENV)
+	$(UV) venv $(VENV) --clear
 	$(UV) sync
 	touch $(VENV_STAMP)
 
