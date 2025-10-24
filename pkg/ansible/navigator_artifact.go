@@ -29,8 +29,8 @@ func getPlaybookArtifact(dir string) (*PlaybookArtifact, error) {
 	return &artifact, nil
 }
 
-func GetStatusFromPlaybookArtifact(dir string) (string, error) {
-	artifact, err := getPlaybookArtifact(dir)
+func GetStatusFromPlaybookArtifact(runDir *RunDir) (string, error) {
+	artifact, err := getPlaybookArtifact(runDir.Host)
 	if err != nil {
 		return "", err
 	}
@@ -38,8 +38,8 @@ func GetStatusFromPlaybookArtifact(dir string) (string, error) {
 	return artifact.Status, nil
 }
 
-func GetStdoutFromPlaybookArtifact(dir string) (string, error) {
-	artifact, err := getPlaybookArtifact(dir)
+func GetStdoutFromPlaybookArtifact(runDir *RunDir) (string, error) {
+	artifact, err := getPlaybookArtifact(runDir.Host)
 	if err != nil {
 		return "", err
 	}

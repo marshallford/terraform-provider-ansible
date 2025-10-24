@@ -70,7 +70,7 @@ func incrementRuns(ctx context.Context, diags *diag.Diagnostics, getKey getKey, 
 }
 
 type navigatorRun struct {
-	dir               string
+	hostDir           string
 	persistDir        bool
 	playbook          string
 	inventories       []ansible.Inventory
@@ -87,11 +87,10 @@ type navigatorRun struct {
 func run(ctx context.Context, diags *diag.Diagnostics, timeout time.Duration, operation terraformOp, run *navigatorRun) { //nolint:cyclop
 	var err error
 
-	ctx = tflog.SetField(ctx, "dir", run.dir)
-	ctx = tflog.SetField(ctx, "workingDir", run.workingDir)
 	tflog.Debug(ctx, "starting run")
 
 	tflog.Trace(ctx, "directory preflight")
+	ctx = tflog.SetField(ctx, "workingDir", run.workingDir)
 	err = ansible.DirectoryPreflight(run.workingDir)
 	addPathError(diags, path.Root("working_directory"), "Working directory preflight check", err)
 
@@ -115,39 +114,33 @@ func run(ctx context.Context, diags *diag.Diagnostics, timeout time.Duration, op
 
 	tflog.Trace(ctx, "creating directories and files")
 
-	err = ansible.CreateRunDir(run.dir)
+	runDir, err := ansible.CreateRunDir(run.hostDir, &run.navigatorSettings)
+	ctx = tflog.SetField(ctx, "hostRunDir", runDir.Host)
+	ctx = tflog.SetField(ctx, "resolvedRunDir", runDir.Resolved)
 	addError(diags, "Run directory not created", err)
 
-	err = ansible.CreatePlaybook(run.dir, run.playbook)
+	err = ansible.CreatePlaybook(runDir, run.playbook)
 	addError(diags, "Ansible playbook not created", err)
 
-	err = ansible.CreateInventories(run.dir, run.inventories, &run.navigatorSettings)
+	err = ansible.CreateInventories(runDir, run.inventories)
 	addError(diags, "Ansible inventories not created", err)
 
 	if len(run.privateKeys) > 0 {
-		err = ansible.CreatePrivateKeys(run.dir, run.privateKeys, &run.navigatorSettings)
+		err = ansible.CreatePrivateKeys(runDir, run.privateKeys)
 		addError(diags, "Private keys not created", err)
 	}
 
 	if run.options.KnownHosts {
-		err = ansible.CreateKnownHosts(run.dir, run.knownHosts, &run.navigatorSettings)
+		err = ansible.CreateKnownHosts(runDir, run.knownHosts)
 		addError(diags, "Known hosts not created", err)
 	}
 
+	inventoryPaths := ansible.ResolvedInventoryPaths(runDir, run.inventories)
+
 	run.navigatorSettings.EnvironmentVariablesSet[navigatorRunOperationEnvVar] = operation.String()
-	run.navigatorSettings.EnvironmentVariablesSet[navigatorRunInventoryEnvVar] = ansible.InventoryPath(
-		run.dir,
-		navigatorRunName,
-		run.navigatorSettings.EEEnabled,
-		false,
-	)
+	run.navigatorSettings.EnvironmentVariablesSet[navigatorRunInventoryEnvVar] = inventoryPaths[navigatorRunName]
 	if operation == terraformOpUpdate {
-		run.navigatorSettings.EnvironmentVariablesSet[navigatorRunPrevInventoryEnvVar] = ansible.InventoryPath(
-			run.dir,
-			navigatorRunPrevInventoryName,
-			run.navigatorSettings.EEEnabled,
-			true,
-		)
+		run.navigatorSettings.EnvironmentVariablesSet[navigatorRunPrevInventoryEnvVar] = inventoryPaths[navigatorRunPrevInventoryName]
 	}
 
 	run.navigatorSettings.Timeout = timeout
@@ -155,12 +148,12 @@ func run(ctx context.Context, diags *diag.Diagnostics, timeout time.Duration, op
 	navigatorSettingsContents, err := ansible.GenerateNavigatorSettings(&run.navigatorSettings)
 	addError(diags, "Ansible navigator settings not generated", err)
 
-	err = ansible.CreateNavigatorSettingsFile(run.dir, navigatorSettingsContents)
+	err = ansible.CreateNavigatorSettingsFile(runDir.Host, navigatorSettingsContents)
 	addError(diags, "Ansible navigator settings file not created", err)
 
 	if diags.HasError() {
 		if !run.persistDir {
-			err = ansible.RemoveRunDir(run.dir)
+			err = runDir.Remove()
 			addWarning(diags, "Run directory not removed", err)
 		}
 
@@ -169,10 +162,9 @@ func run(ctx context.Context, diags *diag.Diagnostics, timeout time.Duration, op
 
 	command := ansible.GenerateNavigatorRunCommand(
 		ctx,
-		run.dir,
+		runDir,
 		run.workingDir,
 		binary,
-		run.navigatorSettings.EEEnabled,
 		&run.options,
 	)
 
@@ -180,12 +172,12 @@ func run(ctx context.Context, diags *diag.Diagnostics, timeout time.Duration, op
 
 	commandOutput, err := ansible.ExecNavigatorRunCommand(command)
 	if err != nil {
-		output, _ := ansible.GetStdoutFromPlaybookArtifact(run.dir)
+		output, _ := ansible.GetStdoutFromPlaybookArtifact(runDir)
 		if output == "" {
 			output = commandOutput
 		}
 
-		status, _ := ansible.GetStatusFromPlaybookArtifact(run.dir)
+		status, _ := ansible.GetStatusFromPlaybookArtifact(runDir)
 		switch status {
 		case "timeout":
 			addError(diags, "Ansible navigator run timed out", fmt.Errorf("%w\n\nOutput:\n%s", err, output))
@@ -195,18 +187,18 @@ func run(ctx context.Context, diags *diag.Diagnostics, timeout time.Duration, op
 	}
 
 	if !diags.HasError() {
-		err = ansible.QueryPlaybookArtifact(run.dir, run.artifactQueries)
+		err = ansible.QueryPlaybookArtifact(runDir, run.artifactQueries)
 		addPathError(diags, path.Root("artifact_queries"), "Playbook artifact queries failed", err)
 
 		if run.options.KnownHosts {
-			knownHosts, err := ansible.GetKnownHosts(run.dir)
+			knownHosts, err := ansible.GetKnownHosts(runDir)
 			addPathError(diags, path.Root("ansible_options").AtMapKey("known_hosts"), "Failed to get known hosts", err)
 			run.knownHosts = knownHosts
 		}
 	}
 
 	if !run.persistDir {
-		err = ansible.RemoveRunDir(run.dir)
+		err = runDir.Remove()
 		addWarning(diags, "Run directory not removed", err)
 	}
 }
