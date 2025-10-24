@@ -3,7 +3,6 @@ package ansible
 import (
 	"fmt"
 	"os"
-	"path/filepath"
 )
 
 type ArtifactQuery struct {
@@ -11,8 +10,8 @@ type ArtifactQuery struct {
 	Results  []string
 }
 
-func QueryPlaybookArtifact(dir string, queries map[string]ArtifactQuery) error {
-	path := filepath.Join(dir, playbookArtifactFilename)
+func QueryPlaybookArtifact(runDir *RunDir, queries map[string]ArtifactQuery) error {
+	path := runDir.HostJoin(playbookArtifactFilename)
 
 	contents, err := os.ReadFile(path) // #nosec G304
 	if err != nil {

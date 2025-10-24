@@ -50,10 +50,11 @@ type NavigatorRunDataSourceModel struct {
 func (m NavigatorRunDataSourceModel) Value(ctx context.Context, run *navigatorRun, opts *providerOptions) diag.Diagnostics {
 	var diags diag.Diagnostics
 
-	run.dir = runDir(opts.BaseRunDirectory, m.ID.ValueString(), 0)
+	run.hostDir = runDir(opts.BaseRunDirectory, m.ID.ValueString(), 0)
 	run.persistDir = opts.PersistRunDirectory
 	run.playbook = m.Playbook.ValueString()
 	run.inventories = []ansible.Inventory{{Name: navigatorRunName, Contents: m.Inventory.ValueString()}}
+	run.options.Inventories = []string{navigatorRunName}
 	run.workingDir = m.WorkingDirectory.ValueString()
 	run.navigatorBinary = m.AnsibleNavigatorBinary.ValueString()
 

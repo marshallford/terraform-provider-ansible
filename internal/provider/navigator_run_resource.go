@@ -62,7 +62,7 @@ type NavigatorRunResourceModel struct {
 func (m NavigatorRunResourceModel) Value(ctx context.Context, run *navigatorRun, destroy bool, opts *providerOptions, runs uint32, previousInventory *string) diag.Diagnostics {
 	var diags diag.Diagnostics
 
-	run.dir = runDir(opts.BaseRunDirectory, m.ID.ValueString(), runs)
+	run.hostDir = runDir(opts.BaseRunDirectory, m.ID.ValueString(), runs)
 	run.persistDir = opts.PersistRunDirectory
 
 	run.playbook = m.Playbook.ValueString()
@@ -72,8 +72,9 @@ func (m NavigatorRunResourceModel) Value(ctx context.Context, run *navigatorRun,
 
 	run.inventories = []ansible.Inventory{{Name: navigatorRunName, Contents: m.Inventory.ValueString()}}
 	if previousInventory != nil {
-		run.inventories = append(run.inventories, ansible.Inventory{Name: navigatorRunPrevInventoryName, Contents: *previousInventory, Exclude: true})
+		run.inventories = append(run.inventories, ansible.Inventory{Name: navigatorRunPrevInventoryName, Contents: *previousInventory})
 	}
+	run.options.Inventories = []string{navigatorRunName}
 
 	run.workingDir = m.WorkingDirectory.ValueString()
 	run.navigatorBinary = m.AnsibleNavigatorBinary.ValueString()

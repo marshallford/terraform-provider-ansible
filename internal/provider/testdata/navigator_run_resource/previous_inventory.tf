@@ -6,6 +6,11 @@ resource "ansible_navigator_run" "test" {
     gather_facts: false
     become: false
     tasks:
+    - name: Check that only current inventory is used
+      ansible.builtin.assert:
+        that:
+        - "groups.all | length == 2"
+      when: lookup('ansible.builtin.env', 'ANSIBLE_TF_OPERATION') == 'update'
     - name: Get inventory of previous run
       ansible.builtin.command:
         cmd: "ansible-inventory --list -i {{ lookup('ansible.builtin.env', 'ANSIBLE_TF_PREVIOUS_INVENTORY') }}"

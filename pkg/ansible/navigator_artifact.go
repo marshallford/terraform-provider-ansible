@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
-	"path/filepath"
 	"strings"
 )
 
@@ -13,8 +12,8 @@ type PlaybookArtifact struct {
 	Stdout []string `json:"stdout"`
 }
 
-func getPlaybookArtifact(dir string) (*PlaybookArtifact, error) {
-	path := filepath.Join(dir, playbookArtifactFilename)
+func getPlaybookArtifact(runDir *RunDir) (*PlaybookArtifact, error) {
+	path := runDir.HostJoin(playbookArtifactFilename)
 
 	contents, err := os.ReadFile(path) // #nosec G304
 	if err != nil {
@@ -29,8 +28,8 @@ func getPlaybookArtifact(dir string) (*PlaybookArtifact, error) {
 	return &artifact, nil
 }
 
-func GetStatusFromPlaybookArtifact(dir string) (string, error) {
-	artifact, err := getPlaybookArtifact(dir)
+func GetStatusFromPlaybookArtifact(runDir *RunDir) (string, error) {
+	artifact, err := getPlaybookArtifact(runDir)
 	if err != nil {
 		return "", err
 	}
@@ -38,8 +37,8 @@ func GetStatusFromPlaybookArtifact(dir string) (string, error) {
 	return artifact.Status, nil
 }
 
-func GetStdoutFromPlaybookArtifact(dir string) (string, error) {
-	artifact, err := getPlaybookArtifact(dir)
+func GetStdoutFromPlaybookArtifact(runDir *RunDir) (string, error) {
+	artifact, err := getPlaybookArtifact(runDir)
 	if err != nil {
 		return "", err
 	}
