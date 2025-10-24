@@ -25,7 +25,7 @@ const (
 	defaultNavigatorRunTimeout         = 10 * time.Minute
 	defaultNavigatorRunContainerEngine = ansible.ContainerEngineAuto
 	defaultNavigatorRunEEEnabled       = true
-	defaultNavigatorRunImage           = "ghcr.io/ansible/community-ansible-dev-tools:v25.8.3"
+	defaultNavigatorRunImage           = "ghcr.io/ansible/community-ansible-dev-tools:v25.9.0"
 	defaultNavigatorRunPullPolicy      = "tag"
 	defaultNavigatorRunTimezone        = "UTC"
 	defaultNavigatorRunOnDestroy       = false

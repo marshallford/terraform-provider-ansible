@@ -22,7 +22,10 @@ const (
 	terraformOpUpdate = iota
 	terraformOpDelete = iota
 	terraformOpOpen   = iota
-	diagDetailPrefix  = "Underlying error details"
+)
+
+const (
+	diagDetailPrefix = "Underlying error details"
 )
 
 type attrDescription struct {

@@ -106,7 +106,6 @@ func NavigatorPathPreflight(path string) (string, error) {
 	return path, nil
 }
 
-// TODO require a min version and include output in error.
 func NavigatorPreflight(ctx context.Context, binary string) error {
 	command := exec.CommandContext(ctx, binary, "--version")
 	stdoutStderr, err := command.CombinedOutput()
@@ -118,10 +117,11 @@ func NavigatorPreflight(ctx context.Context, binary string) error {
 		return fmt.Errorf("%w, '%s --version' command output not expected", ErrNavigator, binary)
 	}
 
+	// TODO require a min version and include output in error.
+
 	return nil
 }
 
-// TODO require a min version and include output in error.
 func PlaybookPreflight(ctx context.Context) error {
 	if err := programExistsOnPath(PlaybookProgram); err != nil {
 		return fmt.Errorf("%w, ansible is required when running without an execution environment", ErrPlaybookPath)
@@ -136,6 +136,8 @@ func PlaybookPreflight(ctx context.Context) error {
 	if !strings.HasPrefix(string(stdoutStderr), PlaybookProgram) {
 		return fmt.Errorf("%w, '%s --version' command output not expected", ErrPlaybook, PlaybookProgram)
 	}
+
+	// TODO require a min version and include output in error.
 
 	return nil
 }

@@ -469,7 +469,6 @@ func (r *NavigatorRunResource) Schema(ctx context.Context, _ resource.SchemaRequ
 	}
 }
 
-// TODO find better solution.
 func (NavigatorRunResource) TriggersAttr(data *NavigatorRunResourceModel, attribute string) attr.Value { //nolint:ireturn
 	if data.Triggers.IsNull() {
 		return types.DynamicNull()
