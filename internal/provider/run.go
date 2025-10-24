@@ -148,7 +148,7 @@ func run(ctx context.Context, diags *diag.Diagnostics, timeout time.Duration, op
 	navigatorSettingsContents, err := ansible.GenerateNavigatorSettings(&run.navigatorSettings)
 	addError(diags, "Ansible navigator settings not generated", err)
 
-	err = ansible.CreateNavigatorSettingsFile(runDir.Host, navigatorSettingsContents)
+	err = ansible.CreateNavigatorSettingsFile(runDir, navigatorSettingsContents)
 	addError(diags, "Ansible navigator settings file not created", err)
 
 	if diags.HasError() {

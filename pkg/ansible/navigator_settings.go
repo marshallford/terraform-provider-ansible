@@ -2,7 +2,6 @@ package ansible
 
 import (
 	"fmt"
-	"path/filepath"
 	"time"
 
 	"gopkg.in/yaml.v3"
@@ -130,8 +129,8 @@ func GenerateNavigatorSettings(settings *NavigatorSettings) (string, error) {
 	return string(data), nil
 }
 
-func CreateNavigatorSettingsFile(dir string, settingsContents string) error {
-	path := filepath.Join(dir, navigatorSettingsFilename)
+func CreateNavigatorSettingsFile(runDir *RunDir, settingsContents string) error {
+	path := runDir.HostJoin(navigatorSettingsFilename)
 
 	err := writeFile(path, settingsContents)
 	if err != nil {
