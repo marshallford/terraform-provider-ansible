@@ -1,9 +1,9 @@
 [project]
 name = "terraform-provider-ansible"
 version = "0.1.0"
-requires-python = ">=3.13.7"
+requires-python = ">=3.13.9"
 dependencies = [
-    "ansible>=11.9.0",
-    "ansible-lint>=25.8.2",
-    "ansible-navigator>=25.8.0",
+    "ansible>=12.1.0",
+    "ansible-lint>=25.9.2",
+    "ansible-navigator>=25.9.0",
 ]
