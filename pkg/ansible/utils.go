@@ -26,6 +26,7 @@ func writeFile(path string, contents string) error {
 	return nil
 }
 
+//nolint:cyclop
 func jqJSON(data []byte, filter string, raw bool) ([]string, error) {
 	var blob any
 	if err := json.Unmarshal(data, &blob); err != nil {
@@ -58,6 +59,7 @@ func jqJSON(data []byte, filter string, raw bool) ([]string, error) {
 		if raw {
 			if s, ok := value.(string); ok {
 				results = append(results, s)
+
 				continue
 			}
 		}
