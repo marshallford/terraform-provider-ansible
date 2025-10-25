@@ -26,7 +26,7 @@ func writeFile(path string, contents string) error {
 	return nil
 }
 
-func jqJSON(data []byte, filter string) ([]string, error) {
+func jqJSON(data []byte, filter string, raw bool) ([]string, error) {
 	var blob any
 	if err := json.Unmarshal(data, &blob); err != nil {
 		return nil, fmt.Errorf("failed to parse JSON, %w", err)
@@ -53,6 +53,13 @@ func jqJSON(data []byte, filter string) ([]string, error) {
 			}
 
 			return nil, fmt.Errorf("JQ failed, %w", err)
+		}
+
+		if raw {
+			if s, ok := value.(string); ok {
+				results = append(results, s)
+				continue
+			}
 		}
 
 		result, err := jq.Marshal(value)
