@@ -84,7 +84,8 @@ type navigatorRun struct {
 	command           string
 }
 
-func run(ctx context.Context, diags *diag.Diagnostics, timeout time.Duration, operation terraformOp, run *navigatorRun) { //nolint:cyclop
+//nolint:cyclop
+func run(ctx context.Context, diags *diag.Diagnostics, timeout time.Duration, operation terraformOp, run *navigatorRun) {
 	var err error
 
 	tflog.Debug(ctx, "starting run")

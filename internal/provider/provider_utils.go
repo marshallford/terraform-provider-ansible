@@ -6,9 +6,11 @@ import (
 	"strings"
 	"time"
 
+	actionTimeouts "github.com/hashicorp/terraform-plugin-framework-timeouts/action/timeouts"
 	dataSourceTimeouts "github.com/hashicorp/terraform-plugin-framework-timeouts/datasource/timeouts"
 	ephemeralResourceTimeouts "github.com/hashicorp/terraform-plugin-framework-timeouts/ephemeral/timeouts"
 	resourceTimeouts "github.com/hashicorp/terraform-plugin-framework-timeouts/resource/timeouts"
+	"github.com/hashicorp/terraform-plugin-framework/action"
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/ephemeral"
@@ -22,6 +24,7 @@ const (
 	terraformOpUpdate = iota
 	terraformOpDelete = iota
 	terraformOpOpen   = iota
+	terraformOpInvoke = iota
 )
 
 const (
@@ -43,7 +46,7 @@ type (
 	terraformOps []terraformOp
 )
 
-var terraformOpNames = []string{"create", "read", "update", "delete", "open"} //nolint:gochecknoglobals
+var terraformOpNames = []string{"create", "read", "update", "delete", "open", "invoke"} //nolint:gochecknoglobals
 
 func (op terraformOp) String() string {
 	return terraformOpNames[op]
@@ -79,6 +82,10 @@ func terraformOperationDataSourceTimeout(ctx context.Context, value dataSourceTi
 
 func terraformOperationEphemeralResourceTimeout(ctx context.Context, value ephemeralResourceTimeouts.Value, defaultTimeout time.Duration) (time.Duration, diag.Diagnostics) {
 	return value.Open(ctx, defaultTimeout)
+}
+
+func terraformOperationActionTimeout(ctx context.Context, value actionTimeouts.Value, defaultTimeout time.Duration) (time.Duration, diag.Diagnostics) {
+	return value.Invoke(ctx, defaultTimeout)
 }
 
 func unknownProviderValue(value path.Path) (string, string) {
@@ -131,6 +138,21 @@ func configureEphemeralResourceClient(req ephemeral.ConfigureRequest, resp *ephe
 
 	if !ok {
 		summary, detail := unexpectedConfigureType("Ephemeral Resource", req.ProviderData)
+		resp.Diagnostics.AddError(summary, detail)
+	}
+
+	return opts, ok
+}
+
+func configureActionClient(req action.ConfigureRequest, resp *action.ConfigureResponse) (*providerOptions, bool) {
+	if req.ProviderData == nil {
+		return nil, false
+	}
+
+	opts, ok := req.ProviderData.(*providerOptions)
+
+	if !ok {
+		summary, detail := unexpectedConfigureType("Action", req.ProviderData)
 		resp.Diagnostics.AddError(summary, detail)
 	}
 
