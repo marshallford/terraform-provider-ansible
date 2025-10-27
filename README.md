@@ -4,6 +4,7 @@
 )](https://registry.terraform.io/providers/marshallford/ansible/latest/docs)
 [![Go Report Card](https://goreportcard.com/badge/github.com/marshallford/terraform-provider-ansible)](https://goreportcard.com/report/github.com/marshallford/terraform-provider-ansible)
 [![Acceptance Coverage](https://marshallford.github.io/terraform-provider-ansible/badge.svg)](https://marshallford.github.io/terraform-provider-ansible/cover.html)
+[![FOSSA Status](https://app.fossa.com/api/projects/git%2Bgithub.com%2Fmarshallford%2Fterraform-provider-ansible.svg?type=shield)](https://app.fossa.com/projects/git%2Bgithub.com%2Fmarshallford%2Fterraform-provider-ansible?ref=badge_shield)
 
 Run [Ansible](https://github.com/ansible/ansible) playbooks using Terraform.
 
@@ -121,3 +122,7 @@ In order to run the full suite of Acceptance tests, run `make test/acc`.
 ```shell
 make test/acc
 ```
+
+
+## License
+[![FOSSA Status](https://app.fossa.com/api/projects/git%2Bgithub.com%2Fmarshallford%2Fterraform-provider-ansible.svg?type=large)](https://app.fossa.com/projects/git%2Bgithub.com%2Fmarshallford%2Fterraform-provider-ansible?ref=badge_large)
