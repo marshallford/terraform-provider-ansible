@@ -402,7 +402,6 @@ func (er *NavigatorRunAction) Invoke(ctx context.Context, req action.InvokeReque
 		return
 	}
 
-	// TODO test successful run
 	stdout := strings.Join(navigatorRun.artifactQueries["stdout"].Results, "\n")
 	resp.SendProgress(action.InvokeProgressEvent{Message: stdout})
 }

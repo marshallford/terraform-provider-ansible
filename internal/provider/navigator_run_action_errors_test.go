@@ -42,7 +42,7 @@ func TestAccNavigatorRunAction_errors(t *testing.T) {
 				PreCheck:                 func() { testPreCheck(t) },
 				ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
 				TerraformVersionChecks: []tfversion.TerraformVersionCheck{
-					tfversion.SkipBelow(version.Must(version.NewVersion("1.14.0"))),
+					tfversion.SkipBelow(version.Must(version.NewVersion("1.14.0"))), // TODO replace with tfversion.Version1_14_0 when new plugin-testing version is released
 				},
 				Steps: []resource.TestStep{
 					{

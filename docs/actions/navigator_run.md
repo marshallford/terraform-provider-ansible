@@ -11,6 +11,8 @@ description: |-
 Run an Ansible playbook. Requires `ansible-navigator` and a container engine to run within an execution environment (EE).
 
 ## Example Usage
+Additional examples available in the `ansible_navigator_run` **resource** doc given the overlap in available features.
+That said, keep in mind the differences between *actions* and *resources* when deciding which to use.
 
 ```terraform
 action "ansible_navigator_run" "this" {

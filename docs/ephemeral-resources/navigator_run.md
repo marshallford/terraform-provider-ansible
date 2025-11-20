@@ -11,6 +11,8 @@ description: |-
 Run an Ansible playbook as a means to gather temporary and likely sensitive information. It is recommended to only run playbooks without observable side-effects. Requires `ansible-navigator` and a container engine to run within an execution environment (EE).
 
 ## Example Usage
+Additional examples available in the `ansible_navigator_run` **resource** doc given the overlap in available features.
+That said, keep in mind the differences between *ephemeral resources* and *resources* when deciding which to use.
 
 ```terraform
 ephemeral "ansible_navigator_run" "this" {

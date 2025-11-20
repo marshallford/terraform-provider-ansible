@@ -9,7 +9,7 @@ DOCKER := docker
 DOCKER_RUN := $(DOCKER) run $(DOCKER_FLAGS)
 DOCKER_PULL := $(DOCKER) pull -q
 
-TERRAFORM_VERSION ?= 1.14.0-rc1
+TERRAFORM_VERSION ?= 1.14.0
 
 EDITORCONFIG_CHECKER_VERSION ?= 3.4.1
 EDITORCONFIG_CHECKER_IMAGE ?= docker.io/mstruebing/editorconfig-checker:v$(EDITORCONFIG_CHECKER_VERSION)
@@ -94,7 +94,7 @@ test/docs:
 	TFENV_TERRAFORM_VERSION=$(TERRAFORM_VERSION) go run github.com/hashicorp/terraform-plugin-docs/cmd/tfplugindocs validate
 
 test/pkg: $(VENV_STAMP)
-	GOTOOLCHAIN=go1.25.3+auto go test ./pkg/... -v -coverprofile=cover.out $(TESTARGS) -timeout 60m
+	GOTOOLCHAIN=go1.25.4+auto go test ./pkg/... -v -coverprofile=cover.out $(TESTARGS) -timeout 60m
 
 test/acc: $(VENV_STAMP)
-	GOTOOLCHAIN=go1.25.3+auto TF_ACC=1 TFENV_TERRAFORM_VERSION=$(TERRAFORM_VERSION) go test ./internal/provider/... -v -coverprofile=cover.out $(TESTARGS) -timeout 60m
+	GOTOOLCHAIN=go1.25.4+auto TF_ACC=1 TFENV_TERRAFORM_VERSION=$(TERRAFORM_VERSION) go test ./internal/provider/... -v -coverprofile=cover.out $(TESTARGS) -timeout 60m
