@@ -7,6 +7,7 @@ import (
 
 type ArtifactQuery struct {
 	JQFilter string
+	Raw      bool
 	Results  []string
 }
 
@@ -19,7 +20,7 @@ func QueryPlaybookArtifact(runDir *RunDir, queries map[string]ArtifactQuery) err
 	}
 
 	for name, query := range queries {
-		results, err := jqJSON(contents, query.JQFilter)
+		results, err := jqJSON(contents, query.JQFilter, query.Raw)
 		if err != nil {
 			return fmt.Errorf("failed to query playbook artifact, %w", err)
 		}

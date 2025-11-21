@@ -11,7 +11,7 @@ description: |-
 Run an Ansible playbook as a means to gather information. It is recommended to only run playbooks without observable side-effects. Requires `ansible-navigator` and a container engine to run within an execution environment (EE).
 
 ## Example Usage
-Additional examples available in the `ansible_navigator_run` **resource** docs given the overlap in available features.
+Additional examples available in the `ansible_navigator_run` **resource** doc given the overlap in available features.
 That said, keep in mind the differences between *data sources* and *resources* when deciding which to use.
 
 ```terraform
