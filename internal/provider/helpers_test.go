@@ -12,6 +12,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/gliderlabs/ssh"
@@ -103,7 +104,7 @@ func testPrependPlaybookToPath(t *testing.T) {
 func testTerraformFiles(t *testing.T, names ...string) string {
 	t.Helper()
 
-	var combinedFiles string
+	var combinedFiles strings.Builder
 
 	for _, name := range names {
 		file, err := os.ReadFile(filepath.Join("testdata", fmt.Sprintf("%s.tf", name)))
@@ -111,10 +112,10 @@ func testTerraformFiles(t *testing.T, names ...string) string {
 			t.Fatal(err)
 		}
 
-		combinedFiles += string(file)
+		combinedFiles.Write(file)
 	}
 
-	return combinedFiles
+	return combinedFiles.String()
 }
 
 func testTerraformConfig(t *testing.T, names ...string) string {

@@ -3,5 +3,7 @@ name = "terraform-provider-ansible-example-libvirt"
 version = "0.1.0"
 requires-python = ">=3.13.9"
 dependencies = [
-    "ansible-navigator>=25.9.0",
+    "ansible-navigator>=25.11.0",
 ]
+[tool.uv]
+required-version = ">=0.9.10"
