@@ -3,6 +3,8 @@ name = "terraform-provider-ansible-example-aws"
 version = "0.1.0"
 requires-python = ">=3.13.9"
 dependencies = [
-    "ansible-builder>=3.1.0",
-    "ansible-navigator>=25.9.0",
+    "ansible-builder>=3.1.1",
+    "ansible-navigator>=25.11.0",
 ]
+[tool.uv]
+required-version = ">=0.9.10"

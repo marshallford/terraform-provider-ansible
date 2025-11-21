@@ -76,7 +76,7 @@ wheels = [
 
 [[package]]
 name = "ansible-navigator"
-version = "25.9.0"
+version = "25.11.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "ansible-builder" },
@@ -89,9 +89,9 @@ dependencies = [
     { name = "setuptools" },
     { name = "tzdata" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/06/fa/caa4ca091c0e4d5d9afa1da859e5f87fa3ddd1e35142d19e5a5eafffacd5/ansible_navigator-25.9.0.tar.gz", hash = "sha256:0e0466d72ffcee000645c4d7d5907609be1e456645751d0a12fcdc60f1a8b186", size = 393728, upload-time = "2025-09-16T12:19:24.31Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/33/5d/fb394ec58efed202fc68679882494a9c50a6774b5b1e16f520748872cbc0/ansible_navigator-25.11.0.tar.gz", hash = "sha256:3cf4841045025f9f3f737233d4d32a0ad7ef388e5804f4d2a22813c3f52be198", size = 393812, upload-time = "2025-11-10T15:07:01.99Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/0b/3e/819cb4fbb3a8939108befe8ef388f4e91e79502acde4222469004d452c37/ansible_navigator-25.9.0-py3-none-any.whl", hash = "sha256:d10ad99e6ad120e27278e0dc71f9745f0202ca0e71da73cc33b51cf2f397dc9a", size = 304434, upload-time = "2025-09-16T12:19:22.457Z" },
+    { url = "https://files.pythonhosted.org/packages/6d/5a/8af76a21f14d2ffbe16887632eec00404ae9762fd89567519661b573681d/ansible_navigator-25.11.0-py3-none-any.whl", hash = "sha256:dc40d8e7582765bc66339cd88213ba2c5f7ae477a311a83b552746b43715e31c", size = 304453, upload-time = "2025-11-10T15:07:00.551Z" },
 ]
 
 [[package]]
@@ -618,7 +618,7 @@ dependencies = [
 ]
 
 [package.metadata]
-requires-dist = [{ name = "ansible-navigator", specifier = ">=25.9.0" }]
+requires-dist = [{ name = "ansible-navigator", specifier = ">=25.11.0" }]
 
 [[package]]
 name = "tzdata"
