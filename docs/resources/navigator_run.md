@@ -254,20 +254,20 @@ pipelining=True
 ### Required
 
 - `inventory` (String) Ansible [inventory](https://docs.ansible.com/ansible/latest/getting_started/get_started_inventory.html) contents. The environment variable `ANSIBLE_TF_INVENTORY` is set to the path of the inventory in cases where `{{ inventory_file }}` cannot be referenced. In addition, the environment variable `ANSIBLE_TF_PREVIOUS_INVENTORY` is set to the path of the last applied inventory when the resource is updated.
-- `playbook` (String) Ansible [playbook](https://docs.ansible.com/ansible/latest/playbook_guide/playbooks_intro.html) contents.
+- `playbook` (String) Ansible [playbook](https://docs.ansible.com/ansible/latest/playbook_guide/playbooks_intro.html) contents (YAML).
 
 ### Optional
 
 - `ansible_navigator_binary` (String) Path to the `ansible-navigator` binary. By default `$PATH` is searched.
 - `ansible_options` (Attributes) Ansible [playbook](https://docs.ansible.com/ansible/latest/cli/ansible-playbook.html) run related configuration. (see [below for nested schema](#nestedatt--ansible_options))
 - `artifact_queries` (Attributes Map) Query the Ansible playbook artifact with [`jq`](https://jqlang.github.io/jq/) syntax. The [playbook artifact](https://access.redhat.com/documentation/en-us/red_hat_ansible_automation_platform/2.0-ea/html/ansible_navigator_creator_guide/assembly-troubleshooting-navigator_ansible-navigator#proc-review-artifact_troubleshooting-navigator) contains detailed information about every play and task, as well as the stdout from the playbook run. (see [below for nested schema](#nestedatt--artifact_queries))
-- `destroy_playbook` (String) Ansible playbook contents. Only run on destroy (`run_on_destroy` must be `true`).
+- `destroy_playbook` (String) Ansible playbook contents (YAML). Only run on destroy (`run_on_destroy` must be `true`).
 - `execution_environment` (Attributes) [Execution environment](https://ansible.readthedocs.io/en/latest/getting_started_ee/index.html) (EE) related configuration. (see [below for nested schema](#nestedatt--execution_environment))
 - `run_on_destroy` (Boolean) Run playbook (or alternatively `destroy_playbook` if configured) on destroy. The environment variable `ANSIBLE_TF_OPERATION` is set to `delete` during the run to allow for conditional plays, tasks, etc. Defaults to `false`.
 - `timeouts` (Attributes) (see [below for nested schema](#nestedatt--timeouts))
 - `timezone` (String) IANA time zone, use `local` for the system time zone. Defaults to `UTC`.
 - `triggers` (Attributes) Trigger various behaviors via arbitrary values. (see [below for nested schema](#nestedatt--triggers))
-- `working_directory` (String) Directory which `ansible-navigator` is run from. Recommended to be the root Ansible [content directory](https://docs.ansible.com/ansible/latest/tips_tricks/sample_setup.html#sample-directory-layout) (sometimes called the project directory), which is likely to contain `ansible.cfg`, `roles/`, etc. Defaults to `.`.
+- `working_directory` (String) Directory in which `ansible-navigator` runs. Recommended to be the root Ansible [content directory](https://docs.ansible.com/ansible/latest/tips_tricks/sample_setup.html#sample-directory-layout) (sometimes called the project directory), which is likely to contain `ansible.cfg`, `roles/`, etc. Defaults to `.`.
 
 ### Read-Only
 
@@ -279,9 +279,10 @@ pipelining=True
 
 Optional:
 
+- `extra_vars` (String) Set additional [variables](https://docs.ansible.com/projects/ansible/latest/playbook_guide/playbooks_variables.html#defining-variables-at-runtime) (YAML).
 - `force_handlers` (Boolean) Run handlers even if a task fails.
 - `host_key_checking` (Boolean) SSH host key checking. Can help protect against man-in-the-middle attacks by verifying the identity of hosts. Ansible runner (library used by `ansible-navigator`) defaults this option to `false` explicitly.
-- `known_hosts` (List of String) SSH known host entries. Ansible variable `ansible_ssh_known_hosts_file` set to path of `known_hosts` file and SSH option `UserKnownHostsFile` must be configured to said path. Defaults to all of the `known_hosts` entries recorded.
+- `known_hosts` (List of String) SSH known host entries. Ansible variable `ansible_ssh_known_hosts_file` set to path of `known_hosts` file and SSH option `UserKnownHostsFile` must be configured to that path. Defaults to all of the `known_hosts` entries recorded.
 - `limit` (List of String) Further limit selected hosts to an additional pattern.
 - `private_keys` (Attributes List) SSH private keys used for authentication in addition to the [automatically mounted](https://ansible.readthedocs.io/projects/navigator/faq/#how-do-i-use-my-ssh-keys-with-an-execution-environment) default named keys and SSH agent socket path. (see [below for nested schema](#nestedatt--ansible_options--private_keys))
 - `skip_tags` (List of String) Only run plays and tasks whose tags do not match these values.
@@ -320,7 +321,7 @@ Optional:
 - `enabled` (Boolean) Enable or disable the use of an execution environment. Disabling requires `ansible-playbook` and is only recommended when without a container engine. Defaults to `true`.
 - `environment_variables_pass` (List of String) Existing environment variables to be [passed](https://ansible.readthedocs.io/projects/navigator/settings/#pass-environment-variable) through to and set within the execution environment.
 - `environment_variables_set` (Map of String) Environment variables to be [set](https://ansible.readthedocs.io/projects/navigator/settings/#set-environment-variable) within the execution environment. `ANSIBLE_TF_OPERATION` is automatically set to the current CRUD operation (`create`, `update`, `delete`).
-- `image` (String) Name of the execution environment container [image](https://ansible.readthedocs.io/projects/navigator/settings/#execution-environment-image). Defaults to `ghcr.io/ansible/community-ansible-dev-tools:v25.10.0`.
+- `image` (String) Name of the execution environment container [image](https://ansible.readthedocs.io/projects/navigator/settings/#execution-environment-image). Defaults to `ghcr.io/ansible/community-ansible-dev-tools:v26.1.0`.
 - `pull_arguments` (List of String) Additional [parameters](https://ansible.readthedocs.io/projects/navigator/settings/#pull-arguments) that should be added to the pull command when pulling an execution environment container image from a container registry.
 - `pull_policy` (String) Container image [pull policy](https://ansible.readthedocs.io/projects/navigator/settings/#pull-policy). Defaults to `tag`.
 

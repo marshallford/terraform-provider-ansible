@@ -24,6 +24,7 @@ type ExecutionEnvironmentModel struct {
 }
 
 type AnsibleOptionsModel struct {
+	ExtraVars       types.String `tfsdk:"extra_vars"`
 	ForceHandlers   types.Bool   `tfsdk:"force_handlers"`
 	SkipTags        types.List   `tfsdk:"skip_tags"`
 	StartAtTask     types.String `tfsdk:"start_at_task"`
@@ -47,16 +48,16 @@ type ArtifactQueryModel struct {
 func navigatorRunDescriptions() map[string]attrDescription {
 	return map[string]attrDescription{
 		"playbook": {
-			Description:         "Ansible playbook contents.",
-			MarkdownDescription: "Ansible [playbook](https://docs.ansible.com/ansible/latest/playbook_guide/playbooks_intro.html) contents.",
+			Description:         "Ansible playbook contents (YAML).",
+			MarkdownDescription: "Ansible [playbook](https://docs.ansible.com/ansible/latest/playbook_guide/playbooks_intro.html) contents (YAML).",
 		},
 		"inventory": {
 			Description:         fmt.Sprintf("Ansible inventory contents. The environment variable '%s' is set to the path of the inventory in cases where '{{ inventory_file }}' cannot be referenced.", navigatorRunInventoryEnvVar),
 			MarkdownDescription: fmt.Sprintf("Ansible [inventory](https://docs.ansible.com/ansible/latest/getting_started/get_started_inventory.html) contents. The environment variable `%s` is set to the path of the inventory in cases where `{{ inventory_file }}` cannot be referenced.", navigatorRunInventoryEnvVar),
 		},
 		"working_directory": {
-			Description:         fmt.Sprintf("Directory which '%s' is run from. Recommended to be the root Ansible content directory (sometimes called the project directory), which is likely to contain 'ansible.cfg', 'roles/', etc. Defaults to '%s'.", ansible.NavigatorProgram, defaultNavigatorRunWorkingDir),
-			MarkdownDescription: fmt.Sprintf("Directory which `%s` is run from. Recommended to be the root Ansible [content directory](https://docs.ansible.com/ansible/latest/tips_tricks/sample_setup.html#sample-directory-layout) (sometimes called the project directory), which is likely to contain `ansible.cfg`, `roles/`, etc. Defaults to `%s`.", ansible.NavigatorProgram, defaultNavigatorRunWorkingDir),
+			Description:         fmt.Sprintf("Directory in which '%s' runs. Recommended to be the root Ansible content directory (sometimes called the project directory), which is likely to contain 'ansible.cfg', 'roles/', etc. Defaults to '%s'.", ansible.NavigatorProgram, defaultNavigatorRunWorkingDir),
+			MarkdownDescription: fmt.Sprintf("Directory in which `%s` runs. Recommended to be the root Ansible [content directory](https://docs.ansible.com/ansible/latest/tips_tricks/sample_setup.html#sample-directory-layout) (sometimes called the project directory), which is likely to contain `ansible.cfg`, `roles/`, etc. Defaults to `%s`.", ansible.NavigatorProgram, defaultNavigatorRunWorkingDir),
 		},
 		"execution_environment": {
 			Description:         "Execution environment (EE) related configuration.",
@@ -196,6 +197,10 @@ func (m ExecutionEnvironmentModel) Value(ctx context.Context, settings *ansible.
 
 func (AnsibleOptionsModel) descriptions() map[string]attrDescription {
 	return map[string]attrDescription{
+		"extra_vars": {
+			Description:         "Set additional variables (YAML).",
+			MarkdownDescription: "Set additional [variables](https://docs.ansible.com/projects/ansible/latest/playbook_guide/playbooks_variables.html#defining-variables-at-runtime) (YAML).",
+		},
 		"force_handlers": {
 			Description: "Run handlers even if a task fails.",
 		},
@@ -216,8 +221,8 @@ func (AnsibleOptionsModel) descriptions() map[string]attrDescription {
 			MarkdownDescription: "SSH private keys used for authentication in addition to the [automatically mounted](https://ansible.readthedocs.io/projects/navigator/faq/#how-do-i-use-my-ssh-keys-with-an-execution-environment) default named keys and SSH agent socket path.",
 		},
 		"known_hosts": {
-			Description:         fmt.Sprintf("SSH known host entries. Ansible variable '%s' set to path of 'known_hosts' file and SSH option 'UserKnownHostsFile' must be configured to said path. Defaults to all of the 'known_hosts' entries recorded.", ansible.SSHKnownHostsFileVar),
-			MarkdownDescription: fmt.Sprintf("SSH known host entries. Ansible variable `%s` set to path of `known_hosts` file and SSH option `UserKnownHostsFile` must be configured to said path. Defaults to all of the `known_hosts` entries recorded.", ansible.SSHKnownHostsFileVar),
+			Description:         fmt.Sprintf("SSH known host entries. Ansible variable '%s' set to path of 'known_hosts' file and SSH option 'UserKnownHostsFile' must be configured to that path. Defaults to all of the 'known_hosts' entries recorded.", ansible.SSHKnownHostsFileVar),
+			MarkdownDescription: fmt.Sprintf("SSH known host entries. Ansible variable `%s` set to path of `known_hosts` file and SSH option `UserKnownHostsFile` must be configured to that path. Defaults to all of the `known_hosts` entries recorded.", ansible.SSHKnownHostsFileVar),
 		},
 		"host_key_checking": {
 			Description:         fmt.Sprintf("SSH host key checking. Can help protect against man-in-the-middle attacks by verifying the identity of hosts. Ansible runner (library used by '%s') defaults this option to '%t' explicitly.", ansible.NavigatorProgram, ansible.RunnerDefaultHostKeyChecking),
@@ -228,6 +233,7 @@ func (AnsibleOptionsModel) descriptions() map[string]attrDescription {
 
 func (AnsibleOptionsModel) AttrTypes() map[string]attr.Type {
 	return map[string]attr.Type{
+		"extra_vars":        types.StringType,
 		"force_handlers":    types.BoolType,
 		"skip_tags":         types.ListType{ElemType: types.StringType},
 		"start_at_task":     types.StringType,
@@ -243,6 +249,7 @@ func (AnsibleOptionsModel) Defaults() basetypes.ObjectValue {
 	return types.ObjectValueMust(
 		AnsibleOptionsModel{}.AttrTypes(),
 		map[string]attr.Value{
+			"extra_vars":        types.StringNull(),
 			"force_handlers":    types.BoolNull(),
 			"skip_tags":         types.ListNull(types.StringType),
 			"start_at_task":     types.StringNull(),
@@ -257,6 +264,12 @@ func (AnsibleOptionsModel) Defaults() basetypes.ObjectValue {
 
 func (m AnsibleOptionsModel) Value(ctx context.Context, options *ansible.Options) diag.Diagnostics {
 	var diags diag.Diagnostics
+
+	options.Inventories = []string{navigatorRunName}
+
+	if !m.ExtraVars.IsNull() {
+		options.ExtraVarsFiles = []string{navigatorRunExtraVarsFileName}
+	}
 
 	options.ForceHandlers = m.ForceHandlers.ValueBool()
 

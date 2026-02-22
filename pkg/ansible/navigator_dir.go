@@ -53,6 +53,10 @@ func CreateRunDir(hostDir string, settings *NavigatorSettings) (*RunDir, error) 
 		return nil, fmt.Errorf("failed to create inventories directory for run, %w", err)
 	}
 
+	if err := os.Mkdir(runDir.HostJoin(extraVarsDir), 0o700); err != nil { //nolint:mnd
+		return nil, fmt.Errorf("failed to create extra vars directory for run, %w", err)
+	}
+
 	if err := os.Mkdir(runDir.HostJoin(privateKeysDir), 0o700); err != nil { //nolint:mnd
 		return nil, fmt.Errorf("failed to create private keys directory for run, %w", err)
 	}

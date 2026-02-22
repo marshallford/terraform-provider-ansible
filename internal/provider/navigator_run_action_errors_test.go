@@ -5,7 +5,6 @@ import (
 	"regexp"
 	"testing"
 
-	"github.com/hashicorp/go-version"
 	"github.com/hashicorp/terraform-plugin-testing/config"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 	"github.com/hashicorp/terraform-plugin-testing/tfversion"
@@ -42,7 +41,7 @@ func TestAccNavigatorRunAction_errors(t *testing.T) {
 				PreCheck:                 func() { testPreCheck(t) },
 				ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
 				TerraformVersionChecks: []tfversion.TerraformVersionCheck{
-					tfversion.SkipBelow(version.Must(version.NewVersion("1.14.0"))), // TODO replace with tfversion.Version1_14_0 when new plugin-testing version is released
+					tfversion.SkipBelow(tfversion.Version1_14_0),
 				},
 				Steps: []resource.TestStep{
 					{

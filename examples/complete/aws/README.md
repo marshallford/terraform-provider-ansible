@@ -1,6 +1,6 @@
 # AWS Example
 
-This Terraform configuration creates an AL2023 AWS EC2 instance using the [`hashicorp/aws`](https://registry.terraform.io/providers/hashicorp/aws/latest/docs) provider, constructs an Ansible inventory containing the virtual machine, and runs a playbook against said inventory.
+This Terraform configuration creates an AL2023 AWS EC2 instance using the [`hashicorp/aws`](https://registry.terraform.io/providers/hashicorp/aws/latest/docs) provider, constructs an Ansible inventory containing the virtual machine, and runs a playbook against that inventory.
 
 ## Prerequisites
 

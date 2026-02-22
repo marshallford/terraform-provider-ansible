@@ -206,6 +206,21 @@ func TestAccNavigatorRunResource_env_vars(t *testing.T) {
 	})
 }
 
+func TestAccNavigatorRunResource_extra_vars(t *testing.T) {
+	t.Parallel()
+
+	resource.Test(t, resource.TestCase{
+		PreCheck:                 func() { testPreCheck(t) },
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		Steps: []resource.TestStep{
+			{
+				Config:          testTerraformConfig(t, filepath.Join("navigator_run_resource", "extra_vars")),
+				ConfigVariables: testDefaultConfigVariables(t),
+			},
+		},
+	})
+}
+
 func TestAccNavigatorRunResource_known_hosts(t *testing.T) {
 	t.Parallel()
 

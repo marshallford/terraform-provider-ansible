@@ -54,7 +54,6 @@ func (m NavigatorRunDataSourceModel) Value(ctx context.Context, run *navigatorRu
 	run.persistDir = opts.PersistRunDirectory
 	run.playbook = m.Playbook.ValueString()
 	run.inventories = []ansible.Inventory{{Name: navigatorRunName, Contents: m.Inventory.ValueString()}}
-	run.options.Inventories = []string{navigatorRunName}
 	run.workingDir = m.WorkingDirectory.ValueString()
 	run.navigatorBinary = m.AnsibleNavigatorBinary.ValueString()
 
@@ -69,6 +68,10 @@ func (m NavigatorRunDataSourceModel) Value(ctx context.Context, run *navigatorRu
 	diags.Append(m.AnsibleOptions.As(ctx, &optsModel, basetypes.ObjectAsOptions{})...)
 
 	diags.Append(optsModel.Value(ctx, &run.options)...)
+
+	if !optsModel.ExtraVars.IsNull() {
+		run.extraVarsFiles = []ansible.ExtraVarsFile{{Name: navigatorRunExtraVarsFileName, Contents: optsModel.ExtraVars.ValueString()}}
+	}
 
 	var privateKeysModel []PrivateKeyModel
 	if !optsModel.PrivateKeys.IsNull() {
@@ -195,8 +198,8 @@ func (d *NavigatorRunDataSource) Metadata(_ context.Context, req datasource.Meta
 //nolint:dupl
 func (d *NavigatorRunDataSource) Schema(ctx context.Context, _ datasource.SchemaRequest, resp *datasource.SchemaResponse) {
 	resp.Schema = schema.Schema{
-		Description:         fmt.Sprintf("Run an Ansible playbook as a means to gather information. It is recommended to only run playbooks without observable side-effects. Requires '%s' and a container engine to run within an execution environment (EE).", ansible.NavigatorProgram),
-		MarkdownDescription: fmt.Sprintf("Run an Ansible playbook as a means to gather information. It is recommended to only run playbooks without observable side-effects. Requires `%s` and a container engine to run within an execution environment (EE).", ansible.NavigatorProgram),
+		Description:         fmt.Sprintf("Run an Ansible playbook to gather information. It is recommended to only run playbooks without observable side effects. Requires '%s' and a container engine to run within an execution environment (EE).", ansible.NavigatorProgram),
+		MarkdownDescription: fmt.Sprintf("Run an Ansible playbook to gather information. It is recommended to only run playbooks without observable side effects. Requires `%s` and a container engine to run within an execution environment (EE).", ansible.NavigatorProgram),
 		Attributes: map[string]schema.Attribute{
 			// required
 			"playbook": schema.StringAttribute{
@@ -317,6 +320,15 @@ func (d *NavigatorRunDataSource) Schema(ctx context.Context, _ datasource.Schema
 				Optional:            true,
 				Computed:            true,
 				Attributes: map[string]schema.Attribute{
+					"extra_vars": schema.StringAttribute{
+						Description:         AnsibleOptionsModel{}.descriptions()["extra_vars"].Description,
+						MarkdownDescription: AnsibleOptionsModel{}.descriptions()["extra_vars"].MarkdownDescription,
+						Optional:            true,
+						Validators: []validator.String{
+							stringvalidator.LengthAtLeast(1),
+							stringIsYAML(),
+						},
+					},
 					"force_handlers": schema.BoolAttribute{
 						Description: AnsibleOptionsModel{}.descriptions()["force_handlers"].Description,
 						Optional:    true,

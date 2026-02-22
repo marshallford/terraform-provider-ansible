@@ -15,6 +15,7 @@ import (
 
 const (
 	navigatorRunName                   = "terraform"
+	navigatorRunExtraVarsFileName      = "terraform.yaml"
 	navigatorRunPrevInventoryName      = "previous-terraform"
 	navigatorRunDir                    = "tf-ansible-navigator-run"
 	navigatorRunOperationEnvVar        = "ANSIBLE_TF_OPERATION"
@@ -25,7 +26,7 @@ const (
 	defaultNavigatorRunTimeout         = 10 * time.Minute
 	defaultNavigatorRunContainerEngine = ansible.ContainerEngineAuto
 	defaultNavigatorRunEEEnabled       = true
-	defaultNavigatorRunImage           = "ghcr.io/ansible/community-ansible-dev-tools:v25.10.0"
+	defaultNavigatorRunImage           = "ghcr.io/ansible/community-ansible-dev-tools:v26.1.0"
 	defaultNavigatorRunPullPolicy      = "tag"
 	defaultNavigatorRunTimezone        = "UTC"
 	defaultNavigatorRunOnDestroy       = false
@@ -78,6 +79,7 @@ type navigatorRun struct {
 	navigatorBinary   string
 	options           ansible.Options
 	navigatorSettings ansible.NavigatorSettings
+	extraVarsFiles    []ansible.ExtraVarsFile
 	privateKeys       []ansible.PrivateKey
 	knownHosts        []ansible.KnownHost
 	artifactQueries   map[string]ansible.ArtifactQuery
@@ -121,10 +123,15 @@ func run(ctx context.Context, diags *diag.Diagnostics, timeout time.Duration, op
 	addError(diags, "Run directory not created", err)
 
 	err = ansible.CreatePlaybook(runDir, run.playbook)
-	addError(diags, "Ansible playbook not created", err)
+	addError(diags, "Playbook not created", err)
 
 	err = ansible.CreateInventories(runDir, run.inventories)
-	addError(diags, "Ansible inventories not created", err)
+	addError(diags, "Inventories not created", err)
+
+	if len(run.extraVarsFiles) > 0 {
+		err = ansible.CreateExtraVarsFiles(runDir, run.extraVarsFiles)
+		addError(diags, "Extra vars files not created", err)
+	}
 
 	if len(run.privateKeys) > 0 {
 		err = ansible.CreatePrivateKeys(runDir, run.privateKeys)

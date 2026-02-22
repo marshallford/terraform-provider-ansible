@@ -74,7 +74,6 @@ func (m NavigatorRunResourceModel) Value(ctx context.Context, run *navigatorRun,
 	if previousInventory != nil {
 		run.inventories = append(run.inventories, ansible.Inventory{Name: navigatorRunPrevInventoryName, Contents: *previousInventory})
 	}
-	run.options.Inventories = []string{navigatorRunName}
 
 	run.workingDir = m.WorkingDirectory.ValueString()
 	run.navigatorBinary = m.AnsibleNavigatorBinary.ValueString()
@@ -90,6 +89,10 @@ func (m NavigatorRunResourceModel) Value(ctx context.Context, run *navigatorRun,
 	diags.Append(m.AnsibleOptions.As(ctx, &optsModel, basetypes.ObjectAsOptions{})...)
 
 	diags.Append(optsModel.Value(ctx, &run.options)...)
+
+	if !optsModel.ExtraVars.IsNull() {
+		run.extraVarsFiles = []ansible.ExtraVarsFile{{Name: navigatorRunExtraVarsFileName, Contents: optsModel.ExtraVars.ValueString()}}
+	}
 
 	var privateKeysModel []PrivateKeyModel
 	if !optsModel.PrivateKeys.IsNull() {
@@ -290,6 +293,15 @@ func (r *NavigatorRunResource) Schema(ctx context.Context, _ resource.SchemaRequ
 				Computed:            true,
 				Default:             objectdefault.StaticValue(AnsibleOptionsModel{}.Defaults()),
 				Attributes: map[string]schema.Attribute{
+					"extra_vars": schema.StringAttribute{
+						Description:         AnsibleOptionsModel{}.descriptions()["extra_vars"].Description,
+						MarkdownDescription: AnsibleOptionsModel{}.descriptions()["extra_vars"].MarkdownDescription,
+						Optional:            true,
+						Validators: []validator.String{
+							stringvalidator.LengthAtLeast(1),
+							stringIsYAML(),
+						},
+					},
 					"force_handlers": schema.BoolAttribute{
 						Description: AnsibleOptionsModel{}.descriptions()["force_handlers"].Description,
 						Optional:    true,
