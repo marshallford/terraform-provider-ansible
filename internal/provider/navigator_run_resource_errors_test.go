@@ -67,6 +67,10 @@ func TestAccNavigatorRunResource_errors(t *testing.T) {
 			expected: regexp.MustCompile(`must(\s)consist(\s)only(\s)of(\s)printable(\s)ASCII`),
 		},
 		{
+			name:     "extra_vars_yaml",
+			expected: regexp.MustCompile("Not valid YAML"),
+		},
+		{
 			name:     "image",
 			expected: regexp.MustCompile("failed to parse container image"),
 		},

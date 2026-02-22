@@ -1,8 +1,8 @@
 examples/smoke
 context/
 
-# Created by https://www.toptal.com/developers/gitignore/api/go,linux,terraform,python
-# Edit at https://www.toptal.com/developers/gitignore?templates=go,linux,terraform,python
+# Created by https://www.toptal.com/developers/gitignore/api/go,linux,python,terraform
+# Edit at https://www.toptal.com/developers/gitignore?templates=go,linux,python,terraform
 
 ### Go ###
 # If you prefer the allow list template instead of the deny list, see community template:
@@ -249,4 +249,4 @@ override.tf.json
 .terraformrc
 terraform.rc
 
-# End of https://www.toptal.com/developers/gitignore/api/go,linux,terraform,python
+# End of https://www.toptal.com/developers/gitignore/api/go,linux,python,terraform

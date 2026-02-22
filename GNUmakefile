@@ -9,9 +9,9 @@ DOCKER := docker
 DOCKER_RUN := $(DOCKER) run $(DOCKER_FLAGS)
 DOCKER_PULL := $(DOCKER) pull -q
 
-TERRAFORM_VERSION ?= 1.14.0
+TERRAFORM_VERSION ?= 1.14.5
 
-EDITORCONFIG_CHECKER_VERSION ?= 3.4.1
+EDITORCONFIG_CHECKER_VERSION ?= 3.6.1
 EDITORCONFIG_CHECKER_IMAGE ?= docker.io/mstruebing/editorconfig-checker:v$(EDITORCONFIG_CHECKER_VERSION)
 EDITORCONFIG_CHECKER := $(DOCKER_RUN) -v=$(CURDIR):/check $(EDITORCONFIG_CHECKER_IMAGE)
 
@@ -23,7 +23,7 @@ YAMLLINT_VERSION ?= 0.35.9
 YAMLLINT_IMAGE ?= docker.io/pipelinecomponents/yamllint:$(YAMLLINT_VERSION)
 YAMLLINT := $(DOCKER_RUN) -v=$(CURDIR):/code $(YAMLLINT_IMAGE) yamllint
 
-GOLANGCI_VERSION ?= 2.6.2
+GOLANGCI_VERSION ?= 2.9.0
 GOLANGCI_IMAGE ?= docker.io/golangci/golangci-lint:v$(GOLANGCI_VERSION)
 GOLANGCI := $(DOCKER_RUN) -v=$(CURDIR):/code -w /code $(GOLANGCI_IMAGE) golangci-lint run
 
@@ -65,7 +65,7 @@ lint/editorconfig:
 	$(EDITORCONFIG_CHECKER)
 
 lint/shellcheck:
-	$(SHELLCHECK) $(shell find . -type f -not -path '*/\$(VENV)/*' -name '*.sh')
+	$(SHELLCHECK) $(shell grep -rlI '^#!' --exclude-dir=.git --exclude-dir=$(VENV) --exclude-dir=_build .)
 
 lint/yamllint:
 	$(YAMLLINT) .
@@ -94,7 +94,7 @@ test/docs:
 	TFENV_TERRAFORM_VERSION=$(TERRAFORM_VERSION) go run github.com/hashicorp/terraform-plugin-docs/cmd/tfplugindocs validate
 
 test/pkg: $(VENV_STAMP)
-	GOTOOLCHAIN=go1.25.4+auto go test ./pkg/... -v -coverprofile=cover.out $(TESTARGS) -timeout 60m
+	go test ./pkg/... -v -coverprofile=cover.out $(TESTARGS) -timeout 60m
 
 test/acc: $(VENV_STAMP)
-	GOTOOLCHAIN=go1.25.4+auto TF_ACC=1 TFENV_TERRAFORM_VERSION=$(TERRAFORM_VERSION) go test ./internal/provider/... -v -coverprofile=cover.out $(TESTARGS) -timeout 60m
+	TF_ACC=1 TFENV_TERRAFORM_VERSION=$(TERRAFORM_VERSION) go test ./internal/provider/... -v -coverprofile=cover.out $(TESTARGS) -timeout 60m

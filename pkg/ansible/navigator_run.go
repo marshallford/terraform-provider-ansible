@@ -30,7 +30,7 @@ type Options struct {
 }
 
 func navigatorRunCommandArgs(runDir *RunDir, options *Options) []string {
-	var args []string //nolint:prealloc
+	var args []string
 
 	for _, inventory := range options.Inventories {
 		args = append(args, "--inventory", runDir.HostJoin(inventoriesDir, inventory))
