@@ -41,7 +41,7 @@ type navigatorSettingsFormatPlaybookArtifact struct {
 }
 
 type navigatorSettingsFormatEnvironmentVariables struct {
-	Pass []string          `yaml:"pass"`
+	Pass []string          `yaml:"pass"` // #nosec G117
 	Set  map[string]string `yaml:"set"`
 }
 

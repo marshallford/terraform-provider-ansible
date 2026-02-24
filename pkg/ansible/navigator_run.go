@@ -24,7 +24,7 @@ type Options struct {
 	StartAtTask     string
 	Limit           []string
 	Tags            []string
-	PrivateKeys     []string
+	PrivateKeys     []string // #nosec G117
 	KnownHosts      bool
 	HostKeyChecking bool
 }
