@@ -112,6 +112,10 @@ func ValidateIANATimezone(timezone string) error {
 }
 
 func ValidateJQFilter(filter string) error {
+	if len(filter) == 0 {
+		return fmt.Errorf("%w, JQ filter must not be empty", ErrValidation)
+	}
+
 	if _, err := jq.Parse(filter); err != nil {
 		return fmt.Errorf("%w, failed to parse JQ filter, %w", ErrValidation, err)
 	}

@@ -32,6 +32,10 @@ func stringIsSSHPrivateKey() stringIsSSHPrivateKeyValidator {
 	return stringIsSSHPrivateKeyValidator{}
 }
 
+func StringIsSSHPrivateKey() validator.String { //nolint:ireturn
+	return stringIsSSHPrivateKey()
+}
+
 type stringIsSSHPrivateKeyNameValidator struct{}
 
 var _ validator.String = (*stringIsSSHPrivateKeyNameValidator)(nil)
@@ -55,6 +59,10 @@ func (v stringIsSSHPrivateKeyNameValidator) ValidateString(_ context.Context, re
 
 func stringIsSSHPrivateKeyName() stringIsSSHPrivateKeyNameValidator {
 	return stringIsSSHPrivateKeyNameValidator{}
+}
+
+func StringIsSSHPrivateKeyName() validator.String { //nolint:ireturn
+	return stringIsSSHPrivateKeyName()
 }
 
 type stringIsSSHKnownHostValidator struct{}
@@ -82,6 +90,10 @@ func stringIsSSHKnownHost() stringIsSSHKnownHostValidator {
 	return stringIsSSHKnownHostValidator{}
 }
 
+func StringIsSSHKnownHost() validator.String { //nolint:ireturn
+	return stringIsSSHKnownHost()
+}
+
 type stringIsEnvVarNameValidator struct{}
 
 var _ validator.String = (*stringIsEnvVarNameValidator)(nil)
@@ -105,6 +117,10 @@ func (v stringIsEnvVarNameValidator) ValidateString(_ context.Context, req valid
 
 func stringIsEnvVarName() stringIsEnvVarNameValidator {
 	return stringIsEnvVarNameValidator{}
+}
+
+func StringIsEnvVarName() validator.String { //nolint:ireturn
+	return stringIsEnvVarName()
 }
 
 type stringIsYAMLValidator struct{}
@@ -132,6 +148,10 @@ func stringIsYAML() stringIsYAMLValidator {
 	return stringIsYAMLValidator{}
 }
 
+func StringIsYAML() validator.String { //nolint:ireturn
+	return stringIsYAML()
+}
+
 type stringIsIANATimezoneValidator struct{}
 
 var _ validator.String = (*stringIsIANATimezoneValidator)(nil)
@@ -155,6 +175,10 @@ func (v stringIsIANATimezoneValidator) ValidateString(_ context.Context, req val
 
 func stringIsIANATimezone() stringIsIANATimezoneValidator {
 	return stringIsIANATimezoneValidator{}
+}
+
+func StringIsIANATimezone() validator.String { //nolint:ireturn
+	return stringIsIANATimezone()
 }
 
 type stringIsJQFilterValidator struct{}
@@ -182,6 +206,10 @@ func stringIsJQFilter() stringIsJQFilterValidator {
 	return stringIsJQFilterValidator{}
 }
 
+func StringIsJQFilter() validator.String { //nolint:ireturn
+	return stringIsJQFilter()
+}
+
 type stringIsContainerImageNameValidator struct{}
 
 var _ validator.String = (*stringIsContainerImageNameValidator)(nil)
@@ -205,4 +233,8 @@ func (v stringIsContainerImageNameValidator) ValidateString(_ context.Context, r
 
 func stringIsContainerImageName() stringIsContainerImageNameValidator {
 	return stringIsContainerImageNameValidator{}
+}
+
+func StringIsContainerImageName() validator.String { //nolint:ireturn
+	return stringIsContainerImageName()
 }

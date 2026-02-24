@@ -23,7 +23,7 @@ YAMLLINT_VERSION ?= 0.35.9
 YAMLLINT_IMAGE ?= docker.io/pipelinecomponents/yamllint:$(YAMLLINT_VERSION)
 YAMLLINT := $(DOCKER_RUN) -v=$(CURDIR):/code $(YAMLLINT_IMAGE) yamllint
 
-GOLANGCI_VERSION ?= 2.9.0
+GOLANGCI_VERSION ?= 2.10.1
 GOLANGCI_IMAGE ?= docker.io/golangci/golangci-lint:v$(GOLANGCI_VERSION)
 GOLANGCI := $(DOCKER_RUN) -v=$(CURDIR):/code -w /code $(GOLANGCI_IMAGE) golangci-lint run
 
