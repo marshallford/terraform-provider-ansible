@@ -1,4 +1,4 @@
-package ansible
+package ansible_test
 
 import (
 	"errors"
@@ -7,26 +7,30 @@ import (
 	"strings"
 	"testing"
 	"testing/iotest"
+
+	"github.com/marshallford/terraform-provider-ansible/pkg/ansible"
 )
+
+var errReadFailure = errors.New("read failure")
 
 func TestParseKnownHosts(t *testing.T) {
 	t.Parallel()
 
 	tests := map[string]struct {
 		input     io.Reader
-		expected  []KnownHost
+		expected  []ansible.KnownHost
 		expectErr bool
 	}{
 		"empty": {
 			input:    strings.NewReader(""),
-			expected: []KnownHost{},
+			expected: []ansible.KnownHost{},
 		},
 		"multiple_lines": {
 			input:    strings.NewReader("host1 ssh-rsa AAAA...\nhost2 ssh-ed25519 BBBB..."),
-			expected: []KnownHost{"host1 ssh-rsa AAAA...", "host2 ssh-ed25519 BBBB..."},
+			expected: []ansible.KnownHost{"host1 ssh-rsa AAAA...", "host2 ssh-ed25519 BBBB..."},
 		},
 		"scanner_error": {
-			input:     iotest.ErrReader(errors.New("read failure")),
+			input:     iotest.ErrReader(errReadFailure),
 			expectErr: true,
 		},
 	}
@@ -35,7 +39,7 @@ func TestParseKnownHosts(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
-			got, err := ParseKnownHosts(test.input)
+			got, err := ansible.ParseKnownHosts(test.input)
 
 			if test.expectErr {
 				if err == nil {
@@ -89,7 +93,7 @@ func TestKnownHostsLine(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
-			got, err := KnownHostsLine(test.inputAddresses, test.inputPublicKey)
+			got, err := ansible.KnownHostsLine(test.inputAddresses, test.inputPublicKey)
 
 			if test.expectErr {
 				if err == nil {
@@ -120,11 +124,11 @@ func TestSSHArgs(t *testing.T) {
 	}{
 		"strict": {
 			input:    false,
-			expected: "-o StrictHostKeyChecking=yes -o UserKnownHostsFile={{ " + SSHKnownHostsFileVar + " }}",
+			expected: "-o StrictHostKeyChecking=yes -o UserKnownHostsFile={{ " + ansible.SSHKnownHostsFileVar + " }}",
 		},
 		"accept_new": {
 			input:    true,
-			expected: "-o StrictHostKeyChecking=accept-new -o UserKnownHostsFile={{ " + SSHKnownHostsFileVar + " }}",
+			expected: "-o StrictHostKeyChecking=accept-new -o UserKnownHostsFile={{ " + ansible.SSHKnownHostsFileVar + " }}",
 		},
 	}
 
@@ -132,7 +136,7 @@ func TestSSHArgs(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
-			if got := SSHArgs(test.input); got != test.expected {
+			if got := ansible.SSHArgs(test.input); got != test.expected {
 				t.Errorf("expected %q, got %q", test.expected, got)
 			}
 		})

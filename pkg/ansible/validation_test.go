@@ -1,4 +1,4 @@
-package ansible
+package ansible_test
 
 import (
 	"crypto"
@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/marshallford/terraform-provider-ansible/pkg/ansible"
 	gossh "golang.org/x/crypto/ssh"
 )
 
@@ -58,7 +59,7 @@ func TestValidateSSHPrivateKey(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
-			err := ValidateSSHPrivateKey(test.input)
+			err := ansible.ValidateSSHPrivateKey(test.input)
 
 			if test.expectErr {
 				if err == nil {
@@ -107,7 +108,7 @@ func TestValidateSSHPrivateKeyName(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
-			err := ValidateSSHPrivateKeyName(test.input)
+			err := ansible.ValidateSSHPrivateKeyName(test.input)
 
 			if test.expectErr {
 				if err == nil {
@@ -154,7 +155,7 @@ func TestValidateSSHKnownHost(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
-			err := ValidateSSHKnownHost(test.input)
+			err := ansible.ValidateSSHKnownHost(test.input)
 
 			if test.expectErr {
 				if err == nil {
@@ -199,7 +200,7 @@ func TestValidateEnvVarName(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
-			err := ValidateEnvVarName(test.input)
+			err := ansible.ValidateEnvVarName(test.input)
 
 			if test.expectErr {
 				if err == nil {
@@ -236,7 +237,7 @@ func TestValidateYAML(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
-			err := ValidateYAML(test.input)
+			err := ansible.ValidateYAML(test.input)
 
 			if test.expectErr {
 				if err == nil {

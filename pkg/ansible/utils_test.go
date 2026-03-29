@@ -1,8 +1,9 @@
-package ansible
+package ansible_test
 
 import (
 	"testing"
 
+	"github.com/marshallford/terraform-provider-ansible/pkg/ansible"
 	"github.com/spf13/afero"
 )
 
@@ -12,24 +13,32 @@ func TestCheckDirectory(t *testing.T) {
 	tests := map[string]struct {
 		input     string
 		expectErr bool
-		setup     func(afero.Fs)
+		setup     func(*testing.T, afero.Fs)
 	}{
 		"valid": {
 			input: "/mydir",
-			setup: func(fs afero.Fs) {
-				fs.MkdirAll("/mydir", 0o755) //nolint:errcheck
+			setup: func(t *testing.T, fs afero.Fs) {
+				t.Helper()
+
+				if err := fs.MkdirAll("/mydir", 0o755); err != nil {
+					t.Fatal(err)
+				}
 			},
 		},
 		"not_a_directory": {
 			input: "/myfile",
-			setup: func(fs afero.Fs) {
-				afero.WriteFile(fs, "/myfile", []byte(""), 0o644) //nolint:errcheck
+			setup: func(t *testing.T, fs afero.Fs) {
+				t.Helper()
+
+				if err := afero.WriteFile(fs, "/myfile", []byte(""), 0o644); err != nil {
+					t.Fatal(err)
+				}
 			},
 			expectErr: true,
 		},
 		"not_found": {
 			input:     "/nonexistent",
-			setup:     func(fs afero.Fs) {},
+			setup:     func(_ *testing.T, _ afero.Fs) {},
 			expectErr: true,
 		},
 	}
@@ -39,9 +48,9 @@ func TestCheckDirectory(t *testing.T) {
 			t.Parallel()
 
 			fs := afero.NewMemMapFs()
-			test.setup(fs)
+			test.setup(t, fs)
 
-			err := CheckDirectory(fs, test.input)
+			err := ansible.CheckDirectory(fs, test.input)
 
 			if test.expectErr {
 				if err == nil {

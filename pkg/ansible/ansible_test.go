@@ -1,29 +1,31 @@
-package ansible
+package ansible_test
 
 import (
 	"slices"
 	"testing"
+
+	"github.com/marshallford/terraform-provider-ansible/pkg/ansible"
 )
 
 func TestPlaybookOptionsArgs(t *testing.T) {
 	t.Parallel()
 
 	tests := map[string]struct {
-		input    PlaybookOptions
+		input    ansible.PlaybookOptions
 		expected []string
 	}{
 		"empty": {
-			input:    PlaybookOptions{},
+			input:    ansible.PlaybookOptions{},
 			expected: nil,
 		},
 		"simple": {
-			input: PlaybookOptions{
+			input: ansible.PlaybookOptions{
 				SkipTags: []string{"tag1"},
 			},
 			expected: []string{"--skip-tags", "tag1"},
 		},
 		"all": {
-			input: PlaybookOptions{
+			input: ansible.PlaybookOptions{
 				ForceHandlers: true,
 				SkipTags:      []string{"tag1", "tag2"},
 				StartAtTask:   "task name",

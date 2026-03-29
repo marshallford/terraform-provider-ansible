@@ -1,23 +1,25 @@
-package ansible
+package ansible_test
 
 import (
 	"slices"
 	"testing"
+
+	"github.com/marshallford/terraform-provider-ansible/pkg/ansible"
 )
 
 func TestPlaybookStdoutString(t *testing.T) {
 	t.Parallel()
 
 	tests := map[string]struct {
-		input    PlaybookStdout
+		input    ansible.PlaybookStdout
 		expected string
 	}{
 		"empty": {
-			input:    PlaybookStdout{},
+			input:    ansible.PlaybookStdout{},
 			expected: "",
 		},
 		"multiple_lines": {
-			input:    PlaybookStdout{"line1", "line2", "line3"},
+			input:    ansible.PlaybookStdout{"line1", "line2", "line3"},
 			expected: "line1\nline2\nline3",
 		},
 	}
@@ -38,14 +40,14 @@ func TestParsePlaybookArtifact(t *testing.T) {
 
 	tests := map[string]struct {
 		input     []byte
-		expected  *PlaybookArtifact
+		expected  *ansible.PlaybookArtifact
 		expectErr bool
 	}{
 		"valid": {
 			input: []byte(`{"status":"successful","stdout":["line1","line2"]}`),
-			expected: &PlaybookArtifact{
+			expected: &ansible.PlaybookArtifact{
 				Status: "successful",
-				Stdout: PlaybookStdout{"line1", "line2"},
+				Stdout: ansible.PlaybookStdout{"line1", "line2"},
 			},
 		},
 		"invalid": {
@@ -58,7 +60,7 @@ func TestParsePlaybookArtifact(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
-			got, err := ParsePlaybookArtifact(test.input)
+			got, err := ansible.ParsePlaybookArtifact(test.input)
 
 			if test.expectErr {
 				if err == nil {
