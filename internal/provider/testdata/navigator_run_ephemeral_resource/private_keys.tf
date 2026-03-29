@@ -16,7 +16,7 @@ ephemeral "ansible_navigator_run" "test" {
         test = {
           ansible_host            = "127.0.0.1"
           ansible_port            = var.ssh_port
-          ansible_ssh_common_args = "-o StrictHostKeyChecking=yes -o UserKnownHostsFile={{ ansible_ssh_known_hosts_file }}"
+          ansible_ssh_common_args = "-o StrictHostKeyChecking=yes -o IdentitiesOnly=yes -o AddKeysToAgent=no -o UserKnownHostsFile={{ ansible_ssh_known_hosts_file }}"
         }
       }
     }

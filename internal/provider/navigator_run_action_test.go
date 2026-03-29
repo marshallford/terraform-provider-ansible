@@ -26,3 +26,21 @@ func TestAccNavigatorRunAction_basic(t *testing.T) {
 		},
 	})
 }
+
+func TestAccNavigatorRunAction_defaults(t *testing.T) {
+	t.Parallel()
+
+	resource.Test(t, resource.TestCase{
+		PreCheck:                 func() { testPreCheck(t) },
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		TerraformVersionChecks: []tfversion.TerraformVersionCheck{
+			tfversion.SkipBelow(tfversion.Version1_14_0),
+		},
+		Steps: []resource.TestStep{
+			{
+				Config:          testTerraformConfig(t, filepath.Join("navigator_run_action", "defaults")),
+				ConfigVariables: testDefaultConfigVariables(t),
+			},
+		},
+	})
+}

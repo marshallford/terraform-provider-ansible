@@ -5,7 +5,6 @@ import (
 	"crypto/ed25519"
 	"encoding/base64"
 	"encoding/pem"
-	"errors"
 	"fmt"
 	"maps"
 	"net"
@@ -33,8 +32,6 @@ const (
 	testString           = "testing"
 	testUpdateString     = "testing (update)"
 )
-
-var ErrTestCheckFunc = errors.New("test check func")
 
 func testDefaultConfigVariables(t *testing.T) config.Variables {
 	t.Helper()
@@ -183,7 +180,6 @@ func testSSHServer(t *testing.T, clientPublicKey string, serverPrivateKey string
 		t.Fatal(err)
 	}
 
-	// TODO wait until ready?
 	go sshServer.Serve(listener) //nolint:errcheck
 
 	t.Cleanup(func() {

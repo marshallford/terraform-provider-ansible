@@ -10,6 +10,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-framework/types/basetypes"
 	"github.com/marshallford/terraform-provider-ansible/pkg/ansible"
+	"github.com/marshallford/terraform-provider-ansible/pkg/ansible/navigator"
 )
 
 type ExecutionEnvironmentModel struct {
@@ -56,16 +57,16 @@ func navigatorRunDescriptions() map[string]attrDescription {
 			MarkdownDescription: fmt.Sprintf("Ansible [inventory](https://docs.ansible.com/ansible/latest/getting_started/get_started_inventory.html) contents. The environment variable `%s` is set to the path of the inventory in cases where `{{ inventory_file }}` cannot be referenced.", navigatorRunInventoryEnvVar),
 		},
 		"working_directory": {
-			Description:         fmt.Sprintf("Directory in which '%s' runs. Recommended to be the root Ansible content directory (sometimes called the project directory), which is likely to contain 'ansible.cfg', 'roles/', etc. Defaults to '%s'.", ansible.NavigatorProgram, defaultNavigatorRunWorkingDir),
-			MarkdownDescription: fmt.Sprintf("Directory in which `%s` runs. Recommended to be the root Ansible [content directory](https://docs.ansible.com/ansible/latest/tips_tricks/sample_setup.html#sample-directory-layout) (sometimes called the project directory), which is likely to contain `ansible.cfg`, `roles/`, etc. Defaults to `%s`.", ansible.NavigatorProgram, defaultNavigatorRunWorkingDir),
+			Description:         fmt.Sprintf("Directory in which '%s' runs. Recommended to be the root Ansible content directory (sometimes called the project directory), which is likely to contain 'ansible.cfg', 'roles/', etc. Defaults to '%s'.", navigator.Program, defaultNavigatorRunWorkingDir),
+			MarkdownDescription: fmt.Sprintf("Directory in which `%s` runs. Recommended to be the root Ansible [content directory](https://docs.ansible.com/ansible/latest/tips_tricks/sample_setup.html#sample-directory-layout) (sometimes called the project directory), which is likely to contain `ansible.cfg`, `roles/`, etc. Defaults to `%s`.", navigator.Program, defaultNavigatorRunWorkingDir),
 		},
 		"execution_environment": {
 			Description:         "Execution environment (EE) related configuration.",
 			MarkdownDescription: "[Execution environment](https://ansible.readthedocs.io/en/latest/getting_started_ee/index.html) (EE) related configuration.",
 		},
 		"ansible_navigator_binary": {
-			Description:         fmt.Sprintf("Path to the '%s' binary. By default '$PATH' is searched.", ansible.NavigatorProgram),
-			MarkdownDescription: fmt.Sprintf("Path to the `%s` binary. By default `$PATH` is searched.", ansible.NavigatorProgram),
+			Description:         fmt.Sprintf("Path to the '%s' binary. By default '$PATH' is searched.", navigator.Program),
+			MarkdownDescription: fmt.Sprintf("Path to the `%s` binary. By default `$PATH` is searched.", navigator.Program),
 		},
 		"ansible_options": {
 			Description:         "Ansible playbook run related configuration.",
@@ -83,8 +84,8 @@ func navigatorRunDescriptions() map[string]attrDescription {
 			Description: "UUID.",
 		},
 		"command": {
-			Description:         fmt.Sprintf("Generated '%s' run command. Useful for troubleshooting.", ansible.NavigatorProgram),
-			MarkdownDescription: fmt.Sprintf("Generated `%s` run command. Useful for troubleshooting.", ansible.NavigatorProgram),
+			Description:         fmt.Sprintf("Generated '%s' run command. Useful for troubleshooting.", navigator.Program),
+			MarkdownDescription: fmt.Sprintf("Generated `%s` run command. Useful for troubleshooting.", navigator.Program),
 		},
 	}
 }
@@ -92,8 +93,8 @@ func navigatorRunDescriptions() map[string]attrDescription {
 func (ExecutionEnvironmentModel) descriptions() map[string]attrDescription {
 	return map[string]attrDescription{
 		"container_engine": {
-			Description:         fmt.Sprintf("Container engine responsible for running the execution environment container image. Options: %s. Defaults to '%s'.", wrapElementsJoin(ansible.ContainerEngineOptions(true), "'"), defaultNavigatorRunContainerEngine),
-			MarkdownDescription: fmt.Sprintf("[Container engine](https://ansible.readthedocs.io/projects/navigator/settings/#container-engine) responsible for running the execution environment container image. Options: %s. Defaults to `%s`.", wrapElementsJoin(ansible.ContainerEngineOptions(true), "`"), defaultNavigatorRunContainerEngine),
+			Description:         fmt.Sprintf("Container engine responsible for running the execution environment container image. Options: %s. Defaults to '%s'.", wrapElementsJoin(navigator.ContainerEngineOptions(true), "'"), defaultNavigatorRunContainerEngine),
+			MarkdownDescription: fmt.Sprintf("[Container engine](https://ansible.readthedocs.io/projects/navigator/settings/#container-engine) responsible for running the execution environment container image. Options: %s. Defaults to `%s`.", wrapElementsJoin(navigator.ContainerEngineOptions(true), "`"), defaultNavigatorRunContainerEngine),
 		},
 		"enabled": {
 			Description:         fmt.Sprintf("Enable or disable the use of an execution environment. Disabling requires '%s' and is only recommended when without a container engine. Defaults to '%t'.", ansible.PlaybookProgram, defaultNavigatorRunEEEnabled),
@@ -155,7 +156,7 @@ func (ExecutionEnvironmentModel) Defaults() basetypes.ObjectValue {
 	)
 }
 
-func (m ExecutionEnvironmentModel) Value(ctx context.Context, settings *ansible.NavigatorSettings) diag.Diagnostics {
+func (m ExecutionEnvironmentModel) Value(ctx context.Context, settings *navigator.Settings) diag.Diagnostics {
 	var diags diag.Diagnostics
 
 	settings.ContainerEngine = m.ContainerEngine.ValueString()
@@ -225,8 +226,8 @@ func (AnsibleOptionsModel) descriptions() map[string]attrDescription {
 			MarkdownDescription: fmt.Sprintf("SSH known host entries. Ansible variable `%s` set to path of `known_hosts` file and SSH option `UserKnownHostsFile` must be configured to that path. Defaults to all of the `known_hosts` entries recorded.", ansible.SSHKnownHostsFileVar),
 		},
 		"host_key_checking": {
-			Description:         fmt.Sprintf("SSH host key checking. Can help protect against man-in-the-middle attacks by verifying the identity of hosts. Ansible runner (library used by '%s') defaults this option to '%t' explicitly.", ansible.NavigatorProgram, ansible.RunnerDefaultHostKeyChecking),
-			MarkdownDescription: fmt.Sprintf("SSH host key checking. Can help protect against man-in-the-middle attacks by verifying the identity of hosts. Ansible runner (library used by `%s`) defaults this option to `%t` explicitly.", ansible.NavigatorProgram, ansible.RunnerDefaultHostKeyChecking),
+			Description:         fmt.Sprintf("SSH host key checking. Can help protect against man-in-the-middle attacks by verifying the identity of hosts. Ansible runner (library used by '%s') defaults this option to '%t' explicitly.", navigator.Program, ansible.RunnerDefaultHostKeyChecking),
+			MarkdownDescription: fmt.Sprintf("SSH host key checking. Can help protect against man-in-the-middle attacks by verifying the identity of hosts. Ansible runner (library used by `%s`) defaults this option to `%t` explicitly.", navigator.Program, ansible.RunnerDefaultHostKeyChecking),
 		},
 	}
 }
@@ -262,14 +263,8 @@ func (AnsibleOptionsModel) Defaults() basetypes.ObjectValue {
 	)
 }
 
-func (m AnsibleOptionsModel) Value(ctx context.Context, options *ansible.Options) diag.Diagnostics {
+func (m AnsibleOptionsModel) Value(ctx context.Context, options *ansible.PlaybookOptions) diag.Diagnostics {
 	var diags diag.Diagnostics
-
-	options.Inventories = []string{navigatorRunName}
-
-	if !m.ExtraVars.IsNull() {
-		options.ExtraVarsFiles = []string{navigatorRunExtraVarsFileName}
-	}
 
 	options.ForceHandlers = m.ForceHandlers.ValueBool()
 
@@ -293,28 +288,10 @@ func (m AnsibleOptionsModel) Value(ctx context.Context, options *ansible.Options
 	}
 	options.Tags = tags
 
-	var privateKeysModel []PrivateKeyModel
-	if !m.PrivateKeys.IsNull() {
-		diags.Append(m.PrivateKeys.ElementsAs(ctx, &privateKeysModel, false)...)
-	}
-
-	privateKeys := make([]string, 0, len(privateKeysModel))
-	for _, privateKeyModel := range privateKeysModel {
-		privateKeys = append(privateKeys, privateKeyModel.Name.ValueString())
-	}
-	options.PrivateKeys = privateKeys
-
-	options.KnownHosts = m.KnownHosts.IsUnknown() || len(m.KnownHosts.Elements()) > 0
-
-	options.HostKeyChecking = m.HostKeyChecking.ValueBool()
-	if m.HostKeyChecking.IsNull() {
-		options.HostKeyChecking = ansible.RunnerDefaultHostKeyChecking
-	}
-
 	return diags
 }
 
-func (m *AnsibleOptionsModel) Set(ctx context.Context, run navigatorRun) diag.Diagnostics {
+func (m *AnsibleOptionsModel) Set(ctx context.Context, run navigatorRunData) diag.Diagnostics {
 	var diags diag.Diagnostics
 
 	if m.KnownHosts.IsUnknown() {
@@ -373,7 +350,7 @@ func (ArtifactQueryModel) AttrTypes() map[string]attr.Type {
 	}
 }
 
-func (m ArtifactQueryModel) Value(_ context.Context, query *ansible.ArtifactQuery) diag.Diagnostics {
+func (m ArtifactQueryModel) Value(_ context.Context, query *ansible.PlaybookArtifactQuery) diag.Diagnostics {
 	var diags diag.Diagnostics
 
 	query.JQFilter = m.JQFilter.ValueString()
@@ -382,7 +359,7 @@ func (m ArtifactQueryModel) Value(_ context.Context, query *ansible.ArtifactQuer
 	return diags
 }
 
-func (m *ArtifactQueryModel) Set(ctx context.Context, query ansible.ArtifactQuery) diag.Diagnostics {
+func (m *ArtifactQueryModel) Set(ctx context.Context, query ansible.PlaybookArtifactQuery) diag.Diagnostics {
 	var diags diag.Diagnostics
 
 	m.JQFilter = types.StringValue(query.JQFilter)

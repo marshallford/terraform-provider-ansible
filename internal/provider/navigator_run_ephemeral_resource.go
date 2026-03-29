@@ -18,6 +18,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-framework/types/basetypes"
 	"github.com/marshallford/terraform-provider-ansible/pkg/ansible"
+	"github.com/marshallford/terraform-provider-ansible/pkg/ansible/navigator"
 )
 
 var (
@@ -47,92 +48,41 @@ type NavigatorRunEphemeralResourceModel struct {
 	Timeouts               timeouts.Value `tfsdk:"timeouts"`
 }
 
-func (m NavigatorRunEphemeralResourceModel) Value(ctx context.Context, run *navigatorRun, opts *providerOptions) diag.Diagnostics {
+func (m NavigatorRunEphemeralResourceModel) Value(ctx context.Context, opts *providerOptions, runData *navigatorRunData) diag.Diagnostics {
 	var diags diag.Diagnostics
 
-	run.hostDir = runDir(opts.BaseRunDirectory, m.ID.ValueString(), 0)
-	run.persistDir = opts.PersistRunDirectory
-	run.playbook = m.Playbook.ValueString()
-	run.inventories = []ansible.Inventory{{Name: navigatorRunName, Contents: m.Inventory.ValueString()}}
-	run.workingDir = m.WorkingDirectory.ValueString()
-	run.navigatorBinary = m.AnsibleNavigatorBinary.ValueString()
-
-	var eeModel ExecutionEnvironmentModel
-	diags.Append(m.ExecutionEnvironment.As(ctx, &eeModel, basetypes.ObjectAsOptions{})...)
-
-	run.navigatorSettings.Timezone = m.Timezone.ValueString()
-
-	diags.Append(eeModel.Value(ctx, &run.navigatorSettings)...)
-
-	var optsModel AnsibleOptionsModel
-	diags.Append(m.AnsibleOptions.As(ctx, &optsModel, basetypes.ObjectAsOptions{})...)
-
-	diags.Append(optsModel.Value(ctx, &run.options)...)
-
-	if !optsModel.ExtraVars.IsNull() {
-		run.extraVarsFiles = []ansible.ExtraVarsFile{{Name: navigatorRunExtraVarsFileName, Contents: optsModel.ExtraVars.ValueString()}}
+	*runData = navigatorRunData{
+		hostDir:    navigatorRunDirPath(opts.BaseRunDirectory, m.ID.ValueString(), 0),
+		persistDir: opts.PersistRunDirectory,
+		config: navigator.RunConfig{
+			WorkingDir:  m.WorkingDirectory.ValueString(),
+			Binary:      m.AnsibleNavigatorBinary.ValueString(),
+			Playbook:    m.Playbook.ValueString(),
+			Inventories: []ansible.Inventory{{Name: navigatorRunName, Contents: m.Inventory.ValueString()}},
+			Settings:    &navigator.Settings{},
+			Options:     &ansible.PlaybookOptions{},
+			Env:         map[string]string{},
+		},
 	}
 
-	var privateKeysModel []PrivateKeyModel
-	if !optsModel.PrivateKeys.IsNull() {
-		diags.Append(optsModel.PrivateKeys.ElementsAs(ctx, &privateKeysModel, false)...)
-	}
-
-	run.privateKeys = make([]ansible.PrivateKey, 0, len(privateKeysModel))
-	for _, model := range privateKeysModel {
-		var key ansible.PrivateKey
-
-		diags.Append(model.Value(ctx, &key)...)
-		run.privateKeys = append(run.privateKeys, key)
-	}
-
-	var knownHosts []string
-	if !optsModel.KnownHosts.IsUnknown() {
-		diags.Append(optsModel.KnownHosts.ElementsAs(ctx, &knownHosts, false)...)
-	}
-
-	run.knownHosts = knownHosts
+	diags.Append(runData.Load(ctx, m.ExecutionEnvironment, m.Timezone.ValueString(), m.AnsibleOptions)...)
 
 	var queriesModel map[string]ArtifactQueryModel
 	diags.Append(m.ArtifactQueries.ElementsAs(ctx, &queriesModel, false)...)
 
-	run.artifactQueries = map[string]ansible.ArtifactQuery{}
+	runData.playbookArtifactQueries = map[string]ansible.PlaybookArtifactQuery{}
 	for name, model := range queriesModel {
-		var query ansible.ArtifactQuery
+		var query ansible.PlaybookArtifactQuery
 
 		diags.Append(model.Value(ctx, &query)...)
-		run.artifactQueries[name] = query
+		runData.playbookArtifactQueries[name] = query
 	}
 
 	return diags
 }
 
-func (m *NavigatorRunEphemeralResourceModel) Set(ctx context.Context, run navigatorRun) diag.Diagnostics {
-	var diags diag.Diagnostics
-
-	m.Command = types.StringValue(run.command)
-
-	var optsModel AnsibleOptionsModel
-	diags.Append(m.AnsibleOptions.As(ctx, &optsModel, basetypes.ObjectAsOptions{})...)
-	diags.Append(optsModel.Set(ctx, run)...)
-
-	optsResults, newDiags := types.ObjectValueFrom(ctx, AnsibleOptionsModel{}.AttrTypes(), optsModel)
-	diags.Append(newDiags...)
-	m.AnsibleOptions = optsResults
-
-	var queriesModel map[string]ArtifactQueryModel
-	diags.Append(m.ArtifactQueries.ElementsAs(ctx, &queriesModel, false)...)
-
-	for name, model := range queriesModel {
-		diags.Append(model.Set(ctx, run.artifactQueries[name])...)
-		queriesModel[name] = model
-	}
-
-	queriesValue, newDiags := types.MapValueFrom(ctx, types.ObjectType{AttrTypes: ArtifactQueryModel{}.AttrTypes()}, queriesModel)
-	diags.Append(newDiags...)
-	m.ArtifactQueries = queriesValue
-
-	return diags
+func (m *NavigatorRunEphemeralResourceModel) Set(ctx context.Context, run navigatorRunData) diag.Diagnostics {
+	return run.Store(ctx, &m.Command, &m.AnsibleOptions, &m.ArtifactQueries)
 }
 
 func (m *NavigatorRunEphemeralResourceModel) SetDefaults(ctx context.Context) diag.Diagnostics {
@@ -198,8 +148,8 @@ func (er *NavigatorRunEphemeralResource) Metadata(_ context.Context, req ephemer
 //nolint:dupl
 func (er *NavigatorRunEphemeralResource) Schema(ctx context.Context, _ ephemeral.SchemaRequest, resp *ephemeral.SchemaResponse) {
 	resp.Schema = schema.Schema{
-		Description:         fmt.Sprintf("Run an Ansible playbook to gather temporary and likely sensitive information. It is recommended to only run playbooks without observable side effects. Requires '%s' and a container engine to run within an execution environment (EE).", ansible.NavigatorProgram),
-		MarkdownDescription: fmt.Sprintf("Run an Ansible playbook to gather temporary and likely sensitive information. It is recommended to only run playbooks without observable side effects. Requires `%s` and a container engine to run within an execution environment (EE).", ansible.NavigatorProgram),
+		Description:         fmt.Sprintf("Run an Ansible playbook to gather temporary and likely sensitive information. It is recommended to only run playbooks without observable side effects. Requires '%s' and a container engine to run within an execution environment (EE).", navigator.Program),
+		MarkdownDescription: fmt.Sprintf("Run an Ansible playbook to gather temporary and likely sensitive information. It is recommended to only run playbooks without observable side effects. Requires `%s` and a container engine to run within an execution environment (EE).", navigator.Program),
 		Attributes: map[string]schema.Attribute{
 			// required
 			"playbook": schema.StringAttribute{
@@ -241,7 +191,7 @@ func (er *NavigatorRunEphemeralResource) Schema(ctx context.Context, _ ephemeral
 						Optional:            true,
 						Computed:            true,
 						Validators: []validator.String{
-							stringvalidator.OneOf(ansible.ContainerEngineOptions(true)...),
+							stringvalidator.OneOf(navigator.ContainerEngineOptions(true)...),
 						},
 					},
 					"enabled": schema.BoolAttribute{
@@ -292,7 +242,7 @@ func (er *NavigatorRunEphemeralResource) Schema(ctx context.Context, _ ephemeral
 						Optional:            true,
 						Computed:            true,
 						Validators: []validator.String{
-							stringvalidator.OneOf(ansible.PullPolicyOptions()...),
+							stringvalidator.OneOf(navigator.PullPolicyOptions()...),
 						},
 					},
 					"container_options": schema.ListAttribute{
@@ -483,15 +433,19 @@ func (er *NavigatorRunEphemeralResource) Open(ctx context.Context, req ephemeral
 
 	data.ID = types.StringValue(uuid.New().String())
 
-	var navigatorRun navigatorRun
-	resp.Diagnostics.Append(data.Value(ctx, &navigatorRun, er.opts)...)
+	var runData navigatorRunData
+
+	resp.Diagnostics.Append(data.Value(ctx, er.opts, &runData)...)
 
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
-	run(ctx, &resp.Diagnostics, timeout, terraformOpOpen, &navigatorRun)
-	resp.Diagnostics.Append(data.Set(ctx, navigatorRun)...)
+	runData.operation = terraformOpOpen
+	runData.timeout = timeout
+
+	run(ctx, &resp.Diagnostics, &runData)
+	resp.Diagnostics.Append(data.Set(ctx, runData)...)
 
 	if resp.Diagnostics.HasError() {
 		return
