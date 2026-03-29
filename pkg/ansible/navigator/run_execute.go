@@ -78,7 +78,7 @@ func (r *Run) generateCommand(ctx context.Context) ansible.Cmd { //nolint:iretur
 		command.AppendEnv("ANSIBLE_HOST_KEY_CHECKING", fmt.Sprintf("%t", r.config.HostKeyChecking))
 	}
 
-	return r.launcher.PrepareCommand(command, nil)
+	return r.launcher.PrepareCommand(command, r.config)
 }
 
 func (r *Run) args() []string {
