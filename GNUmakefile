@@ -9,7 +9,7 @@ DOCKER := docker
 DOCKER_RUN := $(DOCKER) run $(DOCKER_FLAGS)
 DOCKER_PULL := $(DOCKER) pull -q
 
-TERRAFORM_VERSION ?= 1.14.5
+TERRAFORM_VERSION ?= 1.14.8
 
 EDITORCONFIG_CHECKER_VERSION ?= 3.6.1
 EDITORCONFIG_CHECKER_IMAGE ?= docker.io/mstruebing/editorconfig-checker:v$(EDITORCONFIG_CHECKER_VERSION)
@@ -23,7 +23,7 @@ YAMLLINT_VERSION ?= 0.35.9
 YAMLLINT_IMAGE ?= docker.io/pipelinecomponents/yamllint:$(YAMLLINT_VERSION)
 YAMLLINT := $(DOCKER_RUN) -v=$(CURDIR):/code $(YAMLLINT_IMAGE) yamllint
 
-GOLANGCI_VERSION ?= 2.10.1
+GOLANGCI_VERSION ?= 2.11.4
 GOLANGCI_IMAGE ?= docker.io/golangci/golangci-lint:v$(GOLANGCI_VERSION)
 GOLANGCI := $(DOCKER_RUN) -v=$(CURDIR):/code -w /code $(GOLANGCI_IMAGE) golangci-lint run
 
