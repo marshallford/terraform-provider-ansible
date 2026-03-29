@@ -3,14 +3,18 @@ package provider
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"path/filepath"
 	"time"
 
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/path"
+	"github.com/hashicorp/terraform-plugin-framework/types"
+	"github.com/hashicorp/terraform-plugin-framework/types/basetypes"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/marshallford/terraform-provider-ansible/pkg/ansible"
+	"github.com/marshallford/terraform-provider-ansible/pkg/ansible/navigator"
 )
 
 const (
@@ -24,7 +28,7 @@ const (
 	navigatorRunTimeoutOverhead        = 5 * time.Second
 	defaultNavigatorRunWorkingDir      = "."
 	defaultNavigatorRunTimeout         = 10 * time.Minute
-	defaultNavigatorRunContainerEngine = ansible.ContainerEngineAuto
+	defaultNavigatorRunContainerEngine = navigator.ContainerEngineAuto
 	defaultNavigatorRunEEEnabled       = true
 	defaultNavigatorRunImage           = "ghcr.io/ansible/community-ansible-dev-tools:v26.1.0"
 	defaultNavigatorRunPullPolicy      = "tag"
@@ -70,147 +74,196 @@ func incrementRuns(ctx context.Context, diags *diag.Diagnostics, getKey getKey, 
 	return runs
 }
 
-type navigatorRun struct {
-	hostDir           string
-	persistDir        bool
-	playbook          string
-	inventories       []ansible.Inventory
-	workingDir        string
-	navigatorBinary   string
-	options           ansible.Options
-	navigatorSettings ansible.NavigatorSettings
-	extraVarsFiles    []ansible.ExtraVarsFile
-	privateKeys       []ansible.PrivateKey
-	knownHosts        []ansible.KnownHost
-	artifactQueries   map[string]ansible.ArtifactQuery
-	command           string
+type navigatorRunData struct {
+	hostDir                 string
+	config                  navigator.RunConfig
+	operation               terraformOp
+	timeout                 time.Duration
+	persistDir              bool
+	playbookArtifactQueries map[string]ansible.PlaybookArtifactQuery
+	knownHosts              []ansible.KnownHost
+	command                 string
+}
+
+func (rd *navigatorRunData) Load(ctx context.Context, ee types.Object, timezone string, ansibleOpts types.Object) diag.Diagnostics {
+	var diags diag.Diagnostics
+
+	var eeModel ExecutionEnvironmentModel
+	diags.Append(ee.As(ctx, &eeModel, basetypes.ObjectAsOptions{})...)
+
+	rd.config.Settings.Timezone = timezone
+
+	diags.Append(eeModel.Value(ctx, rd.config.Settings)...)
+
+	var optsModel AnsibleOptionsModel
+	diags.Append(ansibleOpts.As(ctx, &optsModel, basetypes.ObjectAsOptions{})...)
+
+	diags.Append(optsModel.Value(ctx, rd.config.Options)...)
+
+	if !optsModel.ExtraVars.IsNull() {
+		rd.config.ExtraVars = []ansible.ExtraVarsFile{{Name: navigatorRunExtraVarsFileName, Contents: optsModel.ExtraVars.ValueString()}}
+	}
+
+	var privateKeysModel []PrivateKeyModel
+	if !optsModel.PrivateKeys.IsNull() {
+		diags.Append(optsModel.PrivateKeys.ElementsAs(ctx, &privateKeysModel, false)...)
+	}
+
+	rd.config.PrivateKeys = make([]ansible.PrivateKey, 0, len(privateKeysModel))
+	for _, model := range privateKeysModel {
+		var key ansible.PrivateKey
+
+		diags.Append(model.Value(ctx, &key)...)
+		rd.config.PrivateKeys = append(rd.config.PrivateKeys, key)
+	}
+
+	var knownHosts []string
+	if !optsModel.KnownHosts.IsUnknown() {
+		diags.Append(optsModel.KnownHosts.ElementsAs(ctx, &knownHosts, false)...)
+	}
+
+	rd.config.KnownHosts = knownHosts
+
+	rd.config.UseKnownHosts = optsModel.KnownHosts.IsUnknown() || len(optsModel.KnownHosts.Elements()) > 0
+
+	rd.config.HostKeyChecking = optsModel.HostKeyChecking.ValueBool()
+	if optsModel.HostKeyChecking.IsNull() {
+		rd.config.HostKeyChecking = ansible.RunnerDefaultHostKeyChecking
+	}
+
+	return diags
+}
+
+func (rd navigatorRunData) Store(ctx context.Context, command *types.String, ansibleOpts *types.Object, artifactQueries *types.Map) diag.Diagnostics {
+	var diags diag.Diagnostics
+
+	*command = types.StringValue(rd.command)
+
+	var optsModel AnsibleOptionsModel
+	diags.Append(ansibleOpts.As(ctx, &optsModel, basetypes.ObjectAsOptions{})...)
+	diags.Append(optsModel.Set(ctx, rd)...)
+
+	optsResults, newDiags := types.ObjectValueFrom(ctx, AnsibleOptionsModel{}.AttrTypes(), optsModel)
+	diags.Append(newDiags...)
+	*ansibleOpts = optsResults
+
+	var queriesModel map[string]ArtifactQueryModel
+	diags.Append(artifactQueries.ElementsAs(ctx, &queriesModel, false)...)
+
+	for name, model := range queriesModel {
+		diags.Append(model.Set(ctx, rd.playbookArtifactQueries[name])...)
+		queriesModel[name] = model
+	}
+
+	queriesValue, newDiags := types.MapValueFrom(ctx, types.ObjectType{AttrTypes: ArtifactQueryModel{}.AttrTypes()}, queriesModel)
+	diags.Append(newDiags...)
+	*artifactQueries = queriesValue
+
+	return diags
+}
+
+func preflightCheckPath(check navigator.PreflightCheckID) path.Path {
+	switch check {
+	case navigator.CheckWorkingDir:
+		return path.Root("working_directory")
+	case navigator.CheckContainerEngine:
+		return path.Root("execution_environment").AtMapKey("container_engine")
+	case navigator.CheckPlaybook:
+		return path.Root("execution_environment").AtMapKey("enabled")
+	case navigator.CheckNavigatorResolve, navigator.CheckNavigatorBinary:
+		return path.Root("ansible_navigator_binary")
+	default:
+		return path.Empty()
+	}
 }
 
 //nolint:cyclop
-func run(ctx context.Context, diags *diag.Diagnostics, timeout time.Duration, operation terraformOp, run *navigatorRun) {
-	var err error
-
+func run(ctx context.Context, diags *diag.Diagnostics, runData *navigatorRunData) {
 	tflog.Debug(ctx, "starting run")
 
-	tflog.Trace(ctx, "directory preflight")
-	ctx = tflog.SetField(ctx, "workingDir", run.workingDir)
-	err = ansible.DirectoryPreflight(run.workingDir)
-	addPathError(diags, path.Root("working_directory"), "Working directory preflight check", err)
+	navRun := navigator.NewRun(runData.hostDir, &runData.config)
+	defer func() {
+		if !runData.persistDir {
+			err := navRun.Cleanup()
+			addWarning(diags, "Run not cleaned up", err)
+		}
+	}()
 
-	if run.navigatorSettings.EEEnabled {
-		tflog.Trace(ctx, "container engine preflight")
-		err = ansible.ContainerEnginePreflight(ctx, run.navigatorSettings.ContainerEngine)
-		addPathError(diags, path.Root("execution_environment").AtMapKey("container_engine"), "Container engine preflight check", err)
-	} else {
-		tflog.Trace(ctx, "playbook preflight")
-		err = ansible.PlaybookPreflight(ctx)
-		addPathError(diags, path.Root("execution_environment").AtMapKey("enabled"), "Ansible playbook preflight check", err)
+	tflog.Trace(ctx, "preflight checks")
+	ctx = tflog.SetField(ctx, "workingDir", runData.config.WorkingDir)
+	if err := navRun.Preflight(ctx); err != nil {
+		for _, e := range unwrapJoinedErrors(err) {
+			var pe *navigator.PreflightError
+			if errors.As(e, &pe) {
+				addPathError(diags, preflightCheckPath(pe.Check), "Preflight check failed", pe)
+			}
+		}
 	}
-
-	tflog.Trace(ctx, "navigator path preflight")
-	binary, err := ansible.NavigatorPathPreflight(run.navigatorBinary)
-	addPathError(diags, path.Root("ansible_navigator_binary"), "Ansible navigator not found", err)
-
-	tflog.Trace(ctx, "navigator preflight")
-	err = ansible.NavigatorPreflight(ctx, binary)
-	addPathError(diags, path.Root("ansible_navigator_binary"), "Ansible navigator preflight check", err)
 
 	tflog.Trace(ctx, "creating directories and files")
-
-	runDir, err := ansible.CreateRunDir(run.hostDir, &run.navigatorSettings)
-	ctx = tflog.SetField(ctx, "hostRunDir", runDir.Host)
-	ctx = tflog.SetField(ctx, "resolvedRunDir", runDir.Resolved)
-	addError(diags, "Run directory not created", err)
-
-	err = ansible.CreatePlaybook(runDir, run.playbook)
-	addError(diags, "Playbook not created", err)
-
-	err = ansible.CreateInventories(runDir, run.inventories)
-	addError(diags, "Inventories not created", err)
-
-	if len(run.extraVarsFiles) > 0 {
-		err = ansible.CreateExtraVarsFiles(runDir, run.extraVarsFiles)
-		addError(diags, "Extra vars files not created", err)
+	if err := navRun.Setup(); err != nil {
+		for _, e := range unwrapJoinedErrors(err) {
+			var se *navigator.SetupError
+			if errors.As(e, &se) {
+				addError(diags, "Setup failed", se)
+			}
+		}
 	}
 
-	if len(run.privateKeys) > 0 {
-		err = ansible.CreatePrivateKeys(runDir, run.privateKeys)
-		addError(diags, "Private keys not created", err)
-	}
-
-	if run.options.KnownHosts {
-		err = ansible.CreateKnownHosts(runDir, run.knownHosts)
-		addError(diags, "Known hosts not created", err)
-	}
-
-	inventoryPaths := ansible.ResolvedInventoryPaths(runDir, run.inventories)
-
-	run.navigatorSettings.EnvironmentVariablesSet[navigatorRunOperationEnvVar] = operation.String()
-	run.navigatorSettings.EnvironmentVariablesSet[navigatorRunInventoryEnvVar] = inventoryPaths[navigatorRunName]
-	if operation == terraformOpUpdate {
-		run.navigatorSettings.EnvironmentVariablesSet[navigatorRunPrevInventoryEnvVar] = inventoryPaths[navigatorRunPrevInventoryName]
-	}
-
-	run.navigatorSettings.Timeout = timeout
-
-	navigatorSettingsContents, err := ansible.GenerateNavigatorSettings(&run.navigatorSettings)
-	addError(diags, "Ansible navigator settings not generated", err)
-
-	err = ansible.CreateNavigatorSettingsFile(runDir, navigatorSettingsContents)
-	addError(diags, "Ansible navigator settings file not created", err)
+	ctx = tflog.SetField(ctx, "hostRunDir", navRun.HostDir())
+	ctx = tflog.SetField(ctx, "resolvedRunDir", navRun.ResolvedDir())
 
 	if diags.HasError() {
-		if !run.persistDir {
-			err = runDir.Remove()
-			addWarning(diags, "Run directory not removed", err)
+		return
+	}
+
+	runData.config.Env[navigatorRunOperationEnvVar] = runData.operation.String()
+	runData.config.Env[navigatorRunInventoryEnvVar] = navRun.InventoryPath(navigatorRunName)
+	if runData.operation == terraformOpUpdate {
+		runData.config.Env[navigatorRunPrevInventoryEnvVar] = navRun.InventoryPath(navigatorRunPrevInventoryName)
+	}
+
+	runData.config.Settings.Timeout = runData.timeout
+
+	tflog.Trace(ctx, "executing ansible-navigator")
+	if err := navRun.Execute(ctx); err != nil {
+		runData.command = navRun.Command
+		switch navRun.Status {
+		case "timeout":
+			addError(diags, "Ansible navigator run timed out", fmt.Errorf("%w\n\nOutput:\n%s", err, navRun.Output))
+		default:
+			addError(diags, "Ansible navigator run failed", fmt.Errorf("%w\n\nOutput:\n%s", err, navRun.Output))
 		}
 
 		return
 	}
 
-	command := ansible.GenerateNavigatorRunCommand(
-		ctx,
-		runDir,
-		run.workingDir,
-		binary,
-		&run.options,
-	)
+	runData.command = navRun.Command
 
-	run.command = command.String()
-
-	commandOutput, err := ansible.ExecNavigatorRunCommand(command)
-	if err != nil {
-		output, _ := ansible.GetStdoutFromPlaybookArtifact(runDir)
-		if output == "" {
-			output = commandOutput
-		}
-
-		status, _ := ansible.GetStatusFromPlaybookArtifact(runDir)
-		switch status {
-		case "timeout":
-			addError(diags, "Ansible navigator run timed out", fmt.Errorf("%w\n\nOutput:\n%s", err, output))
-		default:
-			addError(diags, "Ansible navigator run failed", fmt.Errorf("%w\n\nOutput:\n%s", err, output))
-		}
-	}
-
-	if !diags.HasError() {
-		err = ansible.QueryPlaybookArtifact(runDir, run.artifactQueries)
+	if err := navRun.Query(runData.playbookArtifactQueries); err != nil {
 		addPathError(diags, path.Root("artifact_queries"), "Playbook artifact queries failed", err)
-
-		if run.options.KnownHosts {
-			knownHosts, err := ansible.GetKnownHosts(runDir)
-			addPathError(diags, path.Root("ansible_options").AtMapKey("known_hosts"), "Failed to get known hosts", err)
-			run.knownHosts = knownHosts
-		}
 	}
 
-	if !run.persistDir {
-		err = runDir.Remove()
-		addWarning(diags, "Run directory not removed", err)
+	if runData.config.UseKnownHosts {
+		knownHosts, err := navRun.ReadKnownHosts()
+		if err != nil {
+			addPathError(diags, path.Root("ansible_options").AtMapKey("known_hosts"), "Failed to read known hosts", err)
+		}
+		runData.knownHosts = knownHosts
 	}
 }
 
-func runDir(baseRunDirectory string, id string, runs uint32) string {
+func unwrapJoinedErrors(err error) []error {
+	if err == nil {
+		return nil
+	}
+	if joined, ok := err.(interface{ Unwrap() []error }); ok {
+		return joined.Unwrap()
+	}
+
+	return []error{err}
+}
+
+func navigatorRunDirPath(baseRunDirectory string, id string, runs uint32) string {
 	return filepath.Join(baseRunDirectory, fmt.Sprintf("%s-%s-%d", navigatorRunDir, id, runs))
 }

@@ -17,6 +17,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/marshallford/terraform-provider-ansible/pkg/ansible"
+	"github.com/spf13/afero"
 )
 
 const defaultProviderPersistRunDir = false
@@ -98,7 +99,7 @@ func (p *AnsibleProvider) Configure(ctx context.Context, req provider.ConfigureR
 		opts.BaseRunDirectory = data.BaseRunDirectory.ValueString()
 	}
 
-	err := ansible.DirectoryPreflight(opts.BaseRunDirectory)
+	err := ansible.CheckDirectory(afero.NewOsFs(), opts.BaseRunDirectory)
 	addPathError(&resp.Diagnostics, path.Root("base_run_directory"), "Base run directory preflight check", err)
 
 	if !data.PersistRunDirectory.IsNull() {

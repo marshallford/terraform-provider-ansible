@@ -19,3 +19,6 @@ linters:
       ignore-type-assert-ok: true
       ignore-map-index-ok: true
       ignore-chan-recv-ok: true
+    wrapcheck:
+      ignore-package-globs:
+      - github.com/marshallford/terraform-provider-ansible/*

@@ -85,7 +85,7 @@ func TestAccNavigatorRunResource_errors(t *testing.T) {
 					"ansible_navigator_binary": config.StringVariable(testLookPath(t, "docker")),
 				}
 			},
-			expected: regexp.MustCompile("Ansible navigator preflight check"),
+			expected: regexp.MustCompile("Preflight check failed"),
 		},
 		{
 			name:     "playbook_yaml",
@@ -118,7 +118,7 @@ func TestAccNavigatorRunResource_errors(t *testing.T) {
 					"working_directory": config.StringVariable(filepath.Join(t.TempDir(), "non-existent")),
 				}
 			},
-			expected: regexp.MustCompile("Working directory preflight check"),
+			expected: regexp.MustCompile("Preflight check failed"),
 		},
 	}
 

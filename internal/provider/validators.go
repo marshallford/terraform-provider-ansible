@@ -5,6 +5,7 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/marshallford/terraform-provider-ansible/pkg/ansible"
+	"github.com/marshallford/terraform-provider-ansible/pkg/ansible/navigator"
 )
 
 type stringIsSSHPrivateKeyValidator struct{}
@@ -169,7 +170,7 @@ func (v stringIsIANATimezoneValidator) ValidateString(_ context.Context, req val
 		return
 	}
 
-	err := ansible.ValidateIANATimezone(req.ConfigValue.ValueString())
+	err := navigator.ValidateIANATimezone(req.ConfigValue.ValueString())
 	addPathError(&resp.Diagnostics, req.Path, "Not a valid IANA time zone, use 'local' for the system time zone", err)
 }
 
@@ -198,7 +199,7 @@ func (v stringIsJQFilterValidator) ValidateString(_ context.Context, req validat
 		return
 	}
 
-	err := ansible.ValidateJQFilter(req.ConfigValue.ValueString())
+	err := navigator.ValidateJQFilter(req.ConfigValue.ValueString())
 	addPathError(&resp.Diagnostics, req.Path, "Not a valid JQ filter", err)
 }
 
@@ -227,7 +228,7 @@ func (v stringIsContainerImageNameValidator) ValidateString(_ context.Context, r
 		return
 	}
 
-	err := ansible.ValidateContainerImageName(req.ConfigValue.ValueString())
+	err := navigator.ValidateContainerImageName(req.ConfigValue.ValueString())
 	addPathError(&resp.Diagnostics, req.Path, "Not a valid container image name", err)
 }
 

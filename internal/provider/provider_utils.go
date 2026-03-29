@@ -179,7 +179,7 @@ func addPathError(diags *diag.Diagnostics, path path.Path, summary string, err e
 	return false
 }
 
-func addWarning(diags *diag.Diagnostics, summary string, err error) bool { //nolint:unparam
+func addWarning(diags *diag.Diagnostics, summary string, err error) bool {
 	if err != nil {
 		diags.AddWarning(summary, fmt.Sprintf("%s: %s", diagDetailPrefix, err))
 

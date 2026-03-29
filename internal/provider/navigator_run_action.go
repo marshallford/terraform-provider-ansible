@@ -18,6 +18,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-framework/types/basetypes"
 	"github.com/marshallford/terraform-provider-ansible/pkg/ansible"
+	"github.com/marshallford/terraform-provider-ansible/pkg/ansible/navigator"
 )
 
 var (
@@ -44,51 +45,24 @@ type NavigatorRunActionModel struct {
 	Timeouts               timeouts.Value `tfsdk:"timeouts"`
 }
 
-func (m NavigatorRunActionModel) Value(ctx context.Context, run *navigatorRun, opts *providerOptions) diag.Diagnostics {
+func (m NavigatorRunActionModel) Value(ctx context.Context, opts *providerOptions, runData *navigatorRunData) diag.Diagnostics {
 	var diags diag.Diagnostics
 
-	run.hostDir = runDir(opts.BaseRunDirectory, uuid.New().String(), 0)
-	run.persistDir = opts.PersistRunDirectory
-	run.playbook = m.Playbook.ValueString()
-	run.inventories = []ansible.Inventory{{Name: navigatorRunName, Contents: m.Inventory.ValueString()}}
-	run.workingDir = m.WorkingDirectory.ValueString()
-	run.navigatorBinary = m.AnsibleNavigatorBinary.ValueString()
-
-	var eeModel ExecutionEnvironmentModel
-	diags.Append(m.ExecutionEnvironment.As(ctx, &eeModel, basetypes.ObjectAsOptions{})...)
-
-	run.navigatorSettings.Timezone = m.Timezone.ValueString()
-
-	diags.Append(eeModel.Value(ctx, &run.navigatorSettings)...)
-
-	var optsModel AnsibleOptionsModel
-	diags.Append(m.AnsibleOptions.As(ctx, &optsModel, basetypes.ObjectAsOptions{})...)
-
-	diags.Append(optsModel.Value(ctx, &run.options)...)
-
-	if !optsModel.ExtraVars.IsNull() {
-		run.extraVarsFiles = []ansible.ExtraVarsFile{{Name: navigatorRunExtraVarsFileName, Contents: optsModel.ExtraVars.ValueString()}}
+	*runData = navigatorRunData{
+		hostDir:    navigatorRunDirPath(opts.BaseRunDirectory, uuid.New().String(), 0),
+		persistDir: opts.PersistRunDirectory,
+		config: navigator.RunConfig{
+			WorkingDir:  m.WorkingDirectory.ValueString(),
+			Binary:      m.AnsibleNavigatorBinary.ValueString(),
+			Playbook:    m.Playbook.ValueString(),
+			Inventories: []ansible.Inventory{{Name: navigatorRunName, Contents: m.Inventory.ValueString()}},
+			Settings:    &navigator.Settings{},
+			Options:     &ansible.PlaybookOptions{},
+			Env:         map[string]string{},
+		},
 	}
 
-	var privateKeysModel []PrivateKeyModel
-	if !optsModel.PrivateKeys.IsNull() {
-		diags.Append(optsModel.PrivateKeys.ElementsAs(ctx, &privateKeysModel, false)...)
-	}
-
-	run.privateKeys = make([]ansible.PrivateKey, 0, len(privateKeysModel))
-	for _, model := range privateKeysModel {
-		var key ansible.PrivateKey
-
-		diags.Append(model.Value(ctx, &key)...)
-		run.privateKeys = append(run.privateKeys, key)
-	}
-
-	var knownHosts []string
-	if !optsModel.KnownHosts.IsUnknown() {
-		diags.Append(optsModel.KnownHosts.ElementsAs(ctx, &knownHosts, false)...)
-	}
-
-	run.knownHosts = knownHosts
+	diags.Append(runData.Load(ctx, m.ExecutionEnvironment, m.Timezone.ValueString(), m.AnsibleOptions)...)
 
 	return diags
 }
@@ -156,8 +130,8 @@ func (er *NavigatorRunAction) Metadata(_ context.Context, req action.MetadataReq
 //nolint:dupl
 func (er *NavigatorRunAction) Schema(ctx context.Context, _ action.SchemaRequest, resp *action.SchemaResponse) {
 	resp.Schema = schema.Schema{
-		Description:         fmt.Sprintf("Run an Ansible playbook. Requires '%s' and a container engine to run within an execution environment (EE).", ansible.NavigatorProgram),
-		MarkdownDescription: fmt.Sprintf("Run an Ansible playbook. Requires `%s` and a container engine to run within an execution environment (EE).", ansible.NavigatorProgram),
+		Description:         fmt.Sprintf("Run an Ansible playbook. Requires '%s' and a container engine to run within an execution environment (EE).", navigator.Program),
+		MarkdownDescription: fmt.Sprintf("Run an Ansible playbook. Requires `%s` and a container engine to run within an execution environment (EE).", navigator.Program),
 		Attributes: map[string]schema.Attribute{
 			// required
 			"playbook": schema.StringAttribute{
@@ -196,7 +170,7 @@ func (er *NavigatorRunAction) Schema(ctx context.Context, _ action.SchemaRequest
 						MarkdownDescription: ExecutionEnvironmentModel{}.descriptions()["container_engine"].MarkdownDescription,
 						Optional:            true,
 						Validators: []validator.String{
-							stringvalidator.OneOf(ansible.ContainerEngineOptions(true)...),
+							stringvalidator.OneOf(navigator.ContainerEngineOptions(true)...),
 						},
 					},
 					"enabled": schema.BoolAttribute{
@@ -244,7 +218,7 @@ func (er *NavigatorRunAction) Schema(ctx context.Context, _ action.SchemaRequest
 						MarkdownDescription: ExecutionEnvironmentModel{}.descriptions()["pull_policy"].MarkdownDescription,
 						Optional:            true,
 						Validators: []validator.String{
-							stringvalidator.OneOf(ansible.PullPolicyOptions()...),
+							stringvalidator.OneOf(navigator.PullPolicyOptions()...),
 						},
 					},
 					"container_options": schema.ListAttribute{
@@ -397,23 +371,27 @@ func (er *NavigatorRunAction) Invoke(ctx context.Context, req action.InvokeReque
 	ctx, cancel := context.WithTimeout(ctx, timeout+navigatorRunTimeoutOverhead)
 	defer cancel()
 
-	var navigatorRun navigatorRun
-	resp.Diagnostics.Append(data.Value(ctx, &navigatorRun, er.opts)...)
+	var runData navigatorRunData
+
+	resp.Diagnostics.Append(data.Value(ctx, er.opts, &runData)...)
 
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
-	navigatorRun.artifactQueries = map[string]ansible.ArtifactQuery{
+	runData.playbookArtifactQueries = map[string]ansible.PlaybookArtifactQuery{
 		"stdout": {JQFilter: ".stdout[]", Raw: true},
 	}
 
-	run(ctx, &resp.Diagnostics, timeout, terraformOpInvoke, &navigatorRun)
+	runData.operation = terraformOpInvoke
+	runData.timeout = timeout
+
+	run(ctx, &resp.Diagnostics, &runData)
 
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
-	stdout := strings.Join(navigatorRun.artifactQueries["stdout"].Results, "\n")
+	stdout := strings.Join(runData.playbookArtifactQueries["stdout"].Results, "\n")
 	resp.SendProgress(action.InvokeProgressEvent{Message: stdout})
 }

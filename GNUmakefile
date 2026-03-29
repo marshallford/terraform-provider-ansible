@@ -76,7 +76,10 @@ lint/golangci:
 lint/ansible: $(VENV_STAMP)
 	$(ACTIVATE); ansible-lint docs examples
 
-.PHONY: install cover docs
+.PHONY: build install cover docs
+
+build:
+	go build ./...
 
 install:
 	go install

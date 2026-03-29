@@ -1,76 +1,25 @@
 package ansible
 
 import (
-	"encoding/json"
 	"errors"
 	"fmt"
-	"os"
-	"os/exec"
 
-	jq "github.com/itchyny/gojq"
+	"github.com/spf13/afero"
 )
 
-func programExistsOnPath(program string) error {
-	if _, err := exec.LookPath(program); err != nil {
-		return fmt.Errorf("failed to find program on path, %w", err)
-	}
+var (
+	ErrDirectory = errors.New("directory is not valid")
+)
 
-	return nil
-}
-
-func writeFile(path string, contents string) error {
-	if err := os.WriteFile(path, []byte(contents), 0o600); err != nil { //nolint:mnd
-		return fmt.Errorf("failed to write file, %w", err)
-	}
-
-	return nil
-}
-
-//nolint:cyclop
-func jqJSON(data []byte, filter string, raw bool) ([]string, error) {
-	var blob any
-	if err := json.Unmarshal(data, &blob); err != nil {
-		return nil, fmt.Errorf("failed to parse JSON, %w", err)
-	}
-
-	query, err := jq.Parse(filter)
+func CheckDirectory(fs afero.Fs, path string) error {
+	info, err := fs.Stat(path)
 	if err != nil {
-		return nil, fmt.Errorf("failed to parse JQ filter, %w", err)
+		return fmt.Errorf("%w, %w", ErrDirectory, err)
 	}
 
-	var results []string
-
-	iter := query.Run(blob)
-	for {
-		value, ok := iter.Next()
-		if !ok {
-			break
-		}
-
-		if err, ok := value.(error); ok {
-			var haltErr *jq.HaltError
-			if errors.As(err, &haltErr) && haltErr.Value() == nil {
-				break
-			}
-
-			return nil, fmt.Errorf("JQ failed, %w", err)
-		}
-
-		if raw {
-			if s, ok := value.(string); ok {
-				results = append(results, s)
-
-				continue
-			}
-		}
-
-		result, err := jq.Marshal(value)
-		if err != nil {
-			return nil, fmt.Errorf("failed to convert JQ result into JSON, %w", err)
-		}
-
-		results = append(results, string(result))
+	if !info.IsDir() {
+		return fmt.Errorf("%w, %s is not a directory", ErrDirectory, path)
 	}
 
-	return results, nil
+	return nil
 }
