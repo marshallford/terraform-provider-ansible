@@ -6,6 +6,7 @@ linters:
   - exhaustruct
   - funcorder
   - funlen
+  - goconst
   - godox
   - lll
   - noinlineerr
