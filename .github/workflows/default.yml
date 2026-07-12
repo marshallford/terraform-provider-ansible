@@ -14,7 +14,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - name: Checkout
-      uses: actions/checkout@v6
+      uses: actions/checkout@v7
     - name: Setup go
       uses: actions/setup-go@v6
       with:
@@ -22,22 +22,22 @@ jobs:
     - name: Download dependencies
       run: go mod download
     - name: Setup uv
-      uses: astral-sh/setup-uv@v7
+      uses: astral-sh/setup-uv@v8.3.2
     - name: Setup Python
       uses: actions/setup-python@v6
       with:
         python-version-file: .python-version
     - name: Setup Terraform
-      uses: hashicorp/setup-terraform@v3
+      uses: hashicorp/setup-terraform@v4
       with:
-        terraform_version: 1.14.*
+        terraform_version: 1.15.*
         terraform_wrapper: false
     - name: Acceptance Coverage
       run: make test/acc
     - name: Coverage badge and html
       run: ./.github/scripts/cov-badge-and-html.sh
     - name: Upload Artifact
-      uses: actions/upload-pages-artifact@v4
+      uses: actions/upload-pages-artifact@v5
 
   deploy-pages:
     name: Deploy Pages
@@ -53,4 +53,4 @@ jobs:
     steps:
     - name: Deploy to GitHub Pages
       id: deployment
-      uses: actions/deploy-pages@v4
+      uses: actions/deploy-pages@v5
