@@ -15,7 +15,7 @@ jobs:
     # environment: release
     steps:
     - name: Checkout
-      uses: actions/checkout@v6
+      uses: actions/checkout@v7
       with:
         fetch-depth: 0
     - name: Fetch tags
@@ -26,13 +26,13 @@ jobs:
         go-version-file: .go-version
     - name: Import GPG key
       id: gpg
-      uses: crazy-max/ghaction-import-gpg@v6
+      uses: crazy-max/ghaction-import-gpg@v7
       with:
         gpg_private_key: ${{ secrets.GPG_PRIVATE_KEY }}
     - name: GoReleaser
-      uses: goreleaser/goreleaser-action@v6
+      uses: goreleaser/goreleaser-action@v7
       with:
-        version: v2.12.7
+        version: v2.17.0
         args: release --clean
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

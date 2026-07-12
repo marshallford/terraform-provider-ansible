@@ -129,7 +129,7 @@ func TestStringValidators(t *testing.T) {
 		{
 			name:          "container_image_name",
 			validator:     provider.StringIsContainerImageName(),
-			validValues:   []string{"ghcr.io/ansible/community-ansible-dev-tools:v26.4.6", "docker.io/library/alpine:3.21"},
+			validValues:   []string{"ghcr.io/ansible/community-ansible-dev-tools:v26.7.1", "docker.io/library/alpine:3.21"},
 			invalidValues: []string{"not a valid image", ""},
 		},
 	}
