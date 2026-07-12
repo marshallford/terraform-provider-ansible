@@ -1,9 +1,9 @@
 # Terraform Provider for Ansible
 
-[![Registry](https://img.shields.io/terraform/provider/dt/5096?logo=terraform&label=terraform%20registry&color=blue
-)](https://registry.terraform.io/providers/marshallford/ansible/latest/docs)
-[![Go Report Card](https://goreportcard.com/badge/github.com/marshallford/terraform-provider-ansible)](https://goreportcard.com/report/github.com/marshallford/terraform-provider-ansible)
-[![Acceptance Coverage](https://marshallford.github.io/terraform-provider-ansible/badge.svg)](https://marshallford.github.io/terraform-provider-ansible/cover.html)
+[![Registry](https://img.shields.io/terraform/provider/dt/5096?logo=terraform&label=terraform%20registry&color=7B42BC)](https://registry.terraform.io/providers/marshallford/ansible/latest/docs)
+[![Release](https://img.shields.io/github/v/release/marshallford/terraform-provider-ansible?logo=github)](https://github.com/marshallford/terraform-provider-ansible/releases/latest)
+[![Go version](https://img.shields.io/github/go-mod/go-version/marshallford/terraform-provider-ansible?logo=go&label=go)](go.mod)
+[![Acceptance coverage](https://marshallford.github.io/terraform-provider-ansible/badge.svg)](https://marshallford.github.io/terraform-provider-ansible/cover.html)
 
 Run [Ansible](https://github.com/ansible/ansible) playbooks using Terraform.
 

@@ -22,4 +22,6 @@ elif (( $(echo "$COVERAGE > 80" | bc -l) )); then
   BADGE_COLOR=green
 fi
 
-curl -s "https://img.shields.io/badge/acc%20coverage-$COVERAGE%25-$BADGE_COLOR" > _site/badge.svg
+MAGNIFYING_GLASS="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0id2hpdGUiPjxwYXRoIGZpbGwtcnVsZT0iZXZlbm9kZCIgZD0iTTkuNSAyYTcuNSA3LjUgMCAxIDAgNC41NSAxMy40Nmw1LjI0IDUuMjRhMS40IDEuNCAwIDAgMCAxLjk4LTEuOThsLTUuMjQtNS4yNEE3LjUgNy41IDAgMCAwIDkuNSAyem0wIDNhNC41IDQuNSAwIDEgMSAwIDkgNC41IDQuNSAwIDAgMSAwLTl6Ii8+PC9zdmc+"
+
+curl -s "https://img.shields.io/badge/acc%20coverage-$COVERAGE%25-$BADGE_COLOR?logo=$MAGNIFYING_GLASS" > _site/badge.svg
