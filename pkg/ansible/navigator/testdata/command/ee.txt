@@ -1,0 +1,24 @@
+/usr/bin/ansible-navigator
+run
+/tmp/ansible-navigator-run-test/playbook.yaml
+--playbook-artifact-save-as
+/tmp/ansible-navigator-run-test/playbook-artifact.json
+--log-file
+/tmp/ansible-navigator-run-test/ansible-navigator.log
+--inventory
+/tmp/ansible-navigator-run-test/inventories/hosts
+--extra-vars
+@/tmp/run/extra-vars/vars.yaml
+--force-handlers
+--skip-tags
+skip-me
+--start-at-task
+task name
+--limit
+host1,host2
+--tags
+tag1
+--private-key
+/tmp/run/private-keys/key
+--extra-vars
+ansible_ssh_known_hosts_file=/tmp/run/known-hosts/known_hosts
