@@ -13,6 +13,7 @@ linters:
   - perfsprint
   - recvcheck
   - revive
+  - testpackage
   - wsl
   - wsl_v5
   settings:

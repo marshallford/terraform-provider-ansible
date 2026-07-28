@@ -1,0 +1,32 @@
+ansible-navigator:
+    ansible-runner:
+        timeout: 600
+    color:
+        enable: false
+        osc4: false
+    execution-environment:
+        container-engine: auto
+        enabled: true
+        environment-variables:
+            pass:
+                - SSH_AUTH_SOCK
+                - EXAMPLE_VAR
+            set:
+                SET_VAR: set-value
+        image: ghcr.io/ansible/community-ansible-dev-tools:v26.7.1
+        pull:
+            arguments:
+                - --tls-verify=false
+            policy: tag
+        volume-mounts:
+            - src: /tmp/ansible-navigator-run-test
+              dest: /tmp/run
+              options: Z
+        container-options:
+            - --userns=host
+    logging:
+        level: debug
+    mode: stdout
+    playbook-artifact:
+        enable: true
+    time-zone: UTC

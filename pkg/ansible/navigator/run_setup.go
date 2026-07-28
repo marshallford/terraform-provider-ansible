@@ -69,11 +69,11 @@ func (r *Run) createDirs() error {
 	r.resolvedDir = containerRunDir
 	r.resolvedPathSeparator = containerPathSeparator
 
-	if r.config.Settings.VolumeMounts == nil {
-		r.config.Settings.VolumeMounts = map[string]string{}
-	}
-
-	r.config.Settings.VolumeMounts[r.hostDir] = r.resolvedDir
+	r.config.Settings.VolumeMounts = append(r.config.Settings.VolumeMounts, VolumeMount{
+		Src:     r.hostDir,
+		Dest:    r.resolvedDir,
+		Options: selinuxRelabelOption,
+	})
 
 	return nil
 }

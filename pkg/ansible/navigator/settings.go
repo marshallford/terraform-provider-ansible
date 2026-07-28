@@ -7,6 +7,12 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
+type VolumeMount struct {
+	Src     string
+	Dest    string
+	Options string
+}
+
 type Settings struct {
 	Timeout                  time.Duration
 	EEEnabled                bool
@@ -16,7 +22,7 @@ type Settings struct {
 	Image                    string
 	PullArguments            []string
 	PullPolicy               string
-	VolumeMounts             map[string]string
+	VolumeMounts             []VolumeMount
 	ContainerOptions         []string
 	Timezone                 string
 }
@@ -80,8 +86,8 @@ type settingsFormat struct {
 
 func generateSettings(settings *Settings) (string, error) {
 	volumeMounts := make([]settingsFormatVolumeMounts, 0, len(settings.VolumeMounts))
-	for src, dest := range settings.VolumeMounts {
-		volumeMounts = append(volumeMounts, settingsFormatVolumeMounts{Src: src, Dest: dest, Options: "Z"})
+	for _, mount := range settings.VolumeMounts {
+		volumeMounts = append(volumeMounts, settingsFormatVolumeMounts(mount))
 	}
 
 	format := settingsFormat{

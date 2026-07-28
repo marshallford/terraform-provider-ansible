@@ -22,6 +22,8 @@ const (
 	containerRunDir        = "/tmp/run" // TODO assumes container is unix-like with a /tmp dir.
 	containerPathSeparator = "/"        // TODO assumes container is unix-like.
 
+	selinuxRelabelOption = "Z"
+
 	inventoriesDir   = "inventories"
 	extraVarsDir     = "extra-vars"
 	privateKeysDir   = "private-keys"
