@@ -146,7 +146,7 @@ func TestSetupCreatesRunDirectory(t *testing.T) {
 				t.Fatalf("setup failed: %v", err)
 			}
 
-			var paths []string
+			var got []string
 
 			err := afero.Walk(run.fs, testHostDir, func(path string, info os.FileInfo, err error) error {
 				if err != nil {
@@ -157,7 +157,7 @@ func TestSetupCreatesRunDirectory(t *testing.T) {
 					path += "/"
 				}
 
-				paths = append(paths, path)
+				got = append(got, path)
 
 				return nil
 			})
@@ -165,13 +165,13 @@ func TestSetupCreatesRunDirectory(t *testing.T) {
 				t.Fatalf("failed to walk run directory: %v", err)
 			}
 
-			slices.Sort(paths)
-			assertLines(t, "run directory", paths, want)
+			slices.Sort(got)
+			assertLines(t, "run directory", got, want)
 		})
 	}
 }
 
-func TestGenerateSettings(t *testing.T) {
+func TestSettingsGenerate(t *testing.T) {
 	t.Parallel()
 
 	for name, eeEnabled := range map[string]bool{"host": false, "ee": true} {
@@ -198,7 +198,7 @@ func TestGenerateSettings(t *testing.T) {
 	}
 }
 
-func TestGenerateCommand(t *testing.T) {
+func TestNavigatorCommand(t *testing.T) {
 	t.Parallel()
 
 	wantEnv := []string{
@@ -221,59 +221,58 @@ func TestGenerateCommand(t *testing.T) {
 				t.Fatalf("setup failed: %v", err)
 			}
 
-			run.generateCommand(context.Background())
+			command := run.navigatorCommand()
 
-			cmd := exec.lastCommand()
+			assertGoldenLines(t, "command/"+name+".txt", append([]string{command.Name}, command.Args...))
+			assertLines(t, "env", exec.envDelta(command), wantEnv)
 
-			assertGoldenLines(t, "command/"+name+".txt", cmd.argv)
-			assertLines(t, "env", cmd.envDelta(), wantEnv)
-
-			if cmd.dir != "/work" {
-				t.Errorf("expected command dir %q, got %q", "/work", cmd.dir)
+			if command.Dir != "/work" {
+				t.Errorf("expected command dir %q, got %q", "/work", command.Dir)
 			}
 		})
 	}
 }
 
-func TestPathScopes(t *testing.T) {
+func TestRunDirs(t *testing.T) {
 	t.Parallel()
 
 	tests := map[string]struct {
 		eeEnabled     bool
-		resolvedDir   string
+		playbookDir   string
 		inventoryPath string
-		resolvedJoin  string
+		playbookJoin  string
 	}{
 		"host": {
 			eeEnabled:     false,
-			resolvedDir:   testHostDir,
+			playbookDir:   testHostDir,
 			inventoryPath: testHostDir + "/inventories/hosts",
-			resolvedJoin:  testHostDir + "/extra-vars/vars.yaml",
+			playbookJoin:  testHostDir + "/extra-vars/vars.yaml",
 		},
 		"ee": {
 			eeEnabled:     true,
-			resolvedDir:   containerRunDir,
+			playbookDir:   containerRunDir,
 			inventoryPath: containerRunDir + "/inventories/hosts",
-			resolvedJoin:  containerRunDir + "/extra-vars/vars.yaml",
+			playbookJoin:  containerRunDir + "/extra-vars/vars.yaml",
 		},
 	}
 
+	// Run directories are resolved by NewRun, so none of this depends on Setup having run.
 	for name, test := range tests {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
 			run, _ := newTestRun(t, test.eeEnabled)
 
-			if err := run.Setup(); err != nil {
-				t.Fatalf("setup failed: %v", err)
-			}
-
 			if got := run.HostDir(); got != testHostDir {
 				t.Errorf("hostDir: want %q, got %q", testHostDir, got)
 			}
 
-			if got := run.ResolvedDir(); got != test.resolvedDir {
-				t.Errorf("resolvedDir: want %q, got %q", test.resolvedDir, got)
+			if got := run.NavigatorDir(); got != testHostDir {
+				t.Errorf("navigatorDir: want %q, got %q", testHostDir, got)
+			}
+
+			if got := run.PlaybookDir(); got != test.playbookDir {
+				t.Errorf("playbookDir: want %q, got %q", test.playbookDir, got)
 			}
 
 			if got := run.InventoryPath("hosts"); got != test.inventoryPath {
@@ -285,8 +284,12 @@ func TestPathScopes(t *testing.T) {
 				t.Errorf("hostJoin: want %q, got %q", want, got)
 			}
 
-			if got := run.resolvedJoin(extraVarsDir, "vars.yaml"); got != test.resolvedJoin {
-				t.Errorf("resolvedJoin: want %q, got %q", test.resolvedJoin, got)
+			if got := run.navigatorJoin(extraVarsDir, "vars.yaml"); got != want {
+				t.Errorf("navigatorJoin: want %q, got %q", want, got)
+			}
+
+			if got := run.playbookJoin(extraVarsDir, "vars.yaml"); got != test.playbookJoin {
+				t.Errorf("playbookJoin: want %q, got %q", test.playbookJoin, got)
 			}
 		})
 	}

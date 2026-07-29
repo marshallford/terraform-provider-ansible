@@ -2,9 +2,6 @@ package navigator
 
 import (
 	"fmt"
-	"os"
-	"path/filepath"
-	"strings"
 
 	"github.com/marshallford/terraform-provider-ansible/pkg/ansible"
 	"github.com/spf13/afero"
@@ -19,8 +16,7 @@ const (
 	navigatorSettingsFilename = "ansible-navigator.yaml"
 	dirPermissions            = 0o700
 
-	containerRunDir        = "/tmp/run" // TODO assumes container is unix-like with a /tmp dir.
-	containerPathSeparator = "/"        // TODO assumes container is unix-like.
+	containerRunDir = "/tmp/run"
 
 	selinuxRelabelOption = "Z"
 
@@ -48,15 +44,13 @@ type RunConfig struct {
 }
 
 type Run struct {
-	fs       afero.Fs
-	exec     ansible.Executor
-	launcher Launcher
+	fs   afero.Fs
+	exec ansible.Executor
 
-	config                *RunConfig
-	hostDir               string
-	resolvedDir           string
-	resolvedPathSeparator string
-	binary                string
+	config          *RunConfig
+	mode            Mode
+	dirs            runDirs
+	navigatorBinary string
 
 	Command string
 	Output  string
@@ -77,21 +71,13 @@ func WithExecutor(exec ansible.Executor) RunOption {
 	}
 }
 
-func WithLauncher(launcher Launcher) RunOption {
-	return func(r *Run) {
-		r.launcher = launcher
-	}
-}
-
 func NewRun(hostDir string, config *RunConfig, opts ...RunOption) *Run {
 	run := &Run{
-		fs:                    afero.NewOsFs(),
-		exec:                  ansible.OSExecutor(),
-		launcher:              NativeLauncher(),
-		config:                config,
-		hostDir:               filepath.Clean(hostDir),
-		resolvedDir:           filepath.Clean(hostDir),
-		resolvedPathSeparator: string(os.PathSeparator),
+		fs:     afero.NewOsFs(),
+		exec:   ansible.OSExecutor(),
+		config: config,
+		mode:   config.mode(),
+		dirs:   newRunDirs(config.mode(), hostDir),
 	}
 	for _, opt := range opts {
 		opt(run)
@@ -100,34 +86,42 @@ func NewRun(hostDir string, config *RunConfig, opts ...RunOption) *Run {
 	return run
 }
 
-func (r *Run) HostDir() string {
-	return r.hostDir
+func (r *Run) Mode() Mode {
+	return r.mode
 }
 
-func (r *Run) ResolvedDir() string {
-	return r.resolvedDir
+func (r *Run) HostDir() string {
+	return r.dirs.host.root
+}
+
+func (r *Run) NavigatorDir() string {
+	return r.dirs.navigator.root
+}
+
+func (r *Run) PlaybookDir() string {
+	return r.dirs.playbook.root
 }
 
 func (r *Run) InventoryPath(name string) string {
-	return r.resolvedJoin(inventoriesDir, name)
+	return r.playbookJoin(inventoriesDir, name)
 }
 
 func (r *Run) Cleanup() error {
-	if err := r.fs.RemoveAll(r.hostDir); err != nil {
+	if err := r.fs.RemoveAll(r.HostDir()); err != nil {
 		return fmt.Errorf("failed to remove run directory, %w", err)
 	}
 
 	return nil
 }
 
-func (r *Run) hostJoin(paths ...string) string {
-	paths = append([]string{r.hostDir}, paths...)
-
-	return filepath.Join(paths...)
+func (r *Run) hostJoin(parts ...string) string {
+	return r.dirs.host.join(parts...)
 }
 
-func (r *Run) resolvedJoin(paths ...string) string {
-	paths = append([]string{r.resolvedDir}, paths...)
+func (r *Run) navigatorJoin(parts ...string) string {
+	return r.dirs.navigator.join(parts...)
+}
 
-	return filepath.Clean(strings.Join(paths, r.resolvedPathSeparator))
+func (r *Run) playbookJoin(parts ...string) string {
+	return r.dirs.playbook.join(parts...)
 }

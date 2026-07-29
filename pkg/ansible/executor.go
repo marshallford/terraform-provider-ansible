@@ -5,33 +5,50 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"slices"
+	"strings"
 	"time"
 )
 
 const commandWaitDelay = 10 * time.Second
 
-type Cmd interface {
-	Run() ([]byte, error)
-	SetDir(dir string)
-	SetEnv(env []string)
-	AppendEnv(key, value string)
-	AppendArgs(args ...string)
-	String() string
+// Command describes a process to run. Zero values follow os/exec: an empty Dir
+// means the current process's working directory, and a nil Env means the child
+// inherits the current process's environment. Note that a non-nil but empty Env
+// means the opposite, an environment with nothing in it.
+type Command struct {
+	Name string
+	Args []string
+	Dir  string
+	Env  []string
+}
+
+func (c Command) String() string {
+	return strings.Join(append([]string{c.Name}, c.Args...), " ")
+}
+
+func (c Command) AppendArgs(args ...string) Command {
+	c.Args = append(slices.Clone(c.Args), args...)
+
+	return c
+}
+
+func (c Command) AppendEnv(key, value string) Command {
+	c.Env = append(slices.Clone(c.Env), key+"="+value)
+
+	return c
 }
 
 type Executor interface {
 	LookPath(file string) (string, error)
-	CommandContext(ctx context.Context, name string, args ...string) Cmd
-	Environ() []string
 	Abs(path string) (string, error)
+	Environ() []string
+	Run(ctx context.Context, command Command) ([]byte, error)
 }
 
 type osExecutor struct{}
 
-var (
-	_ Executor = (*osExecutor)(nil)
-	_ Cmd      = (*osCmd)(nil)
-)
+var _ Executor = (*osExecutor)(nil)
 
 func OSExecutor() Executor { //nolint:ireturn
 	return osExecutor{}
@@ -39,13 +56,6 @@ func OSExecutor() Executor { //nolint:ireturn
 
 func (osExecutor) LookPath(file string) (string, error) {
 	return exec.LookPath(file) //nolint:wrapcheck
-}
-
-func (osExecutor) CommandContext(ctx context.Context, name string, args ...string) Cmd { //nolint:ireturn
-	cmd := exec.CommandContext(ctx, name, args...) //nolint:gosec
-	cmd.WaitDelay = commandWaitDelay
-
-	return &osCmd{cmd: cmd}
 }
 
 func (osExecutor) Environ() []string {
@@ -56,30 +66,11 @@ func (osExecutor) Abs(path string) (string, error) {
 	return filepath.Abs(path) //nolint:wrapcheck
 }
 
-type osCmd struct {
-	cmd *exec.Cmd
-}
+func (osExecutor) Run(ctx context.Context, command Command) ([]byte, error) {
+	cmd := exec.CommandContext(ctx, command.Name, command.Args...) //nolint:gosec
+	cmd.WaitDelay = commandWaitDelay
+	cmd.Dir = command.Dir
+	cmd.Env = command.Env
 
-func (c *osCmd) Run() ([]byte, error) {
-	return c.cmd.CombinedOutput() //nolint:wrapcheck
-}
-
-func (c *osCmd) SetDir(dir string) {
-	c.cmd.Dir = dir
-}
-
-func (c *osCmd) SetEnv(env []string) {
-	c.cmd.Env = env
-}
-
-func (c *osCmd) AppendEnv(key, value string) {
-	c.cmd.Env = append(c.cmd.Env, key+"="+value)
-}
-
-func (c *osCmd) AppendArgs(args ...string) {
-	c.cmd.Args = append(c.cmd.Args, args...)
-}
-
-func (c *osCmd) String() string {
-	return c.cmd.String()
+	return cmd.CombinedOutput() //nolint:wrapcheck
 }

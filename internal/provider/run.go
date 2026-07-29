@@ -210,8 +210,9 @@ func run(ctx context.Context, diags *diag.Diagnostics, runData *navigatorRunData
 		}
 	}
 
+	ctx = tflog.SetField(ctx, "mode", navRun.Mode().String())
 	ctx = tflog.SetField(ctx, "hostRunDir", navRun.HostDir())
-	ctx = tflog.SetField(ctx, "resolvedRunDir", navRun.ResolvedDir())
+	ctx = tflog.SetField(ctx, "playbookRunDir", navRun.PlaybookDir())
 
 	if diags.HasError() {
 		return
