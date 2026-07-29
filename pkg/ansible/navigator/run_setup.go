@@ -42,7 +42,7 @@ func (r *Run) Setup() error {
 }
 
 func (r *Run) createDirs() error {
-	if err := r.fs.Mkdir(r.hostDir, dirPermissions); err != nil {
+	if err := r.fs.Mkdir(r.HostDir(), dirPermissions); err != nil {
 		return &SetupError{Component: SetupDir, Message: "failed to create directory for run", Err: err}
 	}
 
@@ -62,16 +62,13 @@ func (r *Run) createDirs() error {
 		return &SetupError{Component: SetupDir, Message: "failed to create known hosts directory for run", Err: err}
 	}
 
-	if !r.config.Settings.EEEnabled {
+	if !r.mode.UsesEE() {
 		return nil
 	}
 
-	r.resolvedDir = containerRunDir
-	r.resolvedPathSeparator = containerPathSeparator
-
 	r.config.Settings.VolumeMounts = append(r.config.Settings.VolumeMounts, VolumeMount{
-		Src:     r.hostDir,
-		Dest:    r.resolvedDir,
+		Src:     r.HostDir(),
+		Dest:    r.PlaybookDir(),
 		Options: selinuxRelabelOption,
 	})
 

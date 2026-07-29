@@ -17,7 +17,7 @@ func (r *Run) Preflight(ctx context.Context) error {
 		errs = append(errs, err)
 	}
 
-	if r.config.Settings.EEEnabled {
+	if r.mode.UsesEE() {
 		if err := r.checkContainerEngine(ctx); err != nil {
 			errs = append(errs, err)
 		}
@@ -27,11 +27,11 @@ func (r *Run) Preflight(ctx context.Context) error {
 		}
 	}
 
-	binary, err := r.resolveNavigatorBinary()
+	navigatorBinary, err := r.resolveNavigatorBinary()
 	if err != nil {
 		errs = append(errs, err)
 	} else {
-		r.binary = binary
+		r.navigatorBinary = navigatorBinary
 		if err := r.checkNavigatorBinary(ctx); err != nil {
 			errs = append(errs, err)
 		}
@@ -82,8 +82,7 @@ func (r *Run) checkContainerEngine(ctx context.Context) error {
 		}
 	}
 
-	command := r.exec.CommandContext(ctx, engine, "info")
-	if _, err := command.Run(); err != nil {
+	if _, err := r.exec.Run(ctx, ansible.Command{Name: engine, Args: []string{"info"}}); err != nil {
 		return &PreflightError{
 			Check:   CheckContainerEngine,
 			Message: fmt.Sprintf("container engine is not running or usable, '%s info' command failed", engine),
@@ -102,8 +101,7 @@ func (r *Run) checkPlaybookBinary(ctx context.Context) error {
 		}
 	}
 
-	command := r.exec.CommandContext(ctx, ansible.PlaybookProgram, "--version")
-	stdoutStderr, err := command.Run()
+	stdoutStderr, err := r.exec.Run(ctx, ansible.Command{Name: ansible.PlaybookProgram, Args: []string{"--version"}})
 	if err != nil {
 		return &PreflightError{
 			Check:   CheckPlaybook,
@@ -149,12 +147,11 @@ func (r *Run) resolveNavigatorBinary() (string, error) {
 }
 
 func (r *Run) checkNavigatorBinary(ctx context.Context) error {
-	command := r.exec.CommandContext(ctx, r.binary, "--version")
-	stdoutStderr, err := command.Run()
+	stdoutStderr, err := r.exec.Run(ctx, ansible.Command{Name: r.navigatorBinary, Args: []string{"--version"}})
 	if err != nil {
 		return &PreflightError{
 			Check:   CheckNavigatorBinary,
-			Message: fmt.Sprintf("'%s --version' command failed", r.binary),
+			Message: fmt.Sprintf("'%s --version' command failed", r.navigatorBinary),
 			Err:     err,
 		}
 	}
@@ -162,7 +159,7 @@ func (r *Run) checkNavigatorBinary(ctx context.Context) error {
 	if !strings.HasPrefix(string(stdoutStderr), Program) {
 		return &PreflightError{
 			Check:   CheckNavigatorBinary,
-			Message: fmt.Sprintf("'%s --version' command output not expected", r.binary),
+			Message: fmt.Sprintf("'%s --version' command output not expected", r.navigatorBinary),
 		}
 	}
 

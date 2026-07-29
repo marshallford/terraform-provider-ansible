@@ -84,35 +84,35 @@ type settingsFormat struct {
 	AnsibleNavigator settingsFormatAnsibleNavigator `yaml:"ansible-navigator"` //nolint:tagliatelle
 }
 
-func generateSettings(settings *Settings) (string, error) {
-	volumeMounts := make([]settingsFormatVolumeMounts, 0, len(settings.VolumeMounts))
-	for _, mount := range settings.VolumeMounts {
+func (s *Settings) generate() (string, error) {
+	volumeMounts := make([]settingsFormatVolumeMounts, 0, len(s.VolumeMounts))
+	for _, mount := range s.VolumeMounts {
 		volumeMounts = append(volumeMounts, settingsFormatVolumeMounts(mount))
 	}
 
 	format := settingsFormat{
 		AnsibleNavigator: settingsFormatAnsibleNavigator{
 			AnsibleRunner: settingsFormatAnsibleRunner{
-				Timeout: uint32(settings.Timeout.Seconds()),
+				Timeout: uint32(s.Timeout.Seconds()),
 			},
 			Color: settingsFormatColor{
 				Enable: false,
 				OSC4:   false,
 			},
 			ExecutionEnvironment: settingsFormatExecutionEnvironment{
-				ContainerEngine: settings.ContainerEngine,
-				Enabled:         settings.EEEnabled,
+				ContainerEngine: s.ContainerEngine,
+				Enabled:         s.EEEnabled,
 				EnvironmentVariables: settingsFormatEnvironmentVariables{
-					Pass: settings.EnvironmentVariablesPass,
-					Set:  settings.EnvironmentVariablesSet,
+					Pass: s.EnvironmentVariablesPass,
+					Set:  s.EnvironmentVariablesSet,
 				},
-				Image: settings.Image,
+				Image: s.Image,
 				Pull: settingsFormatPull{
-					Arguments: settings.PullArguments,
-					Policy:    settings.PullPolicy,
+					Arguments: s.PullArguments,
+					Policy:    s.PullPolicy,
 				},
 				VolumeMounts:     volumeMounts,
-				ContainerOptions: settings.ContainerOptions,
+				ContainerOptions: s.ContainerOptions,
 			},
 			Logging: settingsFormatLogging{
 				Level: "debug",
@@ -121,7 +121,7 @@ func generateSettings(settings *Settings) (string, error) {
 			PlaybookArtifact: settingsFormatPlaybookArtifact{
 				Enable: true,
 			},
-			Timezone: settings.Timezone,
+			Timezone: s.Timezone,
 		},
 	}
 
