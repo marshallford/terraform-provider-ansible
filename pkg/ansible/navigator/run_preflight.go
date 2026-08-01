@@ -17,7 +17,7 @@ func (r *Run) Preflight(ctx context.Context) error {
 		errs = append(errs, err)
 	}
 
-	if r.mode.UsesEE() {
+	if r.config.mode().UsesEE() {
 		if err := r.checkContainerEngine(ctx); err != nil {
 			errs = append(errs, err)
 		}
@@ -27,14 +27,8 @@ func (r *Run) Preflight(ctx context.Context) error {
 		}
 	}
 
-	navigatorBinary, err := r.resolveNavigatorBinary()
-	if err != nil {
+	if err := r.checkNavigatorBinary(ctx); err != nil {
 		errs = append(errs, err)
-	} else {
-		r.navigatorBinary = navigatorBinary
-		if err := r.checkNavigatorBinary(ctx); err != nil {
-			errs = append(errs, err)
-		}
 	}
 
 	return errors.Join(errs...)
@@ -45,13 +39,20 @@ func (r *Run) checkWorkingDir() error {
 		return &PreflightError{Check: CheckWorkingDir, Message: "working directory is not valid", Err: err}
 	}
 
+	workingDir, err := r.exec.Abs(r.config.WorkingDir)
+	if err != nil {
+		return &PreflightError{Check: CheckWorkingDir, Message: "absolute path of working directory cannot be determined", Err: err}
+	}
+
+	r.resolved.workingDir = workingDir
+
 	return nil
 }
 
 func (r *Run) checkContainerEngine(ctx context.Context) error {
-	engine := r.config.Settings.ContainerEngine
+	engine := r.config.Settings.ExecutionEnvironment.ContainerEngine
 
-	if !slices.Contains(ContainerEngineOptions(true), engine) {
+	if !slices.Contains(ContainerEngineOptions(), engine) {
 		return &PreflightError{
 			Check:   CheckContainerEngine,
 			Message: fmt.Sprintf("container engine %s is not a valid option", engine),
@@ -66,7 +67,7 @@ func (r *Run) checkContainerEngine(ctx context.Context) error {
 	}
 
 	if engine == ContainerEngineAuto {
-		for _, option := range ContainerEngineOptions(false) {
+		for _, option := range ContainerEngines() {
 			if r.programExistsOnPath(option) == nil {
 				engine = option
 
@@ -120,38 +121,45 @@ func (r *Run) checkPlaybookBinary(ctx context.Context) error {
 	return nil
 }
 
-func (r *Run) resolveNavigatorBinary() (string, error) {
-	path := r.config.Binary
-	if path == "" {
+func (r *Run) resolveNavigatorBinary() error {
+	if r.config.Binary == "" {
 		path, err := r.exec.LookPath(Program)
 		if err != nil {
-			return "", &PreflightError{
+			return &PreflightError{
 				Check:   CheckNavigatorResolve,
 				Message: fmt.Sprintf("%s not found in PATH", Program),
 			}
 		}
 
-		return path, nil
+		r.resolved.navigatorBinary = path
+
+		return nil
 	}
 
-	path, err := r.exec.Abs(path)
+	path, err := r.exec.Abs(r.config.Binary)
 	if err != nil {
-		return "", &PreflightError{
+		return &PreflightError{
 			Check:   CheckNavigatorResolve,
 			Message: fmt.Sprintf("absolute path of %s cannot be determined", Program),
 			Err:     err,
 		}
 	}
 
-	return path, nil
+	r.resolved.navigatorBinary = path
+
+	return nil
 }
 
 func (r *Run) checkNavigatorBinary(ctx context.Context) error {
-	stdoutStderr, err := r.exec.Run(ctx, ansible.Command{Name: r.navigatorBinary, Args: []string{"--version"}})
+	if err := r.resolveNavigatorBinary(); err != nil {
+		return err
+	}
+
+	stdoutStderr, err := r.exec.Run(ctx, ansible.Command{Name: r.resolved.navigatorBinary, Args: []string{"--version"}})
 	if err != nil {
 		return &PreflightError{
 			Check:   CheckNavigatorBinary,
-			Message: fmt.Sprintf("'%s --version' command failed", r.navigatorBinary),
+			Message: fmt.Sprintf("'%s --version' command failed", r.resolved.navigatorBinary),
 			Err:     err,
 		}
 	}
@@ -159,7 +167,7 @@ func (r *Run) checkNavigatorBinary(ctx context.Context) error {
 	if !strings.HasPrefix(string(stdoutStderr), Program) {
 		return &PreflightError{
 			Check:   CheckNavigatorBinary,
-			Message: fmt.Sprintf("'%s --version' command output not expected", r.navigatorBinary),
+			Message: fmt.Sprintf("'%s --version' command output not expected", r.resolved.navigatorBinary),
 		}
 	}
 

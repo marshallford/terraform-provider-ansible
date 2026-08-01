@@ -19,6 +19,7 @@ const (
 	SetupExtraVars
 	SetupPrivateKeys
 	SetupKnownHosts
+	SetupSettings
 )
 
 type PreflightError struct {

@@ -199,7 +199,7 @@ func (v stringIsJQFilterValidator) ValidateString(_ context.Context, req validat
 		return
 	}
 
-	err := navigator.ValidateJQFilter(req.ConfigValue.ValueString())
+	err := ansible.ValidateJQFilter(req.ConfigValue.ValueString())
 	addPathError(&resp.Diagnostics, req.Path, "Not a valid JQ filter", err)
 }
 

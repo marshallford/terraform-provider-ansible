@@ -16,7 +16,7 @@ type PlaybookOptions struct {
 	Tags          []string
 }
 
-func (o *PlaybookOptions) Args() []string {
+func (o PlaybookOptions) Args() []string {
 	var args []string
 
 	if o.ForceHandlers {

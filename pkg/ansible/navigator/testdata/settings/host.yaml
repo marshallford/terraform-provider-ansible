@@ -10,7 +10,9 @@ ansible-navigator:
         environment-variables:
             pass:
                 - SSH_AUTH_SOCK
+                - ALPHA_VAR
                 - EXAMPLE_VAR
+                - ZULU_VAR
             set:
                 SET_VAR: set-value
         image: ghcr.io/ansible/community-ansible-dev-tools:v26.7.1

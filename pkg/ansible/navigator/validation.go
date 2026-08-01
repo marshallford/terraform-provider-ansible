@@ -6,7 +6,6 @@ import (
 	_ "time/tzdata" // embedded copy of the timezone database
 
 	"github.com/containers/image/v5/docker/reference"
-	jq "github.com/itchyny/gojq"
 	"github.com/marshallford/terraform-provider-ansible/pkg/ansible"
 )
 
@@ -21,18 +20,6 @@ func ValidateIANATimezone(timezone string) error {
 
 	if _, err := time.LoadLocation(timezone); err != nil {
 		return fmt.Errorf("%w, IANA time zone not found, %w", ansible.ErrValidation, err)
-	}
-
-	return nil
-}
-
-func ValidateJQFilter(filter string) error {
-	if len(filter) == 0 {
-		return fmt.Errorf("%w, JQ filter must not be empty", ansible.ErrValidation)
-	}
-
-	if _, err := jq.Parse(filter); err != nil {
-		return fmt.Errorf("%w, failed to parse JQ filter, %w", ansible.ErrValidation, err)
 	}
 
 	return nil

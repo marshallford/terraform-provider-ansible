@@ -4,19 +4,16 @@ import (
 	"fmt"
 
 	"github.com/marshallford/terraform-provider-ansible/pkg/ansible"
-	"github.com/spf13/afero"
 )
 
 func (r *Run) Query(queries map[string]ansible.PlaybookArtifactQuery) error {
-	path := r.hostJoin(playbookArtifactFilename)
-
-	contents, err := afero.ReadFile(r.fs, path)
+	contents, err := r.readPlaybookArtifact()
 	if err != nil {
-		return fmt.Errorf("failed to read playbook artifact, %w", err)
+		return err
 	}
 
 	for name, query := range queries {
-		results, err := jqQuery(contents, query.JQFilter, query.Raw)
+		results, err := ansible.QueryPlaybookArtifact(contents, query)
 		if err != nil {
 			return fmt.Errorf("failed to query playbook artifact, %w", err)
 		}

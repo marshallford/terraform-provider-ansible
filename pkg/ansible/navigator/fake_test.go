@@ -11,8 +11,6 @@ import (
 
 type fakeExecutor struct {
 	lookPath  map[string]string
-	absErr    error
-	abs       func(string) (string, error)
 	environ   []string
 	responses []fakeResponse
 
@@ -59,14 +57,6 @@ func (e *fakeExecutor) Environ() []string {
 }
 
 func (e *fakeExecutor) Abs(path string) (string, error) {
-	if e.absErr != nil {
-		return "", e.absErr
-	}
-
-	if e.abs != nil {
-		return e.abs(path)
-	}
-
 	if strings.HasPrefix(path, "/") {
 		return path, nil
 	}
@@ -95,7 +85,6 @@ func (e *fakeExecutor) commandStrings() []string {
 	return strs
 }
 
-// envDelta returns the entries the run added on top of the host environment.
 func (e *fakeExecutor) envDelta(command ansible.Command) []string {
 	host := map[string]struct{}{}
 	for _, entry := range e.environ {

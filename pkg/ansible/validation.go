@@ -6,6 +6,7 @@ import (
 	"strings"
 	"unicode"
 
+	jq "github.com/itchyny/gojq"
 	"golang.org/x/crypto/ssh"
 	"gopkg.in/yaml.v3"
 )
@@ -90,6 +91,18 @@ func ValidateYAML(value string) error {
 
 	if _, err := yaml.Marshal(output); err != nil {
 		return fmt.Errorf("%w, failed to serialize YAML, %w", ErrValidation, err)
+	}
+
+	return nil
+}
+
+func ValidateJQFilter(filter string) error {
+	if len(filter) == 0 {
+		return fmt.Errorf("%w, JQ filter must not be empty", ErrValidation)
+	}
+
+	if _, err := jq.Parse(filter); err != nil {
+		return fmt.Errorf("%w, failed to parse JQ filter, %w", ErrValidation, err)
 	}
 
 	return nil

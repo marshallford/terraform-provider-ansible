@@ -22,8 +22,8 @@ func (m Mode) UsesEE() bool {
 	return m == ModeEE
 }
 
-func (c *RunConfig) mode() Mode {
-	if c.Settings.EEEnabled {
+func (c RunConfig) mode() Mode {
+	if c.Settings.ExecutionEnvironment.Enabled {
 		return ModeEE
 	}
 

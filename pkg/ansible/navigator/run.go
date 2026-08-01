@@ -2,6 +2,8 @@ package navigator
 
 import (
 	"fmt"
+	"maps"
+	"slices"
 
 	"github.com/marshallford/terraform-provider-ansible/pkg/ansible"
 	"github.com/spf13/afero"
@@ -15,10 +17,9 @@ const (
 	navigatorLogFilename      = "ansible-navigator.log"
 	navigatorSettingsFilename = "ansible-navigator.yaml"
 	dirPermissions            = 0o700
+	filePermissions           = 0o600
 
 	containerRunDir = "/tmp/run"
-
-	selinuxRelabelOption = "Z"
 
 	inventoriesDir   = "inventories"
 	extraVarsDir     = "extra-vars"
@@ -38,23 +39,29 @@ type RunConfig struct {
 	KnownHosts      []ansible.KnownHost
 	UseKnownHosts   bool
 	HostKeyChecking bool
-	Options         *ansible.PlaybookOptions
-	Settings        *Settings
-	Env             map[string]string
+	Options         ansible.PlaybookOptions
+	Settings        Settings
+}
+
+// Zero until Preflight has run.
+type preflightResults struct {
+	navigatorBinary string
+	workingDir      string
 }
 
 type Run struct {
 	fs   afero.Fs
 	exec ansible.Executor
 
-	config          *RunConfig
-	mode            Mode
-	dirs            runDirs
-	navigatorBinary string
+	config           RunConfig
+	env              map[string]string
+	dirs             runDirs
+	resolved         preflightResults
+	artifactContents []byte
 
-	Command string
+	Command ansible.Command
 	Output  string
-	Status  string
+	Status  ansible.Status
 }
 
 type RunOption func(*Run)
@@ -71,13 +78,12 @@ func WithExecutor(exec ansible.Executor) RunOption {
 	}
 }
 
-func NewRun(hostDir string, config *RunConfig, opts ...RunOption) *Run {
+func NewRun(hostDir string, config RunConfig, opts ...RunOption) *Run {
 	run := &Run{
 		fs:     afero.NewOsFs(),
 		exec:   ansible.OSExecutor(),
 		config: config,
-		mode:   config.mode(),
-		dirs:   newRunDirs(config.mode(), hostDir),
+		dirs:   newRunDirs(hostDir, config.mode()),
 	}
 	for _, opt := range opts {
 		opt(run)
@@ -87,7 +93,7 @@ func NewRun(hostDir string, config *RunConfig, opts ...RunOption) *Run {
 }
 
 func (r *Run) Mode() Mode {
-	return r.mode
+	return r.config.mode()
 }
 
 func (r *Run) HostDir() string {
@@ -106,12 +112,44 @@ func (r *Run) InventoryPath(name string) string {
 	return r.playbookJoin(inventoriesDir, name)
 }
 
+// SetEnv must be called before Setup, which bakes the names into the generated
+// settings.
+func (r *Run) SetEnv(name string, value string) {
+	if r.env == nil {
+		r.env = map[string]string{}
+	}
+
+	r.env[name] = value
+}
+
 func (r *Run) Cleanup() error {
 	if err := r.fs.RemoveAll(r.HostDir()); err != nil {
 		return fmt.Errorf("failed to remove run directory, %w", err)
 	}
 
 	return nil
+}
+
+func (r *Run) settings() Settings {
+	settings := r.config.Settings
+	execEnv := &settings.ExecutionEnvironment
+
+	execEnv.EnvironmentVariables.Pass = slices.Clone(execEnv.EnvironmentVariables.Pass)
+	execEnv.EnvironmentVariables.Set = maps.Clone(execEnv.EnvironmentVariables.Set)
+
+	for _, name := range slices.Sorted(maps.Keys(r.env)) {
+		execEnv.EnvironmentVariables.pass(name)
+	}
+
+	if r.config.mode().UsesEE() {
+		execEnv.VolumeMounts = append(slices.Clone(execEnv.VolumeMounts), VolumeMount{
+			Src:     r.HostDir(),
+			Dest:    r.PlaybookDir(),
+			Options: VolumeMountOptions{VolumeMountRelabelUnshared},
+		})
+	}
+
+	return settings
 }
 
 func (r *Run) hostJoin(parts ...string) string {

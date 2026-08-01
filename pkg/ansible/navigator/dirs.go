@@ -20,16 +20,16 @@ func (d runDir) join(parts ...string) string {
 	return filepath.Join(parts...)
 }
 
-// runDirs records the run directory as seen by each process that consumes a
-// path from it: this program (and the container engine it may invoke), the
-// ansible-navigator process, and the ansible-playbook process.
+// runDirs records the run directory as seen by each process that reads a path
+// from it. The three can differ, because navigator and the playbook may each
+// run inside a container.
 type runDirs struct {
 	host      runDir
 	navigator runDir
 	playbook  runDir
 }
 
-func newRunDirs(mode Mode, hostDir string) runDirs {
+func newRunDirs(hostDir string, mode Mode) runDirs {
 	host := runDir{root: filepath.Clean(hostDir)}
 
 	playbook := host

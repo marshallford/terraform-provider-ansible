@@ -12,10 +12,9 @@ import (
 
 const commandWaitDelay = 10 * time.Second
 
-// Command describes a process to run. Zero values follow os/exec: an empty Dir
-// means the current process's working directory, and a nil Env means the child
-// inherits the current process's environment. Note that a non-nil but empty Env
-// means the opposite, an environment with nothing in it.
+// Command zero values follow os/exec: an empty Dir means the current working
+// directory, and a nil Env means the child inherits the current environment. A
+// non-nil but empty Env means the opposite, an environment with nothing in it.
 type Command struct {
 	Name string
 	Args []string

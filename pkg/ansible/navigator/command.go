@@ -2,13 +2,15 @@ package navigator
 
 import (
 	"fmt"
+	"maps"
+	"slices"
 
 	"github.com/marshallford/terraform-provider-ansible/pkg/ansible"
 )
 
 func (r *Run) navigatorCommand() ansible.Command {
 	command := ansible.Command{
-		Name: r.navigatorBinary,
+		Name: r.resolved.navigatorBinary,
 		Args: []string{
 			"run",
 			r.navigatorJoin(playbookFilename),
@@ -17,15 +19,15 @@ func (r *Run) navigatorCommand() ansible.Command {
 			"--log-file",
 			r.navigatorJoin(navigatorLogFilename),
 		},
-		Dir: r.config.WorkingDir,
+		Dir: r.resolved.workingDir,
 		Env: r.exec.Environ(),
 	}
 
 	command = command.AppendArgs(r.navigatorArgs()...)
 	command = command.AppendEnv("ANSIBLE_NAVIGATOR_CONFIG", r.navigatorJoin(navigatorSettingsFilename))
 
-	for name, value := range r.config.Env {
-		command = command.AppendEnv(name, value)
+	for _, name := range slices.Sorted(maps.Keys(r.env)) {
+		command = command.AppendEnv(name, r.env[name])
 	}
 
 	if r.config.HostKeyChecking != ansible.RunnerDefaultHostKeyChecking {

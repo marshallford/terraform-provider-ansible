@@ -56,9 +56,6 @@ func (m NavigatorRunActionModel) Value(ctx context.Context, opts *providerOption
 			Binary:      m.AnsibleNavigatorBinary.ValueString(),
 			Playbook:    m.Playbook.ValueString(),
 			Inventories: []ansible.Inventory{{Name: navigatorRunName, Contents: m.Inventory.ValueString()}},
-			Settings:    &navigator.Settings{},
-			Options:     &ansible.PlaybookOptions{},
-			Env:         map[string]string{},
 		},
 	}
 
@@ -123,12 +120,12 @@ func (m *NavigatorRunActionModel) SetDefaults(ctx context.Context) diag.Diagnost
 	return diags
 }
 
-func (er *NavigatorRunAction) Metadata(_ context.Context, req action.MetadataRequest, resp *action.MetadataResponse) {
+func (a *NavigatorRunAction) Metadata(_ context.Context, req action.MetadataRequest, resp *action.MetadataResponse) {
 	resp.TypeName = fmt.Sprintf("%s_navigator_run", req.ProviderTypeName)
 }
 
 //nolint:dupl
-func (er *NavigatorRunAction) Schema(ctx context.Context, _ action.SchemaRequest, resp *action.SchemaResponse) {
+func (a *NavigatorRunAction) Schema(ctx context.Context, _ action.SchemaRequest, resp *action.SchemaResponse) {
 	resp.Schema = schema.Schema{
 		Description:         fmt.Sprintf("Run an Ansible playbook. Requires '%s' and a container engine to run within an execution environment (EE).", navigator.Program),
 		MarkdownDescription: fmt.Sprintf("Run an Ansible playbook. Requires `%s` and a container engine to run within an execution environment (EE).", navigator.Program),
@@ -170,7 +167,7 @@ func (er *NavigatorRunAction) Schema(ctx context.Context, _ action.SchemaRequest
 						MarkdownDescription: ExecutionEnvironmentModel{}.descriptions()["container_engine"].MarkdownDescription,
 						Optional:            true,
 						Validators: []validator.String{
-							stringvalidator.OneOf(navigator.ContainerEngineOptions(true)...),
+							stringvalidator.OneOf(navigator.ContainerEngineOptions()...),
 						},
 					},
 					"enabled": schema.BoolAttribute{
@@ -342,16 +339,16 @@ func (er *NavigatorRunAction) Schema(ctx context.Context, _ action.SchemaRequest
 	}
 }
 
-func (er *NavigatorRunAction) Configure(_ context.Context, req action.ConfigureRequest, resp *action.ConfigureResponse) {
+func (a *NavigatorRunAction) Configure(_ context.Context, req action.ConfigureRequest, resp *action.ConfigureResponse) {
 	opts, ok := configureActionClient(req, resp)
 	if !ok {
 		return
 	}
 
-	er.opts = opts
+	a.opts = opts
 }
 
-func (er *NavigatorRunAction) Invoke(ctx context.Context, req action.InvokeRequest, resp *action.InvokeResponse) {
+func (a *NavigatorRunAction) Invoke(ctx context.Context, req action.InvokeRequest, resp *action.InvokeResponse) {
 	var data *NavigatorRunActionModel
 
 	resp.Diagnostics.Append(req.Config.Get(ctx, &data)...)
@@ -373,7 +370,7 @@ func (er *NavigatorRunAction) Invoke(ctx context.Context, req action.InvokeReque
 
 	var runData navigatorRunData
 
-	resp.Diagnostics.Append(data.Value(ctx, er.opts, &runData)...)
+	resp.Diagnostics.Append(data.Value(ctx, a.opts, &runData)...)
 
 	if resp.Diagnostics.HasError() {
 		return
@@ -384,7 +381,7 @@ func (er *NavigatorRunAction) Invoke(ctx context.Context, req action.InvokeReque
 	}
 
 	runData.operation = terraformOpInvoke
-	runData.timeout = timeout
+	runData.config.Settings.Timeout = timeout
 
 	run(ctx, &resp.Diagnostics, &runData)
 
