@@ -70,9 +70,6 @@ func (m NavigatorRunResourceModel) Value(ctx context.Context, destroy bool, opts
 			WorkingDir: m.WorkingDirectory.ValueString(),
 			Binary:     m.AnsibleNavigatorBinary.ValueString(),
 			Playbook:   m.Playbook.ValueString(),
-			Settings:   &navigator.Settings{},
-			Options:    &ansible.PlaybookOptions{},
-			Env:        map[string]string{},
 		},
 	}
 
@@ -158,7 +155,7 @@ func (r *NavigatorRunResource) Schema(ctx context.Context, _ resource.SchemaRequ
 						Computed:            true,
 						Default:             stringdefault.StaticString(defaultNavigatorRunContainerEngine),
 						Validators: []validator.String{
-							stringvalidator.OneOf(navigator.ContainerEngineOptions(true)...),
+							stringvalidator.OneOf(navigator.ContainerEngineOptions()...),
 						},
 					},
 					"enabled": schema.BoolAttribute{
@@ -570,7 +567,7 @@ func (r *NavigatorRunResource) Create(ctx context.Context, req resource.CreateRe
 	}
 
 	runData.operation = terraformOpCreate
-	runData.timeout = timeout
+	runData.config.Settings.Timeout = timeout
 
 	run(ctx, &resp.Diagnostics, &runData)
 	resp.Diagnostics.Append(data.Set(ctx, runData)...)
@@ -634,7 +631,7 @@ func (r *NavigatorRunResource) Update(ctx context.Context, req resource.UpdateRe
 	}
 
 	runData.operation = terraformOpUpdate
-	runData.timeout = timeout
+	runData.config.Settings.Timeout = timeout
 
 	run(ctx, &resp.Diagnostics, &runData)
 	resp.Diagnostics.Append(data.Set(ctx, runData)...)
@@ -686,7 +683,7 @@ func (r *NavigatorRunResource) Delete(ctx context.Context, req resource.DeleteRe
 	}
 
 	runData.operation = terraformOpDelete
-	runData.timeout = timeout
+	runData.config.Settings.Timeout = timeout
 
 	run(ctx, &resp.Diagnostics, &runData)
 }

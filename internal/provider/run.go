@@ -78,7 +78,6 @@ type navigatorRunData struct {
 	hostDir                 string
 	config                  navigator.RunConfig
 	operation               terraformOp
-	timeout                 time.Duration
 	persistDir              bool
 	playbookArtifactQueries map[string]ansible.PlaybookArtifactQuery
 	knownHosts              []ansible.KnownHost
@@ -93,12 +92,12 @@ func (rd *navigatorRunData) Load(ctx context.Context, ee types.Object, timezone 
 
 	rd.config.Settings.Timezone = timezone
 
-	diags.Append(eeModel.Value(ctx, rd.config.Settings)...)
+	diags.Append(eeModel.Value(ctx, &rd.config.Settings.ExecutionEnvironment)...)
 
 	var optsModel AnsibleOptionsModel
 	diags.Append(ansibleOpts.As(ctx, &optsModel, basetypes.ObjectAsOptions{})...)
 
-	diags.Append(optsModel.Value(ctx, rd.config.Options)...)
+	diags.Append(optsModel.Value(ctx, &rd.config.Options)...)
 
 	if !optsModel.ExtraVars.IsNull() {
 		rd.config.ExtraVars = []ansible.ExtraVarsFile{{Name: navigatorRunExtraVarsFileName, Contents: optsModel.ExtraVars.ValueString()}}
@@ -181,13 +180,20 @@ func preflightCheckPath(check navigator.PreflightCheckID) path.Path {
 func run(ctx context.Context, diags *diag.Diagnostics, runData *navigatorRunData) {
 	tflog.Debug(ctx, "starting run")
 
-	navRun := navigator.NewRun(runData.hostDir, &runData.config)
+	navRun := navigator.NewRun(runData.hostDir, runData.config)
 	defer func() {
 		if !runData.persistDir {
 			err := navRun.Cleanup()
 			addWarning(diags, "Run not cleaned up", err)
 		}
 	}()
+
+	navRun.SetEnv(navigatorRunOperationEnvVar, runData.operation.String())
+	navRun.SetEnv(navigatorRunInventoryEnvVar, navRun.InventoryPath(navigatorRunName))
+
+	if runData.operation == terraformOpUpdate {
+		navRun.SetEnv(navigatorRunPrevInventoryEnvVar, navRun.InventoryPath(navigatorRunPrevInventoryName))
+	}
 
 	tflog.Trace(ctx, "preflight checks")
 	ctx = tflog.SetField(ctx, "workingDir", runData.config.WorkingDir)
@@ -218,28 +224,21 @@ func run(ctx context.Context, diags *diag.Diagnostics, runData *navigatorRunData
 		return
 	}
 
-	runData.config.Env[navigatorRunOperationEnvVar] = runData.operation.String()
-	runData.config.Env[navigatorRunInventoryEnvVar] = navRun.InventoryPath(navigatorRunName)
-	if runData.operation == terraformOpUpdate {
-		runData.config.Env[navigatorRunPrevInventoryEnvVar] = navRun.InventoryPath(navigatorRunPrevInventoryName)
-	}
-
-	runData.config.Settings.Timeout = runData.timeout
-
 	tflog.Trace(ctx, "executing ansible-navigator")
 	if err := navRun.Execute(ctx); err != nil {
-		runData.command = navRun.Command
-		switch navRun.Status {
-		case "timeout":
-			addError(diags, "Ansible navigator run timed out", fmt.Errorf("%w\n\nOutput:\n%s", err, navRun.Output))
-		default:
-			addError(diags, "Ansible navigator run failed", fmt.Errorf("%w\n\nOutput:\n%s", err, navRun.Output))
+		runData.command = navRun.Command.String()
+
+		summary := "Ansible navigator run failed"
+		if navRun.Status == ansible.StatusTimeout {
+			summary = "Ansible navigator run timed out"
 		}
+
+		addError(diags, summary, fmt.Errorf("%w\n\nOutput:\n%s", err, navRun.Output))
 
 		return
 	}
 
-	runData.command = navRun.Command
+	runData.command = navRun.Command.String()
 
 	if err := navRun.Query(runData.playbookArtifactQueries); err != nil {
 		addPathError(diags, path.Root("artifact_queries"), "Playbook artifact queries failed", err)

@@ -59,9 +59,6 @@ func (m NavigatorRunDataSourceModel) Value(ctx context.Context, opts *providerOp
 			Binary:      m.AnsibleNavigatorBinary.ValueString(),
 			Playbook:    m.Playbook.ValueString(),
 			Inventories: []ansible.Inventory{{Name: navigatorRunName, Contents: m.Inventory.ValueString()}},
-			Settings:    &navigator.Settings{},
-			Options:     &ansible.PlaybookOptions{},
-			Env:         map[string]string{},
 		},
 	}
 
@@ -191,7 +188,7 @@ func (d *NavigatorRunDataSource) Schema(ctx context.Context, _ datasource.Schema
 						Optional:            true,
 						Computed:            true,
 						Validators: []validator.String{
-							stringvalidator.OneOf(navigator.ContainerEngineOptions(true)...),
+							stringvalidator.OneOf(navigator.ContainerEngineOptions()...),
 						},
 					},
 					"enabled": schema.BoolAttribute{
@@ -442,7 +439,7 @@ func (d *NavigatorRunDataSource) Read(ctx context.Context, req datasource.ReadRe
 	}
 
 	runData.operation = terraformOpRead
-	runData.timeout = timeout
+	runData.config.Settings.Timeout = timeout
 
 	run(ctx, &resp.Diagnostics, &runData)
 	resp.Diagnostics.Append(data.Set(ctx, runData)...)

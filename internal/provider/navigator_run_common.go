@@ -93,8 +93,8 @@ func navigatorRunDescriptions() map[string]attrDescription {
 func (ExecutionEnvironmentModel) descriptions() map[string]attrDescription {
 	return map[string]attrDescription{
 		"container_engine": {
-			Description:         fmt.Sprintf("Container engine responsible for running the execution environment container image. Options: %s. Defaults to '%s'.", wrapElementsJoin(navigator.ContainerEngineOptions(true), "'"), defaultNavigatorRunContainerEngine),
-			MarkdownDescription: fmt.Sprintf("[Container engine](https://ansible.readthedocs.io/projects/navigator/settings/#container-engine) responsible for running the execution environment container image. Options: %s. Defaults to `%s`.", wrapElementsJoin(navigator.ContainerEngineOptions(true), "`"), defaultNavigatorRunContainerEngine),
+			Description:         fmt.Sprintf("Container engine responsible for running the execution environment container image. Options: %s. Defaults to '%s'.", wrapElementsJoin(navigator.ContainerEngineOptions(), "'"), defaultNavigatorRunContainerEngine),
+			MarkdownDescription: fmt.Sprintf("[Container engine](https://ansible.readthedocs.io/projects/navigator/settings/#container-engine) responsible for running the execution environment container image. Options: %s. Defaults to `%s`.", wrapElementsJoin(navigator.ContainerEngineOptions(), "`"), defaultNavigatorRunContainerEngine),
 		},
 		"enabled": {
 			Description:         fmt.Sprintf("Enable or disable the use of an execution environment. Disabling requires '%s' and is only recommended when without a container engine. Defaults to '%t'.", ansible.PlaybookProgram, defaultNavigatorRunEEEnabled),
@@ -156,42 +156,42 @@ func (ExecutionEnvironmentModel) Defaults() basetypes.ObjectValue {
 	)
 }
 
-func (m ExecutionEnvironmentModel) Value(ctx context.Context, settings *navigator.Settings) diag.Diagnostics {
+func (m ExecutionEnvironmentModel) Value(ctx context.Context, execEnv *navigator.ExecutionEnvironment) diag.Diagnostics {
 	var diags diag.Diagnostics
 
-	settings.ContainerEngine = m.ContainerEngine.ValueString()
+	execEnv.ContainerEngine = m.ContainerEngine.ValueString()
 
-	settings.EEEnabled = m.Enabled.ValueBool()
+	execEnv.Enabled = m.Enabled.ValueBool()
 
 	var envVarsPass []string
 	if !m.EnvironmentVariablesPass.IsNull() {
 		diags.Append(m.EnvironmentVariablesPass.ElementsAs(ctx, &envVarsPass, false)...)
 	}
 
-	settings.EnvironmentVariablesPass = envVarsPass
+	execEnv.EnvironmentVariables.Pass = envVarsPass
 
 	envVarsSet := map[string]string{}
 	if !m.EnvironmentVariablesSet.IsNull() {
 		diags.Append(m.EnvironmentVariablesSet.ElementsAs(ctx, &envVarsSet, false)...)
 	}
 
-	settings.EnvironmentVariablesSet = envVarsSet
+	execEnv.EnvironmentVariables.Set = envVarsSet
 
-	settings.Image = m.Image.ValueString()
+	execEnv.Image = m.Image.ValueString()
 
 	var pullArguments []string
 	if !m.PullArguments.IsNull() {
 		diags.Append(m.PullArguments.ElementsAs(ctx, &pullArguments, false)...)
 	}
-	settings.PullArguments = pullArguments
+	execEnv.Pull.Arguments = pullArguments
 
-	settings.PullPolicy = m.PullPolicy.ValueString()
+	execEnv.Pull.Policy = m.PullPolicy.ValueString()
 
 	var containerOptions []string
 	if !m.ContainerOptions.IsNull() {
 		diags.Append(m.ContainerOptions.ElementsAs(ctx, &containerOptions, false)...)
 	}
-	settings.ContainerOptions = containerOptions
+	execEnv.ContainerOptions = containerOptions
 
 	return diags
 }

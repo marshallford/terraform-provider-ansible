@@ -2,29 +2,84 @@ package navigator
 
 import (
 	"fmt"
+	"slices"
+	"strings"
 	"time"
 
 	"gopkg.in/yaml.v3"
 )
 
+type VolumeMountOption string
+
+const (
+	VolumeMountOverlay         VolumeMountOption = "O"
+	VolumeMountReadOnly        VolumeMountOption = "ro"
+	VolumeMountReadWrite       VolumeMountOption = "rw"
+	VolumeMountRelabelShared   VolumeMountOption = "z"
+	VolumeMountRelabelUnshared VolumeMountOption = "Z"
+)
+
+type VolumeMountOptions []VolumeMountOption
+
+func (o VolumeMountOptions) String() string {
+	options := make([]string, 0, len(o))
+	for _, option := range o {
+		options = append(options, string(option))
+	}
+
+	return strings.Join(options, ",")
+}
+
+func validVolumeMountOptions() VolumeMountOptions {
+	return VolumeMountOptions{
+		VolumeMountOverlay,
+		VolumeMountReadOnly,
+		VolumeMountReadWrite,
+		VolumeMountRelabelShared,
+		VolumeMountRelabelUnshared,
+	}
+}
+
 type VolumeMount struct {
 	Src     string
 	Dest    string
-	Options string
+	Options VolumeMountOptions
+}
+
+type Pull struct {
+	Arguments []string
+	Policy    string
+}
+
+type EnvironmentVariables struct {
+	Pass []string
+	Set  map[string]string
+}
+
+// The value comes from the navigator process, so a Set entry for the same name
+// would compete with it.
+func (e *EnvironmentVariables) pass(name string) {
+	if !slices.Contains(e.Pass, name) {
+		e.Pass = append(e.Pass, name)
+	}
+
+	delete(e.Set, name)
+}
+
+type ExecutionEnvironment struct {
+	Enabled              bool
+	ContainerEngine      string
+	Image                string
+	Pull                 Pull
+	EnvironmentVariables EnvironmentVariables
+	VolumeMounts         []VolumeMount
+	ContainerOptions     []string
 }
 
 type Settings struct {
-	Timeout                  time.Duration
-	EEEnabled                bool
-	ContainerEngine          string
-	EnvironmentVariablesPass []string
-	EnvironmentVariablesSet  map[string]string
-	Image                    string
-	PullArguments            []string
-	PullPolicy               string
-	VolumeMounts             []VolumeMount
-	ContainerOptions         []string
-	Timezone                 string
+	Timeout              time.Duration
+	Timezone             string
+	ExecutionEnvironment ExecutionEnvironment
 }
 
 type settingsFormatAnsibleRunner struct {
@@ -84,10 +139,16 @@ type settingsFormat struct {
 	AnsibleNavigator settingsFormatAnsibleNavigator `yaml:"ansible-navigator"` //nolint:tagliatelle
 }
 
-func (s *Settings) generate() (string, error) {
-	volumeMounts := make([]settingsFormatVolumeMounts, 0, len(s.VolumeMounts))
-	for _, mount := range s.VolumeMounts {
-		volumeMounts = append(volumeMounts, settingsFormatVolumeMounts(mount))
+func (s Settings) generate() (string, error) {
+	execEnv := s.ExecutionEnvironment
+
+	volumeMounts := make([]settingsFormatVolumeMounts, 0, len(execEnv.VolumeMounts))
+	for _, mount := range execEnv.VolumeMounts {
+		volumeMounts = append(volumeMounts, settingsFormatVolumeMounts{
+			Src:     mount.Src,
+			Dest:    mount.Dest,
+			Options: mount.Options.String(),
+		})
 	}
 
 	format := settingsFormat{
@@ -100,19 +161,19 @@ func (s *Settings) generate() (string, error) {
 				OSC4:   false,
 			},
 			ExecutionEnvironment: settingsFormatExecutionEnvironment{
-				ContainerEngine: s.ContainerEngine,
-				Enabled:         s.EEEnabled,
+				ContainerEngine: execEnv.ContainerEngine,
+				Enabled:         execEnv.Enabled,
 				EnvironmentVariables: settingsFormatEnvironmentVariables{
-					Pass: s.EnvironmentVariablesPass,
-					Set:  s.EnvironmentVariablesSet,
+					Pass: execEnv.EnvironmentVariables.Pass,
+					Set:  execEnv.EnvironmentVariables.Set,
 				},
-				Image: s.Image,
+				Image: execEnv.Image,
 				Pull: settingsFormatPull{
-					Arguments: s.PullArguments,
-					Policy:    s.PullPolicy,
+					Arguments: execEnv.Pull.Arguments,
+					Policy:    execEnv.Pull.Policy,
 				},
 				VolumeMounts:     volumeMounts,
-				ContainerOptions: s.ContainerOptions,
+				ContainerOptions: execEnv.ContainerOptions,
 			},
 			Logging: settingsFormatLogging{
 				Level: "debug",
@@ -133,14 +194,12 @@ func (s *Settings) generate() (string, error) {
 	return string(data), nil
 }
 
-func ContainerEngineOptions(auto bool) []string {
-	containerEngines := []string{"podman", "docker"}
+func ContainerEngines() []string {
+	return []string{"podman", "docker"}
+}
 
-	if auto {
-		containerEngines = append(containerEngines, ContainerEngineAuto)
-	}
-
-	return containerEngines
+func ContainerEngineOptions() []string {
+	return append(ContainerEngines(), ContainerEngineAuto)
 }
 
 func PullPolicyOptions() []string {

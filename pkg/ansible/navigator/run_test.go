@@ -3,6 +3,7 @@ package navigator
 import (
 	"context"
 	"os"
+	"reflect"
 	"slices"
 	"testing"
 	"time"
@@ -13,8 +14,8 @@ import (
 
 const testHostDir = "/tmp/ansible-navigator-run-test"
 
-func testConfig(eeEnabled bool) *RunConfig {
-	return &RunConfig{
+func testConfig(eeEnabled bool) RunConfig {
+	return RunConfig{
 		WorkingDir: "/work",
 		Binary:     "/usr/bin/ansible-navigator",
 		Playbook:   "- hosts: all\n",
@@ -27,26 +28,31 @@ func testConfig(eeEnabled bool) *RunConfig {
 		KnownHosts:      []ansible.KnownHost{"example.com ssh-ed25519 AAAA"},
 		UseKnownHosts:   true,
 		HostKeyChecking: true,
-		Options: &ansible.PlaybookOptions{
+		Options: ansible.PlaybookOptions{
 			ForceHandlers: true,
 			SkipTags:      []string{"skip-me"},
 			StartAtTask:   "task name",
 			Limit:         []string{"host1", "host2"},
 			Tags:          []string{"tag1"},
 		},
-		Settings: &Settings{
-			Timeout:                  10 * time.Minute,
-			EEEnabled:                eeEnabled,
-			ContainerEngine:          ContainerEngineAuto,
-			EnvironmentVariablesPass: []string{"SSH_AUTH_SOCK"},
-			EnvironmentVariablesSet:  map[string]string{"SET_VAR": "set-value"},
-			Image:                    "ghcr.io/ansible/community-ansible-dev-tools:v26.7.1",
-			PullArguments:            []string{"--tls-verify=false"},
-			PullPolicy:               "tag",
-			ContainerOptions:         []string{"--userns=host"},
-			Timezone:                 "UTC",
+		Settings: Settings{
+			Timeout:  10 * time.Minute,
+			Timezone: "UTC",
+			ExecutionEnvironment: ExecutionEnvironment{
+				Enabled:         eeEnabled,
+				ContainerEngine: ContainerEngineAuto,
+				Image:           "ghcr.io/ansible/community-ansible-dev-tools:v26.7.1",
+				Pull: Pull{
+					Arguments: []string{"--tls-verify=false"},
+					Policy:    "tag",
+				},
+				EnvironmentVariables: EnvironmentVariables{
+					Pass: []string{"SSH_AUTH_SOCK"},
+					Set:  map[string]string{"SET_VAR": "set-value"},
+				},
+				ContainerOptions: []string{"--userns=host"},
+			},
 		},
-		Env: map[string]string{"EXAMPLE_VAR": "example-value"},
 	}
 }
 
@@ -54,7 +60,6 @@ func newTestRun(t *testing.T, eeEnabled bool) (*Run, *fakeExecutor) {
 	t.Helper()
 
 	memFs := afero.NewMemMapFs()
-	// createDirs uses Mkdir, not MkdirAll.
 	if err := memFs.MkdirAll("/tmp", dirPermissions); err != nil {
 		t.Fatalf("failed to create tmp directory: %v", err)
 	}
@@ -68,7 +73,14 @@ func newTestRun(t *testing.T, eeEnabled bool) (*Run, *fakeExecutor) {
 		withResponse("ansible-navigator --version", "ansible-navigator 26.6.0", nil).
 		withResponse("ansible-playbook --version", "ansible-playbook [core 2.19.0]", nil)
 
-	return NewRun(testHostDir, testConfig(eeEnabled), WithFs(memFs), WithExecutor(exec)), exec
+	run := NewRun(testHostDir, testConfig(eeEnabled), WithFs(memFs), WithExecutor(exec))
+
+	// Not in sorted order, so the goldens pin that the run sorts them.
+	run.SetEnv("ZULU_VAR", "zulu-value")
+	run.SetEnv("ALPHA_VAR", "alpha-value")
+	run.SetEnv("EXAMPLE_VAR", "example-value")
+
+	return run, exec
 }
 
 func assertLines(t *testing.T, name string, got []string, want []string) {
@@ -117,13 +129,12 @@ func TestPreflightCommands(t *testing.T) {
 	}
 }
 
-// MemMapFs creates parent directories implicitly on write, so assert the exact
-// tree rather than relying on writes failing.
 func TestSetupCreatesRunDirectory(t *testing.T) {
 	t.Parallel()
 
 	want := []string{
 		testHostDir + "/",
+		testHostDir + "/ansible-navigator.yaml",
 		testHostDir + "/extra-vars/",
 		testHostDir + "/extra-vars/vars.yaml",
 		testHostDir + "/inventories/",
@@ -180,12 +191,14 @@ func TestSettingsGenerate(t *testing.T) {
 
 			run, _ := newTestRun(t, eeEnabled)
 
-			if err := run.Setup(); err != nil {
-				t.Fatalf("setup failed: %v", err)
+			// Replays the real order, so a future dependency on preflight
+			// cannot slip in unnoticed.
+			if err := run.Preflight(context.Background()); err != nil {
+				t.Fatalf("preflight failed: %v", err)
 			}
 
-			if err := run.writeGeneratedSettings(); err != nil {
-				t.Fatalf("failed to write settings: %v", err)
+			if err := run.Setup(); err != nil {
+				t.Fatalf("setup failed: %v", err)
 			}
 
 			contents, err := afero.ReadFile(run.fs, run.hostJoin(navigatorSettingsFilename))
@@ -203,7 +216,9 @@ func TestNavigatorCommand(t *testing.T) {
 
 	wantEnv := []string{
 		"ANSIBLE_NAVIGATOR_CONFIG=" + testHostDir + "/ansible-navigator.yaml",
+		"ALPHA_VAR=alpha-value",
 		"EXAMPLE_VAR=example-value",
+		"ZULU_VAR=zulu-value",
 		"ANSIBLE_HOST_KEY_CHECKING=true",
 	}
 
@@ -256,7 +271,7 @@ func TestRunDirs(t *testing.T) {
 		},
 	}
 
-	// Run directories are resolved by NewRun, so none of this depends on Setup having run.
+	// No Setup call: NewRun resolves these.
 	for name, test := range tests {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
@@ -315,5 +330,110 @@ func TestCleanupRemovesRunDirectory(t *testing.T) {
 
 	if exists {
 		t.Error("expected run directory to be removed")
+	}
+}
+
+func TestResolveNavigatorBinary(t *testing.T) {
+	t.Parallel()
+
+	tests := map[string]struct {
+		binary    string
+		onPath    []string
+		want      string
+		expectErr bool
+	}{
+		"looked_up_when_unset": {
+			onPath: []string{Program},
+			want:   "/usr/bin/ansible-navigator",
+		},
+		"error_when_unset_and_not_on_path": {
+			expectErr: true,
+		},
+		"absolute_path_kept": {
+			binary: "/opt/bin/ansible-navigator",
+			want:   "/opt/bin/ansible-navigator",
+		},
+		"relative_path_made_absolute": {
+			binary: "./venv/bin/ansible-navigator",
+			want:   "/abs/venv/bin/ansible-navigator",
+		},
+	}
+
+	for name, test := range tests {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+
+			config := testConfig(false)
+			config.Binary = test.binary
+
+			exec := newFakeExecutor().withProgram(test.onPath...)
+			run := NewRun(testHostDir, config, WithFs(afero.NewMemMapFs()), WithExecutor(exec))
+
+			err := run.resolveNavigatorBinary()
+
+			if test.expectErr {
+				if err == nil {
+					t.Fatal("expected error, got nil")
+				}
+
+				if run.resolved.navigatorBinary != "" {
+					t.Errorf("expected no binary recorded, got %q", run.resolved.navigatorBinary)
+				}
+
+				return
+			}
+
+			if err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
+
+			if run.resolved.navigatorBinary != test.want {
+				t.Errorf("want %q, got %q", test.want, run.resolved.navigatorBinary)
+			}
+		})
+	}
+}
+
+// A Set key colliding with a run variable, and a non-empty mount list, so that
+// a missing clone writes through to the caller.
+func aliasProneConfig() RunConfig {
+	config := testConfig(true)
+
+	execEnv := &config.Settings.ExecutionEnvironment
+	execEnv.EnvironmentVariables.Set = map[string]string{"RUN_VAR": "caller-value"}
+	execEnv.VolumeMounts = []VolumeMount{{Src: "/caller", Dest: "/caller"}}
+
+	return config
+}
+
+func TestRunDoesNotMutateConfig(t *testing.T) {
+	t.Parallel()
+
+	config := aliasProneConfig()
+
+	memFs := afero.NewMemMapFs()
+	for _, dir := range []string{"/tmp", "/work"} {
+		if err := memFs.MkdirAll(dir, dirPermissions); err != nil {
+			t.Fatalf("failed to create %s: %v", dir, err)
+		}
+	}
+
+	exec := newFakeExecutor().
+		withProgram("podman", "docker", ansible.PlaybookProgram, Program).
+		withResponse("ansible-navigator --version", "ansible-navigator 26.6.0", nil)
+
+	run := NewRun(testHostDir, config, WithFs(memFs), WithExecutor(exec))
+	run.SetEnv("RUN_VAR", "run-value")
+
+	if err := run.Preflight(context.Background()); err != nil {
+		t.Fatalf("preflight failed: %v", err)
+	}
+
+	if err := run.Setup(); err != nil {
+		t.Fatalf("setup failed: %v", err)
+	}
+
+	if !reflect.DeepEqual(config, aliasProneConfig()) {
+		t.Errorf("run mutated the caller config:\ngot:  %+v\nwant: %+v", config, testConfig(true))
 	}
 }
