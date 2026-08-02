@@ -59,6 +59,10 @@ func TestAccNavigatorRunResource_errors(t *testing.T) {
 			expected: regexp.MustCompile("failed to parse JQ filter"),
 		},
 		{
+			name:     "artifact_query_runtime",
+			expected: regexp.MustCompile("Playbook artifact query failed"),
+		},
+		{
 			name:     "env_var_name_empty",
 			expected: regexp.MustCompile(`must(\s)not(\s)be(\s)empty`),
 		},

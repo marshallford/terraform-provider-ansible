@@ -44,20 +44,15 @@ type NavigatorRunResource struct {
 }
 
 type NavigatorRunResourceModel struct {
-	Playbook               types.String   `tfsdk:"playbook"`
-	Inventory              types.String   `tfsdk:"inventory"`
-	WorkingDirectory       types.String   `tfsdk:"working_directory"`
-	ExecutionEnvironment   types.Object   `tfsdk:"execution_environment"`
-	AnsibleNavigatorBinary types.String   `tfsdk:"ansible_navigator_binary"`
-	AnsibleOptions         types.Object   `tfsdk:"ansible_options"`
-	Timezone               types.String   `tfsdk:"timezone"`
-	RunOnDestroy           types.Bool     `tfsdk:"run_on_destroy"`
-	DestroyPlaybook        types.String   `tfsdk:"destroy_playbook"`
-	Triggers               types.Object   `tfsdk:"triggers"`
-	ArtifactQueries        types.Map      `tfsdk:"artifact_queries"`
-	ID                     types.String   `tfsdk:"id"`
-	Command                types.String   `tfsdk:"command"`
-	Timeouts               timeouts.Value `tfsdk:"timeouts"`
+	NavigatorRunCommonModel
+
+	RunOnDestroy    types.Bool     `tfsdk:"run_on_destroy"`
+	DestroyPlaybook types.String   `tfsdk:"destroy_playbook"`
+	Triggers        types.Object   `tfsdk:"triggers"`
+	ArtifactQueries types.Map      `tfsdk:"artifact_queries"`
+	ID              types.String   `tfsdk:"id"`
+	Command         types.String   `tfsdk:"command"`
+	Timeouts        timeouts.Value `tfsdk:"timeouts"`
 }
 
 func (m NavigatorRunResourceModel) Value(ctx context.Context, destroy bool, opts *providerOptions, runs uint32, previousInventory *string, runData *navigatorRunData) diag.Diagnostics {
@@ -66,27 +61,22 @@ func (m NavigatorRunResourceModel) Value(ctx context.Context, destroy bool, opts
 	*runData = navigatorRunData{
 		hostDir:    navigatorRunDirPath(opts.BaseRunDirectory, m.ID.ValueString(), runs),
 		persistDir: opts.PersistRunDirectory,
-		config: navigator.RunConfig{
-			WorkingDir: m.WorkingDirectory.ValueString(),
-			Binary:     m.AnsibleNavigatorBinary.ValueString(),
-			Playbook:   m.Playbook.ValueString(),
-		},
 	}
+
+	diags.Append(runData.Load(ctx, m.NavigatorRunCommonModel)...)
 
 	if destroy && !m.DestroyPlaybook.IsNull() {
 		runData.config.Playbook = m.DestroyPlaybook.ValueString()
 	}
 
-	runData.config.Inventories = []ansible.Inventory{{Name: navigatorRunName, Contents: m.Inventory.ValueString()}}
 	if previousInventory != nil {
 		runData.config.Inventories = append(runData.config.Inventories, ansible.Inventory{Name: navigatorRunPrevInventoryName, Contents: *previousInventory, Exclude: true})
 	}
 
-	diags.Append(runData.Load(ctx, m.ExecutionEnvironment, m.Timezone.ValueString(), m.AnsibleOptions)...)
-
 	var queriesModel map[string]ArtifactQueryModel
 	diags.Append(m.ArtifactQueries.ElementsAs(ctx, &queriesModel, false)...)
 
+	runData.userArtifactQueries = true
 	runData.playbookArtifactQueries = map[string]ansible.PlaybookArtifactQuery{}
 	for name, model := range queriesModel {
 		var query ansible.PlaybookArtifactQuery

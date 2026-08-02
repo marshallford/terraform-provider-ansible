@@ -80,22 +80,27 @@ type navigatorRunData struct {
 	operation               terraformOp
 	persistDir              bool
 	playbookArtifactQueries map[string]ansible.PlaybookArtifactQuery
+	userArtifactQueries     bool
 	knownHosts              []ansible.KnownHost
 	command                 string
 }
 
-func (rd *navigatorRunData) Load(ctx context.Context, ee types.Object, timezone string, ansibleOpts types.Object) diag.Diagnostics {
+func (rd *navigatorRunData) Load(ctx context.Context, common NavigatorRunCommonModel) diag.Diagnostics {
 	var diags diag.Diagnostics
 
-	var eeModel ExecutionEnvironmentModel
-	diags.Append(ee.As(ctx, &eeModel, basetypes.ObjectAsOptions{})...)
+	rd.config.WorkingDir = common.WorkingDirectory.ValueString()
+	rd.config.Binary = common.AnsibleNavigatorBinary.ValueString()
+	rd.config.Playbook = common.Playbook.ValueString()
+	rd.config.Inventories = []ansible.Inventory{{Name: navigatorRunName, Contents: common.Inventory.ValueString()}}
+	rd.config.Settings.Timezone = common.Timezone.ValueString()
 
-	rd.config.Settings.Timezone = timezone
+	var eeModel ExecutionEnvironmentModel
+	diags.Append(common.ExecutionEnvironment.As(ctx, &eeModel, basetypes.ObjectAsOptions{})...)
 
 	diags.Append(eeModel.Value(ctx, &rd.config.Settings.ExecutionEnvironment)...)
 
 	var optsModel AnsibleOptionsModel
-	diags.Append(ansibleOpts.As(ctx, &optsModel, basetypes.ObjectAsOptions{})...)
+	diags.Append(common.AnsibleOptions.As(ctx, &optsModel, basetypes.ObjectAsOptions{})...)
 
 	diags.Append(optsModel.Value(ctx, &rd.config.Options)...)
 
@@ -161,19 +166,46 @@ func (rd navigatorRunData) Store(ctx context.Context, command *types.String, ans
 	return diags
 }
 
-func preflightCheckPath(check navigator.PreflightCheckID) path.Path {
+func (rd navigatorRunData) artifactQueryPath(name string) path.Path {
+	if !rd.userArtifactQueries {
+		return path.Empty()
+	}
+
+	return path.Root("artifact_queries").AtMapKey(name)
+}
+
+func preflightCheckPath(check navigator.PreflightCheck) path.Path {
 	switch check {
 	case navigator.CheckWorkingDir:
 		return path.Root("working_directory")
 	case navigator.CheckContainerEngine:
-		return path.Root("execution_environment").AtMapKey("container_engine")
+		return path.Root("execution_environment").AtName("container_engine")
 	case navigator.CheckPlaybook:
-		return path.Root("execution_environment").AtMapKey("enabled")
+		return path.Root("execution_environment").AtName("enabled")
 	case navigator.CheckNavigatorResolve, navigator.CheckNavigatorBinary:
 		return path.Root("ansible_navigator_binary")
-	default:
+	}
+
+	return path.Empty()
+}
+
+func setupStepPath(step navigator.SetupStep) path.Path {
+	switch step {
+	case navigator.SetupPlaybook:
+		return path.Root("playbook")
+	case navigator.SetupInventories:
+		return path.Root("inventory")
+	case navigator.SetupExtraVars:
+		return path.Root("ansible_options").AtName("extra_vars")
+	case navigator.SetupPrivateKeys:
+		return path.Root("ansible_options").AtName("private_keys")
+	case navigator.SetupKnownHosts:
+		return path.Root("ansible_options").AtName("known_hosts")
+	case navigator.SetupDir, navigator.SetupSettings:
 		return path.Empty()
 	}
+
+	return path.Empty()
 }
 
 //nolint:cyclop
@@ -198,21 +230,29 @@ func run(ctx context.Context, diags *diag.Diagnostics, runData *navigatorRunData
 	tflog.Trace(ctx, "preflight checks")
 	ctx = tflog.SetField(ctx, "workingDir", runData.config.WorkingDir)
 	if err := navRun.Preflight(ctx); err != nil {
-		for _, e := range unwrapJoinedErrors(err) {
-			var pe *navigator.PreflightError
-			if errors.As(e, &pe) {
-				addPathError(diags, preflightCheckPath(pe.Check), "Preflight check failed", pe)
+		for _, preflightErr := range unwrapJoinedErrors(err) {
+			var typed *navigator.PreflightError
+			if errors.As(preflightErr, &typed) {
+				addPathError(diags, preflightCheckPath(typed.Check), "Preflight check failed", typed)
+
+				continue
 			}
+
+			addError(diags, "Preflight check failed", preflightErr)
 		}
 	}
 
 	tflog.Trace(ctx, "creating directories and files")
 	if err := navRun.Setup(); err != nil {
-		for _, e := range unwrapJoinedErrors(err) {
-			var se *navigator.SetupError
-			if errors.As(e, &se) {
-				addError(diags, "Setup failed", se)
+		for _, setupErr := range unwrapJoinedErrors(err) {
+			var typed *navigator.SetupError
+			if errors.As(setupErr, &typed) {
+				addPathError(diags, setupStepPath(typed.Step), "Setup failed", typed)
+
+				continue
 			}
+
+			addError(diags, "Setup failed", setupErr)
 		}
 	}
 
@@ -241,13 +281,22 @@ func run(ctx context.Context, diags *diag.Diagnostics, runData *navigatorRunData
 	runData.command = navRun.Command.String()
 
 	if err := navRun.Query(runData.playbookArtifactQueries); err != nil {
-		addPathError(diags, path.Root("artifact_queries"), "Playbook artifact queries failed", err)
+		for _, queryErr := range unwrapJoinedErrors(err) {
+			var typed *navigator.QueryError
+			if errors.As(queryErr, &typed) {
+				addPathError(diags, runData.artifactQueryPath(typed.Name), "Playbook artifact query failed", typed)
+
+				continue
+			}
+
+			addError(diags, "Playbook artifact queries failed", queryErr)
+		}
 	}
 
 	if runData.config.UseKnownHosts {
 		knownHosts, err := navRun.ReadKnownHosts()
 		if err != nil {
-			addPathError(diags, path.Root("ansible_options").AtMapKey("known_hosts"), "Failed to read known hosts", err)
+			addPathError(diags, path.Root("ansible_options").AtName("known_hosts"), "Failed to read known hosts", err)
 		}
 		runData.knownHosts = knownHosts
 	}

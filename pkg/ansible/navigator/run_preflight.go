@@ -36,12 +36,12 @@ func (r *Run) Preflight(ctx context.Context) error {
 
 func (r *Run) checkWorkingDir() error {
 	if err := ansible.CheckDirectory(r.fs, r.config.WorkingDir); err != nil {
-		return &PreflightError{Check: CheckWorkingDir, Message: "working directory is not valid", Err: err}
+		return newPreflightError(CheckWorkingDir, "working directory is not valid", err)
 	}
 
 	workingDir, err := r.exec.Abs(r.config.WorkingDir)
 	if err != nil {
-		return &PreflightError{Check: CheckWorkingDir, Message: "absolute path of working directory cannot be determined", Err: err}
+		return newPreflightError(CheckWorkingDir, "absolute path of working directory cannot be determined", err)
 	}
 
 	r.resolved.workingDir = workingDir
@@ -53,17 +53,11 @@ func (r *Run) checkContainerEngine(ctx context.Context) error {
 	engine := r.config.Settings.ExecutionEnvironment.ContainerEngine
 
 	if !slices.Contains(ContainerEngineOptions(), engine) {
-		return &PreflightError{
-			Check:   CheckContainerEngine,
-			Message: fmt.Sprintf("container engine %s is not a valid option", engine),
-		}
+		return newPreflightError(CheckContainerEngine, fmt.Sprintf("container engine %s is not a valid option", engine), nil)
 	}
 
 	if engine != ContainerEngineAuto && r.programExistsOnPath(engine) != nil {
-		return &PreflightError{
-			Check:   CheckContainerEngine,
-			Message: fmt.Sprintf("container engine %s not found in PATH", engine),
-		}
+		return newPreflightError(CheckContainerEngine, fmt.Sprintf("container engine %s not found in PATH", engine), nil)
 	}
 
 	if engine == ContainerEngineAuto {
@@ -77,18 +71,11 @@ func (r *Run) checkContainerEngine(ctx context.Context) error {
 	}
 
 	if engine == ContainerEngineAuto {
-		return &PreflightError{
-			Check:   CheckContainerEngine,
-			Message: "no container engine found in PATH",
-		}
+		return newPreflightError(CheckContainerEngine, "no container engine found in PATH", nil)
 	}
 
 	if _, err := r.exec.Run(ctx, ansible.Command{Name: engine, Args: []string{"info"}}); err != nil {
-		return &PreflightError{
-			Check:   CheckContainerEngine,
-			Message: fmt.Sprintf("container engine is not running or usable, '%s info' command failed", engine),
-			Err:     err,
-		}
+		return newPreflightError(CheckContainerEngine, fmt.Sprintf("container engine is not running or usable, '%s info' command failed", engine), err)
 	}
 
 	return nil
@@ -96,26 +83,16 @@ func (r *Run) checkContainerEngine(ctx context.Context) error {
 
 func (r *Run) checkPlaybookBinary(ctx context.Context) error {
 	if err := r.programExistsOnPath(ansible.PlaybookProgram); err != nil {
-		return &PreflightError{
-			Check:   CheckPlaybook,
-			Message: fmt.Sprintf("%s not found in PATH, required when not using an execution environment", ansible.PlaybookProgram),
-		}
+		return newPreflightError(CheckPlaybook, fmt.Sprintf("%s not found in PATH, required when not using an execution environment", ansible.PlaybookProgram), nil)
 	}
 
 	stdoutStderr, err := r.exec.Run(ctx, ansible.Command{Name: ansible.PlaybookProgram, Args: []string{"--version"}})
 	if err != nil {
-		return &PreflightError{
-			Check:   CheckPlaybook,
-			Message: fmt.Sprintf("'%s --version' command failed", ansible.PlaybookProgram),
-			Err:     err,
-		}
+		return newPreflightError(CheckPlaybook, fmt.Sprintf("'%s --version' command failed", ansible.PlaybookProgram), err)
 	}
 
 	if !strings.HasPrefix(string(stdoutStderr), ansible.PlaybookProgram) {
-		return &PreflightError{
-			Check:   CheckPlaybook,
-			Message: fmt.Sprintf("'%s --version' command output not expected", ansible.PlaybookProgram),
-		}
+		return newPreflightError(CheckPlaybook, fmt.Sprintf("'%s --version' command output not expected", ansible.PlaybookProgram), nil)
 	}
 
 	return nil
@@ -125,10 +102,7 @@ func (r *Run) resolveNavigatorBinary() error {
 	if r.config.Binary == "" {
 		path, err := r.exec.LookPath(Program)
 		if err != nil {
-			return &PreflightError{
-				Check:   CheckNavigatorResolve,
-				Message: fmt.Sprintf("%s not found in PATH", Program),
-			}
+			return newPreflightError(CheckNavigatorResolve, fmt.Sprintf("%s not found in PATH", Program), nil)
 		}
 
 		r.resolved.navigatorBinary = path
@@ -138,11 +112,7 @@ func (r *Run) resolveNavigatorBinary() error {
 
 	path, err := r.exec.Abs(r.config.Binary)
 	if err != nil {
-		return &PreflightError{
-			Check:   CheckNavigatorResolve,
-			Message: fmt.Sprintf("absolute path of %s cannot be determined", Program),
-			Err:     err,
-		}
+		return newPreflightError(CheckNavigatorResolve, fmt.Sprintf("absolute path of %s cannot be determined", Program), err)
 	}
 
 	r.resolved.navigatorBinary = path
@@ -157,18 +127,11 @@ func (r *Run) checkNavigatorBinary(ctx context.Context) error {
 
 	stdoutStderr, err := r.exec.Run(ctx, ansible.Command{Name: r.resolved.navigatorBinary, Args: []string{"--version"}})
 	if err != nil {
-		return &PreflightError{
-			Check:   CheckNavigatorBinary,
-			Message: fmt.Sprintf("'%s --version' command failed", r.resolved.navigatorBinary),
-			Err:     err,
-		}
+		return newPreflightError(CheckNavigatorBinary, fmt.Sprintf("'%s --version' command failed", r.resolved.navigatorBinary), err)
 	}
 
 	if !strings.HasPrefix(string(stdoutStderr), Program) {
-		return &PreflightError{
-			Check:   CheckNavigatorBinary,
-			Message: fmt.Sprintf("'%s --version' command output not expected", r.resolved.navigatorBinary),
-		}
+		return newPreflightError(CheckNavigatorBinary, fmt.Sprintf("'%s --version' command output not expected", r.resolved.navigatorBinary), nil)
 	}
 
 	return nil
