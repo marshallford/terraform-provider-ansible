@@ -35,17 +35,12 @@ type NavigatorRunEphemeralResource struct {
 }
 
 type NavigatorRunEphemeralResourceModel struct {
-	Playbook               types.String   `tfsdk:"playbook"`
-	Inventory              types.String   `tfsdk:"inventory"`
-	WorkingDirectory       types.String   `tfsdk:"working_directory"`
-	ExecutionEnvironment   types.Object   `tfsdk:"execution_environment"`
-	AnsibleNavigatorBinary types.String   `tfsdk:"ansible_navigator_binary"`
-	AnsibleOptions         types.Object   `tfsdk:"ansible_options"`
-	Timezone               types.String   `tfsdk:"timezone"`
-	ArtifactQueries        types.Map      `tfsdk:"artifact_queries"`
-	ID                     types.String   `tfsdk:"id"`
-	Command                types.String   `tfsdk:"command"`
-	Timeouts               timeouts.Value `tfsdk:"timeouts"`
+	NavigatorRunCommonModel
+
+	ArtifactQueries types.Map      `tfsdk:"artifact_queries"`
+	ID              types.String   `tfsdk:"id"`
+	Command         types.String   `tfsdk:"command"`
+	Timeouts        timeouts.Value `tfsdk:"timeouts"`
 }
 
 func (m NavigatorRunEphemeralResourceModel) Value(ctx context.Context, opts *providerOptions, runData *navigatorRunData) diag.Diagnostics {
@@ -54,19 +49,14 @@ func (m NavigatorRunEphemeralResourceModel) Value(ctx context.Context, opts *pro
 	*runData = navigatorRunData{
 		hostDir:    navigatorRunDirPath(opts.BaseRunDirectory, m.ID.ValueString(), 0),
 		persistDir: opts.PersistRunDirectory,
-		config: navigator.RunConfig{
-			WorkingDir:  m.WorkingDirectory.ValueString(),
-			Binary:      m.AnsibleNavigatorBinary.ValueString(),
-			Playbook:    m.Playbook.ValueString(),
-			Inventories: []ansible.Inventory{{Name: navigatorRunName, Contents: m.Inventory.ValueString()}},
-		},
 	}
 
-	diags.Append(runData.Load(ctx, m.ExecutionEnvironment, m.Timezone.ValueString(), m.AnsibleOptions)...)
+	diags.Append(runData.Load(ctx, m.NavigatorRunCommonModel)...)
 
 	var queriesModel map[string]ArtifactQueryModel
 	diags.Append(m.ArtifactQueries.ElementsAs(ctx, &queriesModel, false)...)
 
+	runData.userArtifactQueries = true
 	runData.playbookArtifactQueries = map[string]ansible.PlaybookArtifactQuery{}
 	for name, model := range queriesModel {
 		var query ansible.PlaybookArtifactQuery

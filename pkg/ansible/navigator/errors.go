@@ -1,19 +1,19 @@
 package navigator
 
-type PreflightCheckID int
+type PreflightCheck int
 
 const (
-	CheckWorkingDir PreflightCheckID = iota
+	CheckWorkingDir PreflightCheck = iota
 	CheckContainerEngine
 	CheckPlaybook
 	CheckNavigatorResolve
 	CheckNavigatorBinary
 )
 
-type SetupComponentID int
+type SetupStep int
 
 const (
-	SetupDir SetupComponentID = iota
+	SetupDir SetupStep = iota
 	SetupPlaybook
 	SetupInventories
 	SetupExtraVars
@@ -22,13 +22,12 @@ const (
 	SetupSettings
 )
 
-type PreflightError struct {
-	Check   PreflightCheckID
+type runError struct {
 	Message string
 	Err     error
 }
 
-func (e *PreflightError) Error() string {
+func (e runError) Error() string {
 	if e.Err != nil {
 		return e.Message + ": " + e.Err.Error()
 	}
@@ -36,24 +35,36 @@ func (e *PreflightError) Error() string {
 	return e.Message
 }
 
-func (e *PreflightError) Unwrap() error {
+func (e runError) Unwrap() error {
 	return e.Err
+}
+
+type PreflightError struct {
+	runError
+
+	Check PreflightCheck
+}
+
+func newPreflightError(check PreflightCheck, message string, err error) *PreflightError {
+	return &PreflightError{runError: runError{Message: message, Err: err}, Check: check}
 }
 
 type SetupError struct {
-	Component SetupComponentID
-	Message   string
-	Err       error
+	runError
+
+	Step SetupStep
 }
 
-func (e *SetupError) Error() string {
-	if e.Err != nil {
-		return e.Message + ": " + e.Err.Error()
-	}
-
-	return e.Message
+func newSetupError(step SetupStep, message string, err error) *SetupError {
+	return &SetupError{runError: runError{Message: message, Err: err}, Step: step}
 }
 
-func (e *SetupError) Unwrap() error {
-	return e.Err
+type QueryError struct {
+	runError
+
+	Name string
+}
+
+func newQueryError(name string, message string, err error) *QueryError {
+	return &QueryError{runError: runError{Message: message, Err: err}, Name: name}
 }

@@ -1,6 +1,7 @@
 package navigator
 
 import (
+	"errors"
 	"fmt"
 
 	"github.com/marshallford/terraform-provider-ansible/pkg/ansible"
@@ -12,17 +13,21 @@ func (r *Run) Query(queries map[string]ansible.PlaybookArtifactQuery) error {
 		return err
 	}
 
+	var errs []error
+
 	for name, query := range queries {
 		results, err := ansible.QueryPlaybookArtifact(contents, query)
 		if err != nil {
-			return fmt.Errorf("failed to query playbook artifact, %w", err)
+			errs = append(errs, newQueryError(name, "failed to query playbook artifact", err))
+
+			continue
 		}
 
 		query.Results = results
 		queries[name] = query
 	}
 
-	return nil
+	return errors.Join(errs...)
 }
 
 func (r *Run) ReadKnownHosts() ([]ansible.KnownHost, error) {

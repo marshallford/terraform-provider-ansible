@@ -35,14 +35,9 @@ type NavigatorRunAction struct {
 }
 
 type NavigatorRunActionModel struct {
-	Playbook               types.String   `tfsdk:"playbook"`
-	Inventory              types.String   `tfsdk:"inventory"`
-	WorkingDirectory       types.String   `tfsdk:"working_directory"`
-	ExecutionEnvironment   types.Object   `tfsdk:"execution_environment"`
-	AnsibleNavigatorBinary types.String   `tfsdk:"ansible_navigator_binary"`
-	AnsibleOptions         types.Object   `tfsdk:"ansible_options"`
-	Timezone               types.String   `tfsdk:"timezone"`
-	Timeouts               timeouts.Value `tfsdk:"timeouts"`
+	NavigatorRunCommonModel
+
+	Timeouts timeouts.Value `tfsdk:"timeouts"`
 }
 
 func (m NavigatorRunActionModel) Value(ctx context.Context, opts *providerOptions, runData *navigatorRunData) diag.Diagnostics {
@@ -51,15 +46,9 @@ func (m NavigatorRunActionModel) Value(ctx context.Context, opts *providerOption
 	*runData = navigatorRunData{
 		hostDir:    navigatorRunDirPath(opts.BaseRunDirectory, uuid.New().String(), 0),
 		persistDir: opts.PersistRunDirectory,
-		config: navigator.RunConfig{
-			WorkingDir:  m.WorkingDirectory.ValueString(),
-			Binary:      m.AnsibleNavigatorBinary.ValueString(),
-			Playbook:    m.Playbook.ValueString(),
-			Inventories: []ansible.Inventory{{Name: navigatorRunName, Contents: m.Inventory.ValueString()}},
-		},
 	}
 
-	diags.Append(runData.Load(ctx, m.ExecutionEnvironment, m.Timezone.ValueString(), m.AnsibleOptions)...)
+	diags.Append(runData.Load(ctx, m.NavigatorRunCommonModel)...)
 
 	return diags
 }

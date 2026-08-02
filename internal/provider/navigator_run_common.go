@@ -13,6 +13,16 @@ import (
 	"github.com/marshallford/terraform-provider-ansible/pkg/ansible/navigator"
 )
 
+type NavigatorRunCommonModel struct {
+	Playbook               types.String `tfsdk:"playbook"`
+	Inventory              types.String `tfsdk:"inventory"`
+	WorkingDirectory       types.String `tfsdk:"working_directory"`
+	ExecutionEnvironment   types.Object `tfsdk:"execution_environment"`
+	AnsibleNavigatorBinary types.String `tfsdk:"ansible_navigator_binary"`
+	AnsibleOptions         types.Object `tfsdk:"ansible_options"`
+	Timezone               types.String `tfsdk:"timezone"`
+}
+
 type ExecutionEnvironmentModel struct {
 	ContainerEngine          types.String `tfsdk:"container_engine"`
 	Enabled                  types.Bool   `tfsdk:"enabled"`
