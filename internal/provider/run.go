@@ -28,10 +28,10 @@ const (
 	navigatorRunTimeoutOverhead        = 5 * time.Second
 	defaultNavigatorRunWorkingDir      = "."
 	defaultNavigatorRunTimeout         = 10 * time.Minute
-	defaultNavigatorRunContainerEngine = navigator.ContainerEngineAuto
+	defaultNavigatorRunContainerEngine = string(navigator.ContainerEngineAuto)
 	defaultNavigatorRunEEEnabled       = true
 	defaultNavigatorRunImage           = "ghcr.io/ansible/community-ansible-dev-tools:v26.7.1"
-	defaultNavigatorRunPullPolicy      = "tag"
+	defaultNavigatorRunPullPolicy      = string(navigator.PullPolicyTag)
 	defaultNavigatorRunTimezone        = "UTC"
 	defaultNavigatorRunOnDestroy       = false
 )
@@ -210,9 +210,16 @@ func setupStepPath(step navigator.SetupStep) path.Path {
 
 //nolint:cyclop
 func run(ctx context.Context, diags *diag.Diagnostics, runData *navigatorRunData) {
+	navRun := navigator.NewRun(runData.hostDir, runData.config)
+
+	ctx = tflog.SetField(ctx, "operation", runData.operation.String())
+	ctx = tflog.SetField(ctx, "mode", navRun.Mode().String())
+	ctx = tflog.SetField(ctx, "workingDir", runData.config.WorkingDir)
+	ctx = tflog.SetField(ctx, "hostDir", navRun.HostDir())
+	ctx = tflog.SetField(ctx, "playbookDir", navRun.PlaybookDir())
+
 	tflog.Debug(ctx, "starting run")
 
-	navRun := navigator.NewRun(runData.hostDir, runData.config)
 	defer func() {
 		if !runData.persistDir {
 			err := navRun.Cleanup()
@@ -227,8 +234,8 @@ func run(ctx context.Context, diags *diag.Diagnostics, runData *navigatorRunData
 		navRun.SetEnv(navigatorRunPrevInventoryEnvVar, navRun.InventoryPath(navigatorRunPrevInventoryName))
 	}
 
-	tflog.Trace(ctx, "preflight checks")
-	ctx = tflog.SetField(ctx, "workingDir", runData.config.WorkingDir)
+	tflog.Trace(ctx, "running preflight checks")
+
 	if err := navRun.Preflight(ctx); err != nil {
 		for _, preflightErr := range unwrapJoinedErrors(err) {
 			var typed *navigator.PreflightError
@@ -242,7 +249,8 @@ func run(ctx context.Context, diags *diag.Diagnostics, runData *navigatorRunData
 		}
 	}
 
-	tflog.Trace(ctx, "creating directories and files")
+	tflog.Trace(ctx, "setting up run directory")
+
 	if err := navRun.Setup(); err != nil {
 		for _, setupErr := range unwrapJoinedErrors(err) {
 			var typed *navigator.SetupError
@@ -256,15 +264,12 @@ func run(ctx context.Context, diags *diag.Diagnostics, runData *navigatorRunData
 		}
 	}
 
-	ctx = tflog.SetField(ctx, "mode", navRun.Mode().String())
-	ctx = tflog.SetField(ctx, "hostRunDir", navRun.HostDir())
-	ctx = tflog.SetField(ctx, "playbookRunDir", navRun.PlaybookDir())
-
 	if diags.HasError() {
 		return
 	}
 
-	tflog.Trace(ctx, "executing ansible-navigator")
+	tflog.Trace(ctx, fmt.Sprintf("executing %s", navigator.Program))
+
 	if err := navRun.Execute(ctx); err != nil {
 		runData.command = navRun.Command.String()
 
@@ -280,6 +285,8 @@ func run(ctx context.Context, diags *diag.Diagnostics, runData *navigatorRunData
 
 	runData.command = navRun.Command.String()
 
+	tflog.Trace(ctx, "querying playbook artifact")
+
 	if err := navRun.Query(runData.playbookArtifactQueries); err != nil {
 		for _, queryErr := range unwrapJoinedErrors(err) {
 			var typed *navigator.QueryError
@@ -294,12 +301,16 @@ func run(ctx context.Context, diags *diag.Diagnostics, runData *navigatorRunData
 	}
 
 	if runData.config.UseKnownHosts {
+		tflog.Trace(ctx, "reading known hosts")
+
 		knownHosts, err := navRun.ReadKnownHosts()
 		if err != nil {
 			addPathError(diags, path.Root("ansible_options").AtName("known_hosts"), "Failed to read known hosts", err)
 		}
 		runData.knownHosts = knownHosts
 	}
+
+	tflog.Debug(ctx, "run complete")
 }
 
 func unwrapJoinedErrors(err error) []error {

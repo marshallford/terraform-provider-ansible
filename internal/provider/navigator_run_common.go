@@ -2,7 +2,6 @@ package provider
 
 import (
 	"context"
-	"fmt"
 
 	"github.com/hashicorp/terraform-plugin-framework-jsontypes/jsontypes"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
@@ -21,6 +20,62 @@ type NavigatorRunCommonModel struct {
 	AnsibleNavigatorBinary types.String `tfsdk:"ansible_navigator_binary"`
 	AnsibleOptions         types.Object `tfsdk:"ansible_options"`
 	Timezone               types.String `tfsdk:"timezone"`
+}
+
+func (m *NavigatorRunCommonModel) SetDefaults(ctx context.Context) diag.Diagnostics {
+	var diags diag.Diagnostics
+
+	if m.WorkingDirectory.IsNull() {
+		m.WorkingDirectory = types.StringValue(defaultNavigatorRunWorkingDir)
+	}
+
+	if m.ExecutionEnvironment.IsNull() {
+		m.ExecutionEnvironment = ExecutionEnvironmentModel{}.Defaults()
+	}
+
+	var eeModel ExecutionEnvironmentModel
+	diags.Append(m.ExecutionEnvironment.As(ctx, &eeModel, basetypes.ObjectAsOptions{})...)
+
+	if eeModel.ContainerEngine.IsNull() {
+		eeModel.ContainerEngine = types.StringValue(defaultNavigatorRunContainerEngine)
+	}
+
+	if eeModel.Enabled.IsNull() {
+		eeModel.Enabled = types.BoolValue(defaultNavigatorRunEEEnabled)
+	}
+
+	if eeModel.Image.IsNull() {
+		eeModel.Image = types.StringValue(defaultNavigatorRunImage)
+	}
+
+	if eeModel.PullPolicy.IsNull() {
+		eeModel.PullPolicy = types.StringValue(defaultNavigatorRunPullPolicy)
+	}
+
+	eeValue, newDiags := types.ObjectValueFrom(ctx, ExecutionEnvironmentModel{}.AttrTypes(), eeModel)
+	diags.Append(newDiags...)
+	m.ExecutionEnvironment = eeValue
+
+	if m.AnsibleOptions.IsNull() {
+		m.AnsibleOptions = AnsibleOptionsModel{}.Defaults()
+	}
+
+	var optsModel AnsibleOptionsModel
+	diags.Append(m.AnsibleOptions.As(ctx, &optsModel, basetypes.ObjectAsOptions{})...)
+
+	if optsModel.KnownHosts.IsNull() {
+		optsModel.KnownHosts = types.ListUnknown(types.StringType)
+	}
+
+	optsResults, newDiags := types.ObjectValueFrom(ctx, AnsibleOptionsModel{}.AttrTypes(), optsModel)
+	diags.Append(newDiags...)
+	m.AnsibleOptions = optsResults
+
+	if m.Timezone.IsNull() {
+		m.Timezone = types.StringValue(defaultNavigatorRunTimezone)
+	}
+
+	return diags
 }
 
 type ExecutionEnvironmentModel struct {
@@ -56,87 +111,6 @@ type ArtifactQueryModel struct {
 	Results  types.List   `tfsdk:"results"`
 }
 
-func navigatorRunDescriptions() map[string]attrDescription {
-	return map[string]attrDescription{
-		"playbook": {
-			Description:         "Ansible playbook contents (YAML).",
-			MarkdownDescription: "Ansible [playbook](https://docs.ansible.com/ansible/latest/playbook_guide/playbooks_intro.html) contents (YAML).",
-		},
-		"inventory": {
-			Description:         fmt.Sprintf("Ansible inventory contents. The environment variable '%s' is set to the path of the inventory in cases where '{{ inventory_file }}' cannot be referenced.", navigatorRunInventoryEnvVar),
-			MarkdownDescription: fmt.Sprintf("Ansible [inventory](https://docs.ansible.com/ansible/latest/getting_started/get_started_inventory.html) contents. The environment variable `%s` is set to the path of the inventory in cases where `{{ inventory_file }}` cannot be referenced.", navigatorRunInventoryEnvVar),
-		},
-		"working_directory": {
-			Description:         fmt.Sprintf("Directory in which '%s' runs. Recommended to be the root Ansible content directory (sometimes called the project directory), which is likely to contain 'ansible.cfg', 'roles/', etc. Defaults to '%s'.", navigator.Program, defaultNavigatorRunWorkingDir),
-			MarkdownDescription: fmt.Sprintf("Directory in which `%s` runs. Recommended to be the root Ansible [content directory](https://docs.ansible.com/ansible/latest/tips_tricks/sample_setup.html#sample-directory-layout) (sometimes called the project directory), which is likely to contain `ansible.cfg`, `roles/`, etc. Defaults to `%s`.", navigator.Program, defaultNavigatorRunWorkingDir),
-		},
-		"execution_environment": {
-			Description:         "Execution environment (EE) related configuration.",
-			MarkdownDescription: "[Execution environment](https://ansible.readthedocs.io/en/latest/getting_started_ee/index.html) (EE) related configuration.",
-		},
-		"ansible_navigator_binary": {
-			Description:         fmt.Sprintf("Path to the '%s' binary. By default '$PATH' is searched.", navigator.Program),
-			MarkdownDescription: fmt.Sprintf("Path to the `%s` binary. By default `$PATH` is searched.", navigator.Program),
-		},
-		"ansible_options": {
-			Description:         "Ansible playbook run related configuration.",
-			MarkdownDescription: "Ansible [playbook](https://docs.ansible.com/ansible/latest/cli/ansible-playbook.html) run related configuration.",
-		},
-		"timezone": {
-			Description:         fmt.Sprintf("IANA time zone, use 'local' for the system time zone. Defaults to '%s'.", defaultNavigatorRunTimezone),
-			MarkdownDescription: fmt.Sprintf("IANA time zone, use `local` for the system time zone. Defaults to `%s`.", defaultNavigatorRunTimezone),
-		},
-		"artifact_queries": {
-			Description:         "Query the Ansible playbook artifact with 'jq' syntax. The playbook artifact contains detailed information about every play and task, as well as the stdout from the playbook run.",
-			MarkdownDescription: "Query the Ansible playbook artifact with [`jq`](https://jqlang.github.io/jq/) syntax. The [playbook artifact](https://access.redhat.com/documentation/en-us/red_hat_ansible_automation_platform/2.0-ea/html/ansible_navigator_creator_guide/assembly-troubleshooting-navigator_ansible-navigator#proc-review-artifact_troubleshooting-navigator) contains detailed information about every play and task, as well as the stdout from the playbook run.",
-		},
-		"id": {
-			Description: "UUID.",
-		},
-		"command": {
-			Description:         fmt.Sprintf("Generated '%s' run command. Useful for troubleshooting.", navigator.Program),
-			MarkdownDescription: fmt.Sprintf("Generated `%s` run command. Useful for troubleshooting.", navigator.Program),
-		},
-	}
-}
-
-func (ExecutionEnvironmentModel) descriptions() map[string]attrDescription {
-	return map[string]attrDescription{
-		"container_engine": {
-			Description:         fmt.Sprintf("Container engine responsible for running the execution environment container image. Options: %s. Defaults to '%s'.", wrapElementsJoin(navigator.ContainerEngineOptions(), "'"), defaultNavigatorRunContainerEngine),
-			MarkdownDescription: fmt.Sprintf("[Container engine](https://ansible.readthedocs.io/projects/navigator/settings/#container-engine) responsible for running the execution environment container image. Options: %s. Defaults to `%s`.", wrapElementsJoin(navigator.ContainerEngineOptions(), "`"), defaultNavigatorRunContainerEngine),
-		},
-		"enabled": {
-			Description:         fmt.Sprintf("Enable or disable the use of an execution environment. Disabling requires '%s' and is only recommended when without a container engine. Defaults to '%t'.", ansible.PlaybookProgram, defaultNavigatorRunEEEnabled),
-			MarkdownDescription: fmt.Sprintf("Enable or disable the use of an execution environment. Disabling requires `%s` and is only recommended when without a container engine. Defaults to `%t`.", ansible.PlaybookProgram, defaultNavigatorRunEEEnabled),
-		},
-		"environment_variables_pass": {
-			Description:         "Existing environment variables to be passed through to and set within the execution environment.",
-			MarkdownDescription: "Existing environment variables to be [passed](https://ansible.readthedocs.io/projects/navigator/settings/#pass-environment-variable) through to and set within the execution environment.",
-		},
-		"environment_variables_set": {
-			Description:         "Environment variables to be set within the execution environment.",
-			MarkdownDescription: "Environment variables to be [set](https://ansible.readthedocs.io/projects/navigator/settings/#set-environment-variable) within the execution environment.",
-		},
-		"image": {
-			Description:         fmt.Sprintf("Name of the execution environment container image. Defaults to '%s'.", defaultNavigatorRunImage),
-			MarkdownDescription: fmt.Sprintf("Name of the execution environment container [image](https://ansible.readthedocs.io/projects/navigator/settings/#execution-environment-image). Defaults to `%s`.", defaultNavigatorRunImage),
-		},
-		"pull_arguments": {
-			Description:         "Additional parameters that should be added to the pull command when pulling an execution environment container image from a container registry.",
-			MarkdownDescription: "Additional [parameters](https://ansible.readthedocs.io/projects/navigator/settings/#pull-arguments) that should be added to the pull command when pulling an execution environment container image from a container registry.",
-		},
-		"pull_policy": {
-			Description:         fmt.Sprintf("Container image pull policy. Defaults to '%s'.", defaultNavigatorRunPullPolicy),
-			MarkdownDescription: fmt.Sprintf("Container image [pull policy](https://ansible.readthedocs.io/projects/navigator/settings/#pull-policy). Defaults to `%s`.", defaultNavigatorRunPullPolicy),
-		},
-		"container_options": {
-			Description:         "Extra parameters passed to the container engine command.",
-			MarkdownDescription: "[Extra parameters](https://ansible.readthedocs.io/projects/navigator/settings/#container-options) passed to the container engine command.",
-		},
-	}
-}
-
 func (ExecutionEnvironmentModel) AttrTypes() map[string]attr.Type {
 	return map[string]attr.Type{
 		"container_engine":           types.StringType,
@@ -150,7 +124,7 @@ func (ExecutionEnvironmentModel) AttrTypes() map[string]attr.Type {
 	}
 }
 
-func (ExecutionEnvironmentModel) Defaults() basetypes.ObjectValue {
+func (ExecutionEnvironmentModel) Defaults() types.Object {
 	return types.ObjectValueMust(
 		ExecutionEnvironmentModel{}.AttrTypes(),
 		map[string]attr.Value{
@@ -169,7 +143,7 @@ func (ExecutionEnvironmentModel) Defaults() basetypes.ObjectValue {
 func (m ExecutionEnvironmentModel) Value(ctx context.Context, execEnv *navigator.ExecutionEnvironment) diag.Diagnostics {
 	var diags diag.Diagnostics
 
-	execEnv.ContainerEngine = m.ContainerEngine.ValueString()
+	execEnv.ContainerEngine = navigator.ContainerEngine(m.ContainerEngine.ValueString())
 
 	execEnv.Enabled = m.Enabled.ValueBool()
 
@@ -195,7 +169,7 @@ func (m ExecutionEnvironmentModel) Value(ctx context.Context, execEnv *navigator
 	}
 	execEnv.Pull.Arguments = pullArguments
 
-	execEnv.Pull.Policy = m.PullPolicy.ValueString()
+	execEnv.Pull.Policy = navigator.PullPolicy(m.PullPolicy.ValueString())
 
 	var containerOptions []string
 	if !m.ContainerOptions.IsNull() {
@@ -204,42 +178,6 @@ func (m ExecutionEnvironmentModel) Value(ctx context.Context, execEnv *navigator
 	execEnv.ContainerOptions = containerOptions
 
 	return diags
-}
-
-func (AnsibleOptionsModel) descriptions() map[string]attrDescription {
-	return map[string]attrDescription{
-		"extra_vars": {
-			Description:         "Set additional variables (YAML).",
-			MarkdownDescription: "Set additional [variables](https://docs.ansible.com/projects/ansible/latest/playbook_guide/playbooks_variables.html#defining-variables-at-runtime) (YAML).",
-		},
-		"force_handlers": {
-			Description: "Run handlers even if a task fails.",
-		},
-		"skip_tags": {
-			Description: "Only run plays and tasks whose tags do not match these values.",
-		},
-		"start_at_task": {
-			Description: "Start the playbook at the task matching this name.",
-		},
-		"limit": {
-			Description: "Further limit selected hosts to an additional pattern.",
-		},
-		"tags": {
-			Description: "Only run plays and tasks tagged with these values.",
-		},
-		"private_keys": {
-			Description:         "SSH private keys used for authentication in addition to the automatically mounted default named keys and SSH agent socket path.",
-			MarkdownDescription: "SSH private keys used for authentication in addition to the [automatically mounted](https://ansible.readthedocs.io/projects/navigator/faq/#how-do-i-use-my-ssh-keys-with-an-execution-environment) default named keys and SSH agent socket path.",
-		},
-		"known_hosts": {
-			Description:         fmt.Sprintf("SSH known host entries. Ansible variable '%s' set to path of 'known_hosts' file and SSH option 'UserKnownHostsFile' must be configured to that path. Defaults to all of the 'known_hosts' entries recorded.", ansible.SSHKnownHostsFileVar),
-			MarkdownDescription: fmt.Sprintf("SSH known host entries. Ansible variable `%s` set to path of `known_hosts` file and SSH option `UserKnownHostsFile` must be configured to that path. Defaults to all of the `known_hosts` entries recorded.", ansible.SSHKnownHostsFileVar),
-		},
-		"host_key_checking": {
-			Description:         fmt.Sprintf("SSH host key checking. Can help protect against man-in-the-middle attacks by verifying the identity of hosts. Ansible runner (library used by '%s') defaults this option to '%t' explicitly.", navigator.Program, ansible.RunnerDefaultHostKeyChecking),
-			MarkdownDescription: fmt.Sprintf("SSH host key checking. Can help protect against man-in-the-middle attacks by verifying the identity of hosts. Ansible runner (library used by `%s`) defaults this option to `%t` explicitly.", navigator.Program, ansible.RunnerDefaultHostKeyChecking),
-		},
-	}
 }
 
 func (AnsibleOptionsModel) AttrTypes() map[string]attr.Type {
@@ -256,7 +194,7 @@ func (AnsibleOptionsModel) AttrTypes() map[string]attr.Type {
 	}
 }
 
-func (AnsibleOptionsModel) Defaults() basetypes.ObjectValue {
+func (AnsibleOptionsModel) Defaults() types.Object {
 	return types.ObjectValueMust(
 		AnsibleOptionsModel{}.AttrTypes(),
 		map[string]attr.Value{
@@ -313,17 +251,6 @@ func (m *AnsibleOptionsModel) Set(ctx context.Context, run navigatorRunData) dia
 	return diags
 }
 
-func (PrivateKeyModel) descriptions() map[string]attrDescription {
-	return map[string]attrDescription{
-		"name": {
-			Description: "Key name.",
-		},
-		"data": {
-			Description: "Key data.",
-		},
-	}
-}
-
 func (PrivateKeyModel) AttrTypes() map[string]attr.Type {
 	return map[string]attr.Type{
 		"name": types.StringType,
@@ -338,19 +265,6 @@ func (m PrivateKeyModel) Value(_ context.Context, key *ansible.PrivateKey) diag.
 	key.Data = m.Data.ValueString()
 
 	return diags
-}
-
-func (ArtifactQueryModel) descriptions() map[string]attrDescription {
-	return map[string]attrDescription{
-		"jq_filter": {
-			Description:         "'jq' filter. Example: '.status, .stdout'.",
-			MarkdownDescription: "`jq` filter. Example: `.status, .stdout`.",
-		},
-		"results": {
-			Description:         "Results of the 'jq' filter in JSON format.",
-			MarkdownDescription: "Results of the `jq` filter in JSON format.",
-		},
-	}
 }
 
 func (ArtifactQueryModel) AttrTypes() map[string]attr.Type {

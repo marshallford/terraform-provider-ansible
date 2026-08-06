@@ -3,30 +3,18 @@ package provider
 import (
 	"context"
 	"fmt"
+	"slices"
 
 	"github.com/google/uuid"
-	"github.com/hashicorp/terraform-plugin-framework-jsontypes/jsontypes"
 	"github.com/hashicorp/terraform-plugin-framework-timeouts/resource/timeouts"
-	"github.com/hashicorp/terraform-plugin-framework-validators/listvalidator"
-	"github.com/hashicorp/terraform-plugin-framework-validators/mapvalidator"
-	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
-	"github.com/hashicorp/terraform-plugin-framework/resource/schema/booldefault"
-	"github.com/hashicorp/terraform-plugin-framework/resource/schema/dynamicplanmodifier"
-	"github.com/hashicorp/terraform-plugin-framework/resource/schema/listplanmodifier"
-	"github.com/hashicorp/terraform-plugin-framework/resource/schema/objectdefault"
-	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
-	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringdefault"
-	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
-	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-framework/types/basetypes"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/marshallford/terraform-provider-ansible/pkg/ansible"
-	"github.com/marshallford/terraform-provider-ansible/pkg/ansible/navigator"
 )
 
 var (
@@ -34,14 +22,6 @@ var (
 	_ resource.ResourceWithConfigure  = (*NavigatorRunResource)(nil)
 	_ resource.ResourceWithModifyPlan = (*NavigatorRunResource)(nil)
 )
-
-func NewNavigatorRunResource() resource.Resource { //nolint:ireturn
-	return &NavigatorRunResource{}
-}
-
-type NavigatorRunResource struct {
-	opts *providerOptions
-}
 
 type NavigatorRunResourceModel struct {
 	NavigatorRunCommonModel
@@ -92,361 +72,60 @@ func (m *NavigatorRunResourceModel) Set(ctx context.Context, run navigatorRunDat
 	return run.Store(ctx, &m.Command, &m.AnsibleOptions, &m.ArtifactQueries)
 }
 
+func (m *NavigatorRunResourceModel) Trigger(name string) attr.Value { //nolint:ireturn
+	if m.Triggers.IsNull() {
+		return types.DynamicNull()
+	}
+
+	return m.Triggers.Attributes()[name]
+}
+
+func (m *NavigatorRunResourceModel) ShouldRun(state *NavigatorRunResourceModel) bool {
+	if !m.Trigger("exclusive_run").IsNull() {
+		return !m.Trigger("exclusive_run").Equal(state.Trigger("exclusive_run"))
+	}
+
+	// skip working_directory, ansible_navigator_binary, run_on_destroy, destroy_playbook, timeouts
+	unchanged := []bool{
+		m.Playbook.Equal(state.Playbook),
+		m.Inventory.Equal(state.Inventory),
+		m.ExecutionEnvironment.Equal(state.ExecutionEnvironment),
+		m.AnsibleOptions.Equal(state.AnsibleOptions),
+		m.Timezone.Equal(state.Timezone),
+		m.Trigger("run").Equal(state.Trigger("run")),
+		m.ArtifactQueries.Equal(state.ArtifactQueries),
+	}
+
+	return slices.Contains(unchanged, false)
+}
+
+type NavigatorRunResource struct {
+	opts *providerOptions
+}
+
+func NewNavigatorRunResource() resource.Resource { //nolint:ireturn
+	return &NavigatorRunResource{}
+}
+
 func (r *NavigatorRunResource) Metadata(_ context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
 	resp.TypeName = fmt.Sprintf("%s_navigator_run", req.ProviderTypeName)
 }
 
-//nolint:maintidx,dupl
 func (r *NavigatorRunResource) Schema(ctx context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
+	description := navigatorRunDescription(surfaceResource)
+	attributes := navigatorRunAttributes(surfaceResource)
+	// TODO include defaultNavigatorRunTimeout in description
+	attributes["timeouts"] = timeouts.Attributes(ctx, timeouts.Opts{
+		Create: true,
+		Update: true,
+		Delete: true,
+	})
+
 	resp.Schema = schema.Schema{
-		Description:         fmt.Sprintf("Run an Ansible playbook. Requires '%s' and a container engine to run within an execution environment (EE).", navigator.Program),
-		MarkdownDescription: fmt.Sprintf("Run an Ansible playbook. Requires `%s` and a container engine to run within an execution environment (EE).", navigator.Program),
-		Attributes: map[string]schema.Attribute{
-			// required
-			"playbook": schema.StringAttribute{
-				Description:         navigatorRunDescriptions()["playbook"].Description,
-				MarkdownDescription: navigatorRunDescriptions()["playbook"].MarkdownDescription,
-				Required:            true,
-				Validators: []validator.String{
-					stringvalidator.LengthAtLeast(1),
-					stringIsYAML(),
-				},
-			},
-			"inventory": schema.StringAttribute{
-				Description:         fmt.Sprintf("%s In addition, the environment variable '%s' is set to the path of the last applied inventory when the resource is updated.", navigatorRunDescriptions()["inventory"].Description, navigatorRunPrevInventoryEnvVar),
-				MarkdownDescription: fmt.Sprintf("%s In addition, the environment variable `%s` is set to the path of the last applied inventory when the resource is updated.", navigatorRunDescriptions()["inventory"].MarkdownDescription, navigatorRunPrevInventoryEnvVar),
-				Required:            true,
-				Validators: []validator.String{
-					stringvalidator.LengthAtLeast(1),
-				},
-			},
-			// optional
-			"working_directory": schema.StringAttribute{
-				Description:         navigatorRunDescriptions()["working_directory"].Description,
-				MarkdownDescription: navigatorRunDescriptions()["working_directory"].MarkdownDescription,
-				Optional:            true,
-				Computed:            true,
-				Default:             stringdefault.StaticString(defaultNavigatorRunWorkingDir),
-				Validators: []validator.String{
-					stringvalidator.LengthAtLeast(1),
-				},
-			},
-			"execution_environment": schema.SingleNestedAttribute{
-				Description:         navigatorRunDescriptions()["execution_environment"].Description,
-				MarkdownDescription: navigatorRunDescriptions()["execution_environment"].MarkdownDescription,
-				Optional:            true,
-				Computed:            true,
-				Default:             objectdefault.StaticValue(ExecutionEnvironmentModel{}.Defaults()),
-				Attributes: map[string]schema.Attribute{
-					"container_engine": schema.StringAttribute{
-						Description:         ExecutionEnvironmentModel{}.descriptions()["container_engine"].Description,
-						MarkdownDescription: ExecutionEnvironmentModel{}.descriptions()["container_engine"].MarkdownDescription,
-						Optional:            true,
-						Computed:            true,
-						Default:             stringdefault.StaticString(defaultNavigatorRunContainerEngine),
-						Validators: []validator.String{
-							stringvalidator.OneOf(navigator.ContainerEngineOptions()...),
-						},
-					},
-					"enabled": schema.BoolAttribute{
-						Description:         ExecutionEnvironmentModel{}.descriptions()["enabled"].Description,
-						MarkdownDescription: ExecutionEnvironmentModel{}.descriptions()["enabled"].MarkdownDescription,
-						Optional:            true,
-						Computed:            true,
-						Default:             booldefault.StaticBool(defaultNavigatorRunEEEnabled),
-					},
-					"environment_variables_pass": schema.ListAttribute{
-						Description:         ExecutionEnvironmentModel{}.descriptions()["environment_variables_pass"].Description,
-						MarkdownDescription: ExecutionEnvironmentModel{}.descriptions()["environment_variables_pass"].MarkdownDescription,
-						Optional:            true,
-						ElementType:         types.StringType,
-						Validators: []validator.List{
-							listvalidator.ValueStringsAre(stringIsEnvVarName()),
-						},
-					},
-					"environment_variables_set": schema.MapAttribute{
-						Description:         fmt.Sprintf("%s '%s' is automatically set to the current CRUD operation (%s).", ExecutionEnvironmentModel{}.descriptions()["environment_variables_set"].Description, navigatorRunOperationEnvVar, wrapElementsJoin(terraformOps([]terraformOp{terraformOpCreate, terraformOpUpdate, terraformOpDelete}).Strings(), "'")),
-						MarkdownDescription: fmt.Sprintf("%s `%s` is automatically set to the current CRUD operation (%s).", ExecutionEnvironmentModel{}.descriptions()["environment_variables_set"].MarkdownDescription, navigatorRunOperationEnvVar, wrapElementsJoin(terraformOps([]terraformOp{terraformOpCreate, terraformOpUpdate, terraformOpDelete}).Strings(), "`")),
-						Optional:            true,
-						ElementType:         types.StringType,
-						Validators: []validator.Map{
-							mapvalidator.KeysAre(stringIsEnvVarName()),
-						},
-					},
-					"image": schema.StringAttribute{
-						Description:         ExecutionEnvironmentModel{}.descriptions()["image"].Description,
-						MarkdownDescription: ExecutionEnvironmentModel{}.descriptions()["image"].MarkdownDescription,
-						Optional:            true,
-						Computed:            true,
-						Default:             stringdefault.StaticString(defaultNavigatorRunImage),
-						Validators: []validator.String{
-							stringIsContainerImageName(),
-						},
-					},
-					"pull_arguments": schema.ListAttribute{
-						Description:         ExecutionEnvironmentModel{}.descriptions()["pull_arguments"].Description,
-						MarkdownDescription: ExecutionEnvironmentModel{}.descriptions()["pull_arguments"].MarkdownDescription,
-						Optional:            true,
-						ElementType:         types.StringType,
-						Validators: []validator.List{
-							listvalidator.ValueStringsAre(stringvalidator.LengthAtLeast(1)),
-						},
-					},
-					"pull_policy": schema.StringAttribute{
-						Description:         ExecutionEnvironmentModel{}.descriptions()["pull_policy"].Description,
-						MarkdownDescription: ExecutionEnvironmentModel{}.descriptions()["pull_policy"].MarkdownDescription,
-						Optional:            true,
-						Computed:            true,
-						Default:             stringdefault.StaticString(defaultNavigatorRunPullPolicy),
-						Validators: []validator.String{
-							stringvalidator.OneOf(navigator.PullPolicyOptions()...),
-						},
-					},
-					"container_options": schema.ListAttribute{
-						Description:         ExecutionEnvironmentModel{}.descriptions()["container_options"].Description,
-						MarkdownDescription: ExecutionEnvironmentModel{}.descriptions()["container_options"].MarkdownDescription,
-						Optional:            true,
-						ElementType:         types.StringType,
-						Validators: []validator.List{
-							listvalidator.ValueStringsAre(stringvalidator.LengthAtLeast(1)),
-						},
-					},
-				},
-			},
-			"ansible_navigator_binary": schema.StringAttribute{
-				Description:         navigatorRunDescriptions()["ansible_navigator_binary"].Description,
-				MarkdownDescription: navigatorRunDescriptions()["ansible_navigator_binary"].MarkdownDescription,
-				Optional:            true,
-				Validators: []validator.String{
-					stringvalidator.LengthAtLeast(1),
-				},
-			},
-			"ansible_options": schema.SingleNestedAttribute{
-				Description:         navigatorRunDescriptions()["ansible_options"].Description,
-				MarkdownDescription: navigatorRunDescriptions()["ansible_options"].MarkdownDescription,
-				Optional:            true,
-				Computed:            true,
-				Default:             objectdefault.StaticValue(AnsibleOptionsModel{}.Defaults()),
-				Attributes: map[string]schema.Attribute{
-					"extra_vars": schema.StringAttribute{
-						Description:         AnsibleOptionsModel{}.descriptions()["extra_vars"].Description,
-						MarkdownDescription: AnsibleOptionsModel{}.descriptions()["extra_vars"].MarkdownDescription,
-						Optional:            true,
-						Validators: []validator.String{
-							stringvalidator.LengthAtLeast(1),
-							stringIsYAML(),
-						},
-					},
-					"force_handlers": schema.BoolAttribute{
-						Description: AnsibleOptionsModel{}.descriptions()["force_handlers"].Description,
-						Optional:    true,
-					},
-					"skip_tags": schema.ListAttribute{
-						Description: AnsibleOptionsModel{}.descriptions()["skip_tags"].Description,
-						Optional:    true,
-						ElementType: types.StringType,
-						Validators: []validator.List{
-							listvalidator.ValueStringsAre(stringvalidator.LengthAtLeast(1)),
-						},
-					},
-					"start_at_task": schema.StringAttribute{
-						Description: AnsibleOptionsModel{}.descriptions()["start_at_task"].Description,
-						Optional:    true,
-						Validators: []validator.String{
-							stringvalidator.LengthAtLeast(1),
-						},
-					},
-					"limit": schema.ListAttribute{
-						Description: AnsibleOptionsModel{}.descriptions()["limit"].Description,
-						Optional:    true,
-						ElementType: types.StringType,
-						Validators: []validator.List{
-							listvalidator.ValueStringsAre(stringvalidator.LengthAtLeast(1)),
-						},
-					},
-					"tags": schema.ListAttribute{
-						Description: AnsibleOptionsModel{}.descriptions()["tags"].Description,
-						Optional:    true,
-						ElementType: types.StringType,
-						Validators: []validator.List{
-							listvalidator.ValueStringsAre(stringvalidator.LengthAtLeast(1)),
-						},
-					},
-					"private_keys": schema.ListNestedAttribute{
-						Description:         AnsibleOptionsModel{}.descriptions()["private_keys"].Description,
-						MarkdownDescription: AnsibleOptionsModel{}.descriptions()["private_keys"].MarkdownDescription,
-						Optional:            true,
-						NestedObject: schema.NestedAttributeObject{
-							Attributes: map[string]schema.Attribute{
-								"name": schema.StringAttribute{
-									Description: PrivateKeyModel{}.descriptions()["name"].Description,
-									Required:    true,
-									Validators: []validator.String{
-										stringIsSSHPrivateKeyName(),
-									},
-								},
-								"data": schema.StringAttribute{
-									Description: PrivateKeyModel{}.descriptions()["data"].Description,
-									Required:    true,
-									Sensitive:   true,
-									Validators: []validator.String{
-										stringIsSSHPrivateKey(),
-									},
-								},
-							},
-						},
-					},
-					"known_hosts": schema.ListAttribute{
-						Description:         AnsibleOptionsModel{}.descriptions()["known_hosts"].Description,
-						MarkdownDescription: AnsibleOptionsModel{}.descriptions()["known_hosts"].MarkdownDescription,
-						Optional:            true,
-						Computed:            true,
-						ElementType:         types.StringType,
-						Validators: []validator.List{
-							listvalidator.ValueStringsAre(stringIsSSHKnownHost()),
-						},
-					},
-					"host_key_checking": schema.BoolAttribute{
-						Description:         AnsibleOptionsModel{}.descriptions()["host_key_checking"].Description,
-						MarkdownDescription: AnsibleOptionsModel{}.descriptions()["host_key_checking"].MarkdownDescription,
-						Optional:            true,
-					},
-				},
-			},
-			"timezone": schema.StringAttribute{
-				Description:         navigatorRunDescriptions()["timezone"].Description,
-				MarkdownDescription: navigatorRunDescriptions()["timezone"].MarkdownDescription,
-				Optional:            true,
-				Computed:            true,
-				Default:             stringdefault.StaticString(defaultNavigatorRunTimezone),
-				Validators: []validator.String{
-					stringIsIANATimezone(),
-				},
-			},
-			"run_on_destroy": schema.BoolAttribute{
-				Description:         fmt.Sprintf("Run playbook (or alternatively 'destroy_playbook' if configured) on destroy. The environment variable '%s' is set to '%s' during the run to allow for conditional plays, tasks, etc. Defaults to '%t'.", navigatorRunOperationEnvVar, terraformOp(terraformOpDelete), defaultNavigatorRunOnDestroy),
-				MarkdownDescription: fmt.Sprintf("Run playbook (or alternatively `destroy_playbook` if configured) on destroy. The environment variable `%s` is set to `%s` during the run to allow for conditional plays, tasks, etc. Defaults to `%t`.", navigatorRunOperationEnvVar, terraformOp(terraformOpDelete), defaultNavigatorRunOnDestroy),
-				Optional:            true,
-				Computed:            true,
-				Default:             booldefault.StaticBool(defaultNavigatorRunOnDestroy),
-			},
-			"destroy_playbook": schema.StringAttribute{
-				Description:         fmt.Sprintf("%s Only run on destroy ('run_on_destroy' must be 'true').", navigatorRunDescriptions()["playbook"].Description),
-				MarkdownDescription: fmt.Sprintf("%s Only run on destroy (`run_on_destroy` must be `true`).", navigatorRunDescriptions()["playbook"].Description),
-				Optional:            true,
-				Validators: []validator.String{
-					stringvalidator.LengthAtLeast(1),
-					stringIsYAML(),
-				},
-			},
-			"triggers": schema.SingleNestedAttribute{
-				Description: "Trigger various behaviors via arbitrary values.",
-				Optional:    true,
-				Attributes: map[string]schema.Attribute{
-					"run": schema.DynamicAttribute{
-						Description: "A value that, when changed, will run the playbook again. Provides a way to initiate a run without changing other attributes such as the inventory or playbook.",
-						Optional:    true,
-					},
-					"exclusive_run": schema.DynamicAttribute{
-						Description: "When non-null, only changes to this value will run the playbook again. All other changes are ignored, the exception being resource destruction or replacement. Provides fine-grained control for advanced use cases.",
-						Optional:    true,
-					},
-					"replace": schema.DynamicAttribute{
-						Description:         "A value that, when changed, will recreate the resource. Serves as an alternative to the native 'replace_triggered_by' lifecycle argument. Will cause 'id' to change. May be useful when combined with 'run_on_destroy'.",
-						MarkdownDescription: "A value that, when changed, will recreate the resource. Serves as an alternative to the native [`replace_triggered_by`](https://developer.hashicorp.com/terraform/language/meta-arguments/lifecycle#replace_triggered_by) lifecycle argument. Will cause `id` to change. May be useful when combined with `run_on_destroy`.",
-						Optional:            true,
-						PlanModifiers: []planmodifier.Dynamic{
-							dynamicplanmodifier.RequiresReplace(),
-						},
-					},
-					"known_hosts": schema.DynamicAttribute{
-						Description: "A value that, when changed, will reset the computed list of SSH known host entries. Useful when inventory hosts are recreated with the same hostnames/IP addresses, but different SSH keypairs.",
-						Optional:    true,
-					},
-				},
-			},
-			"artifact_queries": schema.MapNestedAttribute{
-				Description:         navigatorRunDescriptions()["artifact_queries"].Description,
-				MarkdownDescription: navigatorRunDescriptions()["artifact_queries"].MarkdownDescription,
-				Optional:            true,
-				NestedObject: schema.NestedAttributeObject{
-					Attributes: map[string]schema.Attribute{
-						"jq_filter": schema.StringAttribute{
-							Description:         ArtifactQueryModel{}.descriptions()["jq_filter"].Description,
-							MarkdownDescription: ArtifactQueryModel{}.descriptions()["jq_filter"].MarkdownDescription,
-							Required:            true,
-							Validators: []validator.String{
-								stringIsJQFilter(),
-							},
-						},
-						"results": schema.ListAttribute{ // TODO switch to a dynamic attribute when supported as an element in a collection
-							Description:         ArtifactQueryModel{}.descriptions()["results"].Description,
-							MarkdownDescription: ArtifactQueryModel{}.descriptions()["results"].MarkdownDescription,
-							Computed:            true,
-							ElementType:         jsontypes.NormalizedType{},
-							PlanModifiers: []planmodifier.List{
-								listplanmodifier.UseStateForUnknown(),
-							},
-						},
-					},
-				},
-			},
-			"id": schema.StringAttribute{
-				Description: navigatorRunDescriptions()["id"].Description,
-				Computed:    true,
-				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.UseStateForUnknown(),
-				},
-			},
-			"command": schema.StringAttribute{
-				Description:         navigatorRunDescriptions()["command"].Description,
-				MarkdownDescription: navigatorRunDescriptions()["command"].MarkdownDescription,
-				Computed:            true,
-				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.UseStateForUnknown(),
-				},
-			},
-			// TODO include defaultNavigatorRunTimeout in description
-			"timeouts": timeouts.Attributes(ctx, timeouts.Opts{
-				Create: true,
-				Update: true,
-				Delete: true,
-			}),
-		},
+		Description:         description.Description,
+		MarkdownDescription: description.MarkdownDescription,
+		Attributes:          attributes,
 	}
-}
-
-func (NavigatorRunResource) TriggersAttr(data *NavigatorRunResourceModel, attribute string) attr.Value { //nolint:ireturn
-	if data.Triggers.IsNull() {
-		return types.DynamicNull()
-	}
-
-	return data.Triggers.Attributes()[attribute]
-}
-
-func (r *NavigatorRunResource) ShouldRun(plan *NavigatorRunResourceModel, state *NavigatorRunResourceModel) bool {
-	if !r.TriggersAttr(plan, "exclusive_run").IsNull() {
-		return !r.TriggersAttr(plan, "exclusive_run").Equal(r.TriggersAttr(state, "exclusive_run"))
-	}
-
-	// skip working_directory, ansible_navigator_binary, run_on_destroy, destroy_playbook, timeouts
-	attributeChanges := []bool{
-		plan.Playbook.Equal(state.Playbook),
-		plan.Inventory.Equal(state.Inventory),
-		plan.ExecutionEnvironment.Equal(state.ExecutionEnvironment),
-		plan.AnsibleOptions.Equal(state.AnsibleOptions),
-		plan.Timezone.Equal(state.Timezone),
-		r.TriggersAttr(plan, "run").Equal(r.TriggersAttr(state, "run")),
-		plan.ArtifactQueries.Equal(state.ArtifactQueries),
-	}
-
-	for _, attributeChange := range attributeChanges {
-		if !attributeChange {
-			return true
-		}
-	}
-
-	return false
 }
 
 func (r *NavigatorRunResource) Configure(_ context.Context, req resource.ConfigureRequest, resp *resource.ConfigureResponse) {
@@ -491,7 +170,9 @@ func (r *NavigatorRunResource) ModifyPlan(ctx context.Context, req resource.Modi
 	resp.Diagnostics.Append(data.AnsibleOptions.As(ctx, &optsPlanModel, basetypes.ObjectAsOptions{})...)
 	resp.Diagnostics.Append(state.AnsibleOptions.As(ctx, &optsStateModel, basetypes.ObjectAsOptions{})...)
 
-	if optsPlanModel.KnownHosts.IsUnknown() && r.TriggersAttr(data, "known_hosts").Equal(r.TriggersAttr(state, "known_hosts")) {
+	if optsPlanModel.KnownHosts.IsUnknown() && data.Trigger("known_hosts").Equal(state.Trigger("known_hosts")) {
+		tflog.Trace(ctx, "keeping known hosts from state")
+
 		optsPlanModel.KnownHosts = optsStateModel.KnownHosts
 	}
 
@@ -499,7 +180,9 @@ func (r *NavigatorRunResource) ModifyPlan(ctx context.Context, req resource.Modi
 	resp.Diagnostics.Append(newDiags...)
 	data.AnsibleOptions = optsPlanValue
 
-	if !r.ShouldRun(data, state) {
+	if !data.ShouldRun(state) {
+		tflog.Debug(ctx, "planning no run", map[string]any{"reason": "no changes to run for"})
+
 		return
 	}
 
@@ -534,7 +217,7 @@ func (r *NavigatorRunResource) Create(ctx context.Context, req resource.CreateRe
 		return
 	}
 
-	tflog.SetField(ctx, "runs", runs)
+	ctx = tflog.SetField(ctx, "runs", runs)
 
 	timeout, newDiags := terraformOperationResourceTimeout(ctx, terraformOpCreate, data.Timeouts, defaultNavigatorRunTimeout)
 	resp.Diagnostics.Append(newDiags...)
@@ -588,8 +271,8 @@ func (r *NavigatorRunResource) Update(ctx context.Context, req resource.UpdateRe
 		}
 	}()
 
-	if !r.ShouldRun(data, state) {
-		tflog.Debug(ctx, "skipping run")
+	if !data.ShouldRun(state) {
+		tflog.Debug(ctx, "skipping run", map[string]any{"reason": "no changes to run for"})
 
 		return
 	}
@@ -600,7 +283,7 @@ func (r *NavigatorRunResource) Update(ctx context.Context, req resource.UpdateRe
 		return
 	}
 
-	tflog.SetField(ctx, "runs", runs)
+	ctx = tflog.SetField(ctx, "runs", runs)
 
 	timeout, newDiags := terraformOperationResourceTimeout(ctx, terraformOpUpdate, data.Timeouts, defaultNavigatorRunTimeout)
 	resp.Diagnostics.Append(newDiags...)
@@ -641,7 +324,7 @@ func (r *NavigatorRunResource) Delete(ctx context.Context, req resource.DeleteRe
 	}
 
 	if !data.RunOnDestroy.ValueBool() {
-		tflog.Debug(ctx, "skipping run, 'run_on_destroy' disabled")
+		tflog.Debug(ctx, "skipping run", map[string]any{"reason": "run_on_destroy disabled"})
 
 		return
 	}
@@ -652,7 +335,7 @@ func (r *NavigatorRunResource) Delete(ctx context.Context, req resource.DeleteRe
 		return
 	}
 
-	tflog.SetField(ctx, "runs", runs)
+	ctx = tflog.SetField(ctx, "runs", runs)
 
 	timeout, newDiags := terraformOperationResourceTimeout(ctx, terraformOpDelete, data.Timeouts, defaultNavigatorRunTimeout)
 	resp.Diagnostics.Append(newDiags...)

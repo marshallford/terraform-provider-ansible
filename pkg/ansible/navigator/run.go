@@ -10,12 +10,11 @@ import (
 )
 
 const (
-	Program             = "ansible-navigator"
-	ContainerEngineAuto = "auto"
+	Program = "ansible-navigator"
 
 	playbookArtifactFilename  = "playbook-artifact.json"
-	navigatorLogFilename      = "ansible-navigator.log"
-	navigatorSettingsFilename = "ansible-navigator.yaml"
+	navigatorLogFilename      = Program + ".log"
+	navigatorSettingsFilename = Program + ".yaml"
 	dirPermissions            = 0o700
 	filePermissions           = 0o600
 

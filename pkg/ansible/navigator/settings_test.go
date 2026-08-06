@@ -11,7 +11,7 @@ func TestVolumeMountOptionsMatchNavigator(t *testing.T) {
 
 	want := VolumeMountOptions{"O", "ro", "rw", "z", "Z"}
 
-	got := slices.Clone(validVolumeMountOptions())
+	got := slices.Clone(allVolumeMountOptions())
 	slices.Sort(got)
 	slices.Sort(want)
 
@@ -48,7 +48,7 @@ func TestVolumeMountOptionsString(t *testing.T) {
 func TestVolumeMountOptionsStringHasNoStraySeparator(t *testing.T) {
 	t.Parallel()
 
-	for _, option := range validVolumeMountOptions() {
+	for _, option := range allVolumeMountOptions() {
 		got := VolumeMountOptions{option}.String()
 		if strings.Contains(got, ",") {
 			t.Errorf("option %q rendered with a separator: %q", option, got)

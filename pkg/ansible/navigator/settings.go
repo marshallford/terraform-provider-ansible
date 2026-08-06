@@ -9,7 +9,68 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
+type ContainerEngine string
+
+type ContainerEngines []ContainerEngine
+
+const (
+	ContainerEngineAuto   ContainerEngine = "auto"
+	ContainerEnginePodman ContainerEngine = "podman"
+	ContainerEngineDocker ContainerEngine = "docker"
+)
+
+func (e ContainerEngine) String() string {
+	return string(e)
+}
+
+func (e ContainerEngines) Strings() []string {
+	engines := make([]string, 0, len(e))
+	for _, engine := range e {
+		engines = append(engines, engine.String())
+	}
+
+	return engines
+}
+
+func containerEnginePrograms() ContainerEngines {
+	return ContainerEngines{ContainerEnginePodman, ContainerEngineDocker}
+}
+
+func AllContainerEngines() ContainerEngines {
+	return append(containerEnginePrograms(), ContainerEngineAuto)
+}
+
+type PullPolicy string
+
+type PullPolicies []PullPolicy
+
+const (
+	PullPolicyAlways  PullPolicy = "always"
+	PullPolicyMissing PullPolicy = "missing"
+	PullPolicyNever   PullPolicy = "never"
+	PullPolicyTag     PullPolicy = "tag"
+)
+
+func (p PullPolicy) String() string {
+	return string(p)
+}
+
+func (p PullPolicies) Strings() []string {
+	policies := make([]string, 0, len(p))
+	for _, policy := range p {
+		policies = append(policies, policy.String())
+	}
+
+	return policies
+}
+
+func AllPullPolicies() PullPolicies {
+	return PullPolicies{PullPolicyAlways, PullPolicyMissing, PullPolicyNever, PullPolicyTag}
+}
+
 type VolumeMountOption string
+
+type VolumeMountOptions []VolumeMountOption
 
 const (
 	VolumeMountOverlay         VolumeMountOption = "O"
@@ -19,18 +80,20 @@ const (
 	VolumeMountRelabelUnshared VolumeMountOption = "Z"
 )
 
-type VolumeMountOptions []VolumeMountOption
+func (o VolumeMountOption) String() string {
+	return string(o)
+}
 
 func (o VolumeMountOptions) String() string {
 	options := make([]string, 0, len(o))
 	for _, option := range o {
-		options = append(options, string(option))
+		options = append(options, option.String())
 	}
 
 	return strings.Join(options, ",")
 }
 
-func validVolumeMountOptions() VolumeMountOptions {
+func allVolumeMountOptions() VolumeMountOptions {
 	return VolumeMountOptions{
 		VolumeMountOverlay,
 		VolumeMountReadOnly,
@@ -48,7 +111,7 @@ type VolumeMount struct {
 
 type Pull struct {
 	Arguments []string
-	Policy    string
+	Policy    PullPolicy
 }
 
 type EnvironmentVariables struct {
@@ -56,8 +119,6 @@ type EnvironmentVariables struct {
 	Set  map[string]string
 }
 
-// The value comes from the navigator process, so a Set entry for the same name
-// would compete with it.
 func (e *EnvironmentVariables) pass(name string) {
 	if !slices.Contains(e.Pass, name) {
 		e.Pass = append(e.Pass, name)
@@ -68,7 +129,7 @@ func (e *EnvironmentVariables) pass(name string) {
 
 type ExecutionEnvironment struct {
 	Enabled              bool
-	ContainerEngine      string
+	ContainerEngine      ContainerEngine
 	Image                string
 	Pull                 Pull
 	EnvironmentVariables EnvironmentVariables
@@ -105,8 +166,8 @@ type settingsFormatEnvironmentVariables struct {
 }
 
 type settingsFormatPull struct {
-	Arguments []string `yaml:"arguments"`
-	Policy    string   `yaml:"policy"`
+	Arguments []string   `yaml:"arguments"`
+	Policy    PullPolicy `yaml:"policy"`
 }
 
 type settingsFormatVolumeMounts struct {
@@ -116,7 +177,7 @@ type settingsFormatVolumeMounts struct {
 }
 
 type settingsFormatExecutionEnvironment struct {
-	ContainerEngine      string                             `yaml:"container-engine"` //nolint:tagliatelle
+	ContainerEngine      ContainerEngine                    `yaml:"container-engine"` //nolint:tagliatelle
 	Enabled              bool                               `yaml:"enabled"`
 	EnvironmentVariables settingsFormatEnvironmentVariables `yaml:"environment-variables"` //nolint:tagliatelle
 	Image                string                             `yaml:"image"`
@@ -188,20 +249,8 @@ func (s Settings) generate() (string, error) {
 
 	data, err := yaml.Marshal(&format)
 	if err != nil {
-		return "", fmt.Errorf("failed to build ansible-navigator settings file, %w", err)
+		return "", fmt.Errorf("failed to build %s settings file, %w", Program, err)
 	}
 
 	return string(data), nil
-}
-
-func ContainerEngines() []string {
-	return []string{"podman", "docker"}
-}
-
-func ContainerEngineOptions() []string {
-	return append(ContainerEngines(), ContainerEngineAuto)
-}
-
-func PullPolicyOptions() []string {
-	return []string{"always", "missing", "never", "tag"}
 }
