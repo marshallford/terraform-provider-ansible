@@ -261,7 +261,7 @@ pipelining=True
 - `ansible_navigator_binary` (String) Path to the `ansible-navigator` binary. By default `$PATH` is searched.
 - `ansible_options` (Attributes) Ansible [playbook](https://docs.ansible.com/ansible/latest/cli/ansible-playbook.html) run related configuration. (see [below for nested schema](#nestedatt--ansible_options))
 - `artifact_queries` (Attributes Map) Query the Ansible playbook artifact with [`jq`](https://jqlang.github.io/jq/) syntax. The [playbook artifact](https://access.redhat.com/documentation/en-us/red_hat_ansible_automation_platform/2.0-ea/html/ansible_navigator_creator_guide/assembly-troubleshooting-navigator_ansible-navigator#proc-review-artifact_troubleshooting-navigator) contains detailed information about every play and task, as well as the stdout from the playbook run. (see [below for nested schema](#nestedatt--artifact_queries))
-- `destroy_playbook` (String) Ansible playbook contents (YAML). Only run on destroy (`run_on_destroy` must be `true`).
+- `destroy_playbook` (String) Ansible [playbook](https://docs.ansible.com/ansible/latest/playbook_guide/playbooks_intro.html) contents (YAML). Only run on destroy (`run_on_destroy` must be `true`).
 - `execution_environment` (Attributes) [Execution environment](https://ansible.readthedocs.io/en/latest/getting_started_ee/index.html) (EE) related configuration. (see [below for nested schema](#nestedatt--execution_environment))
 - `run_on_destroy` (Boolean) Run playbook (or alternatively `destroy_playbook` if configured) on destroy. The environment variable `ANSIBLE_TF_OPERATION` is set to `delete` during the run to allow for conditional plays, tasks, etc. Defaults to `false`.
 - `timeouts` (Attributes) (see [below for nested schema](#nestedatt--timeouts))

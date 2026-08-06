@@ -3,6 +3,7 @@ package provider
 import (
 	"context"
 	"fmt"
+	"regexp"
 	"strings"
 	"time"
 
@@ -11,20 +12,20 @@ import (
 	ephemeralResourceTimeouts "github.com/hashicorp/terraform-plugin-framework-timeouts/ephemeral/timeouts"
 	resourceTimeouts "github.com/hashicorp/terraform-plugin-framework-timeouts/resource/timeouts"
 	"github.com/hashicorp/terraform-plugin-framework/action"
+	aschema "github.com/hashicorp/terraform-plugin-framework/action/schema"
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
+	dschema "github.com/hashicorp/terraform-plugin-framework/datasource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/ephemeral"
+	eschema "github.com/hashicorp/terraform-plugin-framework/ephemeral/schema"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
-)
-
-const (
-	terraformOpCreate = iota
-	terraformOpRead   = iota
-	terraformOpUpdate = iota
-	terraformOpDelete = iota
-	terraformOpOpen   = iota
-	terraformOpInvoke = iota
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/booldefault"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/defaults"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/objectdefault"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringdefault"
+	"github.com/hashicorp/terraform-plugin-framework/types"
 )
 
 const (
@@ -36,20 +37,49 @@ type attrDescription struct {
 	MarkdownDescription string
 }
 
+var markdownLink = regexp.MustCompile(`\[([^\]]*)\]\([^)]*\)`)
+
+func describe(markdown string, args ...any) attrDescription {
+	if len(args) > 0 {
+		markdown = fmt.Sprintf(markdown, args...)
+	}
+
+	return attrDescription{
+		Description:         strings.ReplaceAll(markdownLink.ReplaceAllString(markdown, "$1"), "`", "'"),
+		MarkdownDescription: markdown,
+	}
+}
+
+func (d attrDescription) append(markdown string, args ...any) attrDescription {
+	appended := describe(markdown, args...)
+
+	return attrDescription{
+		Description:         d.Description + " " + appended.Description,
+		MarkdownDescription: d.MarkdownDescription + " " + appended.MarkdownDescription,
+	}
+}
+
 type providerOptions struct {
 	BaseRunDirectory    string
 	PersistRunDirectory bool
 }
 
 type (
-	terraformOp  int
+	terraformOp  string
 	terraformOps []terraformOp
 )
 
-var terraformOpNames = []string{"create", "read", "update", "delete", "open", "invoke"} //nolint:gochecknoglobals
+const (
+	terraformOpCreate terraformOp = "create"
+	terraformOpRead   terraformOp = "read"
+	terraformOpUpdate terraformOp = "update"
+	terraformOpDelete terraformOp = "delete"
+	terraformOpOpen   terraformOp = "open"
+	terraformOpInvoke terraformOp = "invoke"
+)
 
 func (op terraformOp) String() string {
-	return terraformOpNames[op]
+	return string(op)
 }
 
 func (ops terraformOps) Strings() []string {
@@ -59,6 +89,74 @@ func (ops terraformOps) Strings() []string {
 	}
 
 	return output
+}
+
+type surface int
+
+const (
+	surfaceResource surface = iota
+	surfaceDataSource
+	surfaceEphemeral
+	surfaceAction
+)
+
+func (s surface) allowsComputed() bool {
+	return s != surfaceAction
+}
+
+func (s surface) allowsSensitive() bool {
+	return s != surfaceAction
+}
+
+func (s surface) stringDefault(value string) defaults.String { //nolint:ireturn
+	if s == surfaceAction {
+		return nil
+	}
+
+	return stringdefault.StaticString(value)
+}
+
+func (s surface) boolDefault(value bool) defaults.Bool { //nolint:ireturn
+	if s == surfaceAction {
+		return nil
+	}
+
+	return booldefault.StaticBool(value)
+}
+
+func (s surface) objectDefault(value types.Object) defaults.Object { //nolint:ireturn
+	if s == surfaceAction {
+		return nil
+	}
+
+	return objectdefault.StaticValue(value)
+}
+
+func dataSourceAttributes(attributes map[string]schema.Attribute) map[string]dschema.Attribute {
+	converted := make(map[string]dschema.Attribute, len(attributes))
+	for name, attribute := range attributes {
+		converted[name] = attribute
+	}
+
+	return converted
+}
+
+func ephemeralAttributes(attributes map[string]schema.Attribute) map[string]eschema.Attribute {
+	converted := make(map[string]eschema.Attribute, len(attributes))
+	for name, attribute := range attributes {
+		converted[name] = attribute
+	}
+
+	return converted
+}
+
+func actionAttributes(attributes map[string]schema.Attribute) map[string]aschema.Attribute {
+	converted := make(map[string]aschema.Attribute, len(attributes))
+	for name, attribute := range attributes {
+		converted[name] = attribute
+	}
+
+	return converted
 }
 
 func terraformOperationResourceTimeout(ctx context.Context, op terraformOp, value resourceTimeouts.Value, defaultTimeout time.Duration) (time.Duration, diag.Diagnostics) {
@@ -71,9 +169,11 @@ func terraformOperationResourceTimeout(ctx context.Context, op terraformOp, valu
 		return value.Update(ctx, defaultTimeout)
 	case terraformOpDelete:
 		return value.Delete(ctx, defaultTimeout)
-	default:
+	case terraformOpOpen, terraformOpInvoke:
 		return defaultTimeout, nil
 	}
+
+	return defaultTimeout, nil
 }
 
 func terraformOperationDataSourceTimeout(ctx context.Context, value dataSourceTimeouts.Value, defaultTimeout time.Duration) (time.Duration, diag.Diagnostics) {

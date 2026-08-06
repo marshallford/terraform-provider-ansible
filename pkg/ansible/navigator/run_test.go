@@ -44,7 +44,7 @@ func testConfig(eeEnabled bool) RunConfig {
 				Image:           "ghcr.io/ansible/community-ansible-dev-tools:v26.7.1",
 				Pull: Pull{
 					Arguments: []string{"--tls-verify=false"},
-					Policy:    "tag",
+					Policy:    PullPolicyTag,
 				},
 				EnvironmentVariables: EnvironmentVariables{
 					Pass: []string{"SSH_AUTH_SOCK"},
@@ -69,9 +69,9 @@ func newTestRun(t *testing.T, eeEnabled bool) (*Run, *fakeExecutor) {
 	}
 
 	exec := newFakeExecutor().
-		withProgram("podman", "docker", ansible.PlaybookProgram, Program).
-		withResponse("ansible-navigator --version", "ansible-navigator 26.6.0", nil).
-		withResponse("ansible-playbook --version", "ansible-playbook [core 2.19.0]", nil)
+		withProgram(ContainerEnginePodman.String(), ContainerEngineDocker.String(), ansible.PlaybookProgram, Program).
+		withResponse(Program+" --version", Program+" 26.6.0", nil).
+		withResponse(ansible.PlaybookProgram+" --version", ansible.PlaybookProgram+" [core 2.19.0]", nil)
 
 	run := NewRun(testHostDir, testConfig(eeEnabled), WithFs(memFs), WithExecutor(exec))
 
@@ -419,8 +419,8 @@ func TestRunDoesNotMutateConfig(t *testing.T) {
 	}
 
 	exec := newFakeExecutor().
-		withProgram("podman", "docker", ansible.PlaybookProgram, Program).
-		withResponse("ansible-navigator --version", "ansible-navigator 26.6.0", nil)
+		withProgram(ContainerEnginePodman.String(), ContainerEngineDocker.String(), ansible.PlaybookProgram, Program).
+		withResponse(Program+" --version", Program+" 26.6.0", nil)
 
 	run := NewRun(testHostDir, config, WithFs(memFs), WithExecutor(exec))
 	run.SetEnv("RUN_VAR", "run-value")

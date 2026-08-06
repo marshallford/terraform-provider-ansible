@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"slices"
 	"strings"
 
 	"github.com/marshallford/terraform-provider-ansible/pkg/ansible"
@@ -52,17 +51,13 @@ func (r *Run) checkWorkingDir() error {
 func (r *Run) checkContainerEngine(ctx context.Context) error {
 	engine := r.config.Settings.ExecutionEnvironment.ContainerEngine
 
-	if !slices.Contains(ContainerEngineOptions(), engine) {
-		return newPreflightError(CheckContainerEngine, fmt.Sprintf("container engine %s is not a valid option", engine), nil)
-	}
-
-	if engine != ContainerEngineAuto && r.programExistsOnPath(engine) != nil {
+	if engine != ContainerEngineAuto && r.programExistsOnPath(engine.String()) != nil {
 		return newPreflightError(CheckContainerEngine, fmt.Sprintf("container engine %s not found in PATH", engine), nil)
 	}
 
 	if engine == ContainerEngineAuto {
-		for _, option := range ContainerEngines() {
-			if r.programExistsOnPath(option) == nil {
+		for _, option := range containerEnginePrograms() {
+			if r.programExistsOnPath(option.String()) == nil {
 				engine = option
 
 				break
@@ -74,7 +69,7 @@ func (r *Run) checkContainerEngine(ctx context.Context) error {
 		return newPreflightError(CheckContainerEngine, "no container engine found in PATH", nil)
 	}
 
-	if _, err := r.exec.Run(ctx, ansible.Command{Name: engine, Args: []string{"info"}}); err != nil {
+	if _, err := r.exec.Run(ctx, ansible.Command{Name: engine.String(), Args: []string{"info"}}); err != nil {
 		return newPreflightError(CheckContainerEngine, fmt.Sprintf("container engine is not running or usable, '%s info' command failed", engine), err)
 	}
 
