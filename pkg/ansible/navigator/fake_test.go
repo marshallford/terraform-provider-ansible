@@ -30,20 +30,6 @@ func newFakeExecutor() *fakeExecutor {
 	}
 }
 
-func (e *fakeExecutor) withProgram(programs ...string) *fakeExecutor {
-	for _, program := range programs {
-		e.lookPath[program] = "/usr/bin/" + program
-	}
-
-	return e
-}
-
-func (e *fakeExecutor) withResponse(match string, output string, err error) *fakeExecutor {
-	e.responses = append(e.responses, fakeResponse{match: match, output: output, err: err})
-
-	return e
-}
-
 func (e *fakeExecutor) LookPath(file string) (string, error) {
 	if path, ok := e.lookPath[file]; ok {
 		return path, nil
@@ -74,6 +60,20 @@ func (e *fakeExecutor) Run(_ context.Context, command ansible.Command) ([]byte, 
 	}
 
 	return nil, nil
+}
+
+func (e *fakeExecutor) withProgram(programs ...string) *fakeExecutor {
+	for _, program := range programs {
+		e.lookPath[program] = "/usr/bin/" + program
+	}
+
+	return e
+}
+
+func (e *fakeExecutor) withResponse(match string, output string, err error) *fakeExecutor {
+	e.responses = append(e.responses, fakeResponse{match: match, output: output, err: err})
+
+	return e
 }
 
 func (e *fakeExecutor) commandStrings() []string {

@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"maps"
 	"slices"
+	"strconv"
 
 	"github.com/marshallford/terraform-provider-ansible/pkg/ansible"
 )
@@ -31,7 +32,7 @@ func (r *Run) navigatorCommand() ansible.Command {
 	}
 
 	if r.config.HostKeyChecking != ansible.RunnerDefaultHostKeyChecking {
-		command = command.AppendEnv("ANSIBLE_HOST_KEY_CHECKING", fmt.Sprintf("%t", r.config.HostKeyChecking))
+		command = command.AppendEnv("ANSIBLE_HOST_KEY_CHECKING", strconv.FormatBool(r.config.HostKeyChecking))
 	}
 
 	return command

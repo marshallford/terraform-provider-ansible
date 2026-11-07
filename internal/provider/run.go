@@ -30,7 +30,7 @@ const (
 	defaultNavigatorRunTimeout         = 10 * time.Minute
 	defaultNavigatorRunContainerEngine = string(navigator.ContainerEngineAuto)
 	defaultNavigatorRunEEEnabled       = true
-	defaultNavigatorRunImage           = "ghcr.io/ansible/community-ansible-dev-tools:v26.7.1"
+	defaultNavigatorRunImage           = "ghcr.io/ansible/community-ansible-dev-tools:v26.11.0"
 	defaultNavigatorRunPullPolicy      = string(navigator.PullPolicyTag)
 	defaultNavigatorRunTimezone        = "UTC"
 	defaultNavigatorRunOnDestroy       = false
@@ -238,8 +238,7 @@ func run(ctx context.Context, diags *diag.Diagnostics, runData *navigatorRunData
 
 	if err := navRun.Preflight(ctx); err != nil {
 		for _, preflightErr := range unwrapJoinedErrors(err) {
-			var typed *navigator.PreflightError
-			if errors.As(preflightErr, &typed) {
+			if typed, ok := errors.AsType[*navigator.PreflightError](preflightErr); ok {
 				addPathError(diags, preflightCheckPath(typed.Check), "Preflight check failed", typed)
 
 				continue
@@ -253,8 +252,7 @@ func run(ctx context.Context, diags *diag.Diagnostics, runData *navigatorRunData
 
 	if err := navRun.Setup(); err != nil {
 		for _, setupErr := range unwrapJoinedErrors(err) {
-			var typed *navigator.SetupError
-			if errors.As(setupErr, &typed) {
+			if typed, ok := errors.AsType[*navigator.SetupError](setupErr); ok {
 				addPathError(diags, setupStepPath(typed.Step), "Setup failed", typed)
 
 				continue
@@ -289,8 +287,7 @@ func run(ctx context.Context, diags *diag.Diagnostics, runData *navigatorRunData
 
 	if err := navRun.Query(runData.playbookArtifactQueries); err != nil {
 		for _, queryErr := range unwrapJoinedErrors(err) {
-			var typed *navigator.QueryError
-			if errors.As(queryErr, &typed) {
+			if typed, ok := errors.AsType[*navigator.QueryError](queryErr); ok {
 				addPathError(diags, runData.artifactQueryPath(typed.Name), "Playbook artifact query failed", typed)
 
 				continue

@@ -64,8 +64,7 @@ func QueryPlaybookArtifact(data []byte, query PlaybookArtifactQuery) ([]string, 
 		}
 
 		if err, ok := value.(error); ok {
-			var haltErr *jq.HaltError
-			if errors.As(err, &haltErr) && haltErr.Value() == nil {
+			if haltErr, ok := errors.AsType[*jq.HaltError](err); ok && haltErr.Value() == nil {
 				break
 			}
 

@@ -27,7 +27,7 @@ type runError struct {
 	Err     error
 }
 
-func (e runError) Error() string {
+func (e *runError) Error() string {
 	if e.Err != nil {
 		return e.Message + ": " + e.Err.Error()
 	}
@@ -35,7 +35,7 @@ func (e runError) Error() string {
 	return e.Message
 }
 
-func (e runError) Unwrap() error {
+func (e *runError) Unwrap() error {
 	return e.Err
 }
 
@@ -46,7 +46,7 @@ type PreflightError struct {
 }
 
 func newPreflightError(check PreflightCheck, message string, err error) *PreflightError {
-	return &PreflightError{runError: runError{Message: message, Err: err}, Check: check}
+	return &PreflightError{Message: message, Err: err, Check: check}
 }
 
 type SetupError struct {
@@ -56,7 +56,7 @@ type SetupError struct {
 }
 
 func newSetupError(step SetupStep, message string, err error) *SetupError {
-	return &SetupError{runError: runError{Message: message, Err: err}, Step: step}
+	return &SetupError{Message: message, Err: err, Step: step}
 }
 
 type QueryError struct {
@@ -66,5 +66,5 @@ type QueryError struct {
 }
 
 func newQueryError(name string, message string, err error) *QueryError {
-	return &QueryError{runError: runError{Message: message, Err: err}, Name: name}
+	return &QueryError{Message: message, Err: err, Name: name}
 }

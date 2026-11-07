@@ -6,29 +6,55 @@ on: # yamllint disable-line rule:truthy
     - opened
     - synchronize
     - reopened
-    # - edited
+    - edited
     branches:
     - main
 
-permissions:
-  contents: read
+permissions: {}
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
+  title:
+    name: PR Title
+    runs-on: ubuntu-latest
+    permissions:
+      pull-requests: read
+    steps:
+    - name: Check PR title
+      uses: amannn/action-semantic-pull-request@v6.1.2
+      env:
+        GITHUB_TOKEN: ${{ github.token }}
+
   lint:
     name: Lint
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     steps:
     - name: Checkout
-      uses: actions/checkout@v7
+      uses: actions/checkout@v7.0.1
+    - name: Verify actions lockfile
+      env:
+        GH_TOKEN: ${{ github.token }}
+      run: |
+        gh extension install github/gh-actions-lock --pin v0.4.1
+        gh actions-lock --verify
     - name: Setup uv
-      uses: astral-sh/setup-uv@v8.3.2
+      uses: astral-sh/setup-uv@v10.3.3
     - name: Setup Python
-      uses: actions/setup-python@v6
+      uses: actions/setup-python@v7.1.0
       with:
         python-version-file: .python-version
+    - name: Read Terraform version
+      id: terraform-version
+      uses: $/.github/actions/terraform-version
     - name: Setup Terraform
-      uses: hashicorp/setup-terraform@v4
+      uses: hashicorp/setup-terraform@v4.0.1
       with:
+        terraform_version: ${{ steps.terraform-version.outputs.version }}
         terraform_wrapper: false
     - name: Pull
       run: make -j pull
@@ -38,11 +64,13 @@ jobs:
   build:
     name: Build
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     steps:
     - name: Checkout
-      uses: actions/checkout@v7
+      uses: actions/checkout@v7.0.1
     - name: Setup go
-      uses: actions/setup-go@v6
+      uses: actions/setup-go@v7.0.0
       with:
         go-version-file: .go-version
     - name: Download dependencies
@@ -53,18 +81,24 @@ jobs:
   docs:
     name: Test Docs
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     steps:
     - name: Checkout
-      uses: actions/checkout@v7
+      uses: actions/checkout@v7.0.1
     - name: Setup go
-      uses: actions/setup-go@v6
+      uses: actions/setup-go@v7.0.0
       with:
         go-version-file: .go-version
     - name: Download dependencies
       run: go mod download
+    - name: Read Terraform version
+      id: terraform-version
+      uses: $/.github/actions/terraform-version
     - name: Setup Terraform
-      uses: hashicorp/setup-terraform@v4
+      uses: hashicorp/setup-terraform@v4.0.1
       with:
+        terraform_version: ${{ steps.terraform-version.outputs.version }}
         terraform_wrapper: false
     - name: Generate and validate docs
       run: make docs test/docs
@@ -80,30 +114,32 @@ jobs:
     - build
     - docs
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     strategy:
       fail-fast: false
       matrix:
         terraform:
-        - 1.13.*
-        - 1.14.*
         - 1.15.*
+        - 1.16.*
+        - 1.17.*
     steps:
     - name: Checkout
-      uses: actions/checkout@v7
+      uses: actions/checkout@v7.0.1
     - name: Setup go
-      uses: actions/setup-go@v6
+      uses: actions/setup-go@v7.0.0
       with:
         go-version-file: .go-version
     - name: Download dependencies
       run: go mod download
     - name: Setup uv
-      uses: astral-sh/setup-uv@v8.3.2
+      uses: astral-sh/setup-uv@v10.3.3
     - name: Setup Python
-      uses: actions/setup-python@v6
+      uses: actions/setup-python@v7.1.0
       with:
         python-version-file: .python-version
     - name: Setup Terraform
-      uses: hashicorp/setup-terraform@v4
+      uses: hashicorp/setup-terraform@v4.0.1
       with:
         terraform_version: ${{ matrix.terraform }}
         terraform_wrapper: false
@@ -115,6 +151,7 @@ jobs:
     runs-on: ubuntu-latest
     if: always()
     needs:
+    - title
     - test
     steps:
     - run: exit 1

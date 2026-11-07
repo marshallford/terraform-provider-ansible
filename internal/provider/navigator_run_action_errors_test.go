@@ -7,7 +7,6 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-testing/config"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
-	"github.com/hashicorp/terraform-plugin-testing/tfversion"
 )
 
 func TestAccNavigatorRunAction_errors(t *testing.T) {
@@ -40,9 +39,6 @@ func TestAccNavigatorRunAction_errors(t *testing.T) {
 			resource.Test(t, resource.TestCase{
 				PreCheck:                 func() { testPreCheck(t) },
 				ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
-				TerraformVersionChecks: []tfversion.TerraformVersionCheck{
-					tfversion.SkipBelow(tfversion.Version1_14_0),
-				},
 				Steps: []resource.TestStep{
 					{
 						Config:          testTerraformConfig(t, filepath.Join("navigator_run_action", "errors", test.name)),
