@@ -5,39 +5,43 @@ on: # yamllint disable-line rule:truthy
     branches:
     - main
 
-permissions:
-  contents: read
+permissions: {}
 
 jobs:
   build-pages:
     name: Build Pages
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     steps:
     - name: Checkout
-      uses: actions/checkout@v7
+      uses: actions/checkout@v7.0.1
     - name: Setup go
-      uses: actions/setup-go@v6
+      uses: actions/setup-go@v7.0.0
       with:
         go-version-file: .go-version
     - name: Download dependencies
       run: go mod download
     - name: Setup uv
-      uses: astral-sh/setup-uv@v8.3.2
+      uses: astral-sh/setup-uv@v10.3.3
     - name: Setup Python
-      uses: actions/setup-python@v6
+      uses: actions/setup-python@v7.1.0
       with:
         python-version-file: .python-version
+    - name: Read Terraform version
+      id: terraform-version
+      uses: $/.github/actions/terraform-version
     - name: Setup Terraform
-      uses: hashicorp/setup-terraform@v4
+      uses: hashicorp/setup-terraform@v4.0.1
       with:
-        terraform_version: 1.15.*
+        terraform_version: ${{ steps.terraform-version.outputs.version }}
         terraform_wrapper: false
     - name: Acceptance Coverage
       run: make test/acc
     - name: Coverage badge and html
       run: ./.github/scripts/cov-badge-and-html.sh
     - name: Upload Artifact
-      uses: actions/upload-pages-artifact@v5
+      uses: actions/upload-pages-artifact@v5.0.0
 
   deploy-pages:
     name: Deploy Pages
@@ -53,4 +57,4 @@ jobs:
     steps:
     - name: Deploy to GitHub Pages
       id: deployment
-      uses: actions/deploy-pages@v5
+      uses: actions/deploy-pages@v5.0.1

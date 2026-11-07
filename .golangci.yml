@@ -4,19 +4,20 @@ linters:
   disable:
   - depguard
   - exhaustruct
-  - funcorder
+  - exhaustruct_v5
   - funlen
   - goconst
   - godox
   - lll
   - noinlineerr
-  - perfsprint
   - recvcheck
   - revive
   - testpackage
   - wsl
   - wsl_v5
   settings:
+    perfsprint:
+      string-format: false
     varnamelen:
       ignore-type-assert-ok: true
       ignore-map-index-ok: true

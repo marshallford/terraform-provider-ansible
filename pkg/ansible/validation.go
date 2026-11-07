@@ -22,8 +22,7 @@ func ValidateSSHPrivateKey(privateKey string) error {
 
 	_, err := ssh.ParseRawPrivateKey([]byte(privateKey))
 
-	var passphraseErr *ssh.PassphraseMissingError
-	if errors.As(err, &passphraseErr) {
+	if _, ok := errors.AsType[*ssh.PassphraseMissingError](err); ok {
 		return fmt.Errorf("%w, SSH private key must be unencrypted (no passphrase), %w", ErrValidation, err)
 	}
 

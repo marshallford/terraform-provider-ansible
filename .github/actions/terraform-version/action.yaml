@@ -1,0 +1,22 @@
+name: Terraform version
+
+inputs:
+  path:
+    required: false
+    type: string
+    default: .
+outputs:
+  version:
+    value: ${{ steps.read.outputs.version }}
+
+runs:
+  using: composite
+  steps:
+  - name: Read Terraform version
+    id: read
+    shell: bash
+    env:
+      VERSION_FILE: ${{ inputs.path }}/.terraform-version
+    run: |
+      version=$(< "$VERSION_FILE")
+      echo "version=$version" >> "$GITHUB_OUTPUT"

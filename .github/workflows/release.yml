@@ -5,34 +5,39 @@ on: # yamllint disable-line rule:truthy
     tags:
     - v*
 
-permissions:
-  contents: write
+permissions: {}
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
 
 jobs:
   release:
     name: Release
     runs-on: ubuntu-latest
     # environment: release
+    permissions:
+      contents: write
     steps:
     - name: Checkout
-      uses: actions/checkout@v7
+      uses: actions/checkout@v7.0.1
       with:
         fetch-depth: 0
     - name: Fetch tags
       run: git fetch --force --tags
     - name: Setup go
-      uses: actions/setup-go@v6
+      uses: actions/setup-go@v7.0.0
       with:
         go-version-file: .go-version
     - name: Import GPG key
       id: gpg
-      uses: crazy-max/ghaction-import-gpg@v7
+      uses: crazy-max/ghaction-import-gpg@v7.0.0
       with:
         gpg_private_key: ${{ secrets.GPG_PRIVATE_KEY }}
     - name: GoReleaser
-      uses: goreleaser/goreleaser-action@v7
+      uses: goreleaser/goreleaser-action@v7.3.0
       with:
-        version: v2.17.0
+        version: v2.20.0
         args: release --clean
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

@@ -41,7 +41,7 @@ func testConfig(eeEnabled bool) RunConfig {
 			ExecutionEnvironment: ExecutionEnvironment{
 				Enabled:         eeEnabled,
 				ContainerEngine: ContainerEngineAuto,
-				Image:           "ghcr.io/ansible/community-ansible-dev-tools:v26.7.1",
+				Image:           "ghcr.io/ansible/community-ansible-dev-tools:v26.11.0",
 				Pull: Pull{
 					Arguments: []string{"--tls-verify=false"},
 					Policy:    PullPolicyTag,
